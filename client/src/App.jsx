@@ -38,8 +38,8 @@ import AdminProfile from './pages/admin/Profile'
 
 // Components
 import ProtectedRoute from './components/common/ProtectedRoute'
-
 function App() {
+
   return (
     <BrowserRouter
       future={{

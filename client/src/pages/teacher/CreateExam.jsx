@@ -9,7 +9,7 @@ import {
   FiChevronLeft, FiCopy, FiEye, FiEyeOff
 } from 'react-icons/fi'
 import { createExam } from '../../redux/slices/examSlice'
-import { toast } from 'react-toastify'
+import toast from '../../utils/toast'
 
 const CreateExam = () => {
   const navigate = useNavigate()
@@ -178,7 +178,6 @@ const CreateExam = () => {
 
     try {
       const result = await dispatch(createExam(examPayload)).unwrap()
-      toast.success('Exam created successfully!')
       navigate('/teacher/exams')
     } catch (error) {
       // The slice already toasts the error, no need to toast here

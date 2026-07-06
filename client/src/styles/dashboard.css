@@ -57,7 +57,7 @@
 .top-header .header-left h1 {
   font-size: 20px;
   font-weight: 600;
-  color: white;
+  color: var(--text-main);
 }
 
 .top-header .header-right {
@@ -191,7 +191,7 @@
 .stat-card .stat-value {
   font-size: 28px;
   font-weight: 700;
-  color: white;
+  color: var(--text-main);
   margin-top: 2px;
 }
 
@@ -227,7 +227,7 @@
 .chart-container h3 {
   font-size: 16px;
   font-weight: 600;
-  color: white;
+  color: var(--text-main);
   margin-bottom: 16px;
 }
 
@@ -248,7 +248,7 @@
 .welcome-banner h2 {
   font-size: 24px;
   font-weight: 700;
-  color: white;
+  color: var(--text-main);
 }
 
 .welcome-banner p {
@@ -286,7 +286,7 @@
 }
 
 .recent-item .item-info .title {
-  color: white;
+  color: var(--text-main);
   font-weight: 500;
 }
 
@@ -359,7 +359,7 @@
 .chart-container h3 {
   font-size: 16px;
   font-weight: 600;
-  color: white;
+  color: var(--text-main);
   margin-bottom: 16px;
 }
 

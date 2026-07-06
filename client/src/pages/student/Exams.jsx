@@ -10,7 +10,7 @@ import {
 } from 'react-icons/fi'
 import { getStudentExams } from '../../redux/slices/examSlice'
 import { getStudentResults } from '../../redux/slices/resultSlice'
-import { toast } from 'react-toastify'
+import toast from '../../utils/toast'
 
 const StudentExams = () => {
   const [searchTerm, setSearchTerm] = useState('')
@@ -45,8 +45,8 @@ const StudentExams = () => {
     if (!exam.isAvailable) {
       if (exam.isUpcoming) {
         toast.info(`Exam starts at ${exam.startTime} on ${new Date(exam.date).toLocaleDateString()}`)
-      } else if (exam.isExpired) {
-        toast.error('Exam entry time has expired')
+      } else {
+        toast.error('You are late! Exam entry time has ended.')
       }
       return
     }
@@ -103,7 +103,7 @@ const StudentExams = () => {
             <h2>My Exams</h2>
             <p>View and take your exams</p>
           </div>
-          <span style={{ color: 'var(--dark-400)', fontSize: '14px' }}>
+          <span style={{ color: 'var(--text-main)', fontSize: '14px', fontWeight: '500' }}>
             {exams.filter(e => e.isAvailable && !e.isTaken).length} available
           </span>
         </div>
@@ -131,7 +131,7 @@ const StudentExams = () => {
                 padding: '10px 20px',
                 borderRadius: 'var(--border-radius)',
                 border: 'none',
-                background: filter === option ? 'var(--primary-500)' : 'rgba(51, 65, 85, 0.5)',
+                background: filter === option ? 'var(--primary-500)' : 'var(--dark-700)',
                 color: filter === option ? 'white' : 'var(--dark-400)',
                 cursor: 'pointer',
                 transition: 'var(--transition)',

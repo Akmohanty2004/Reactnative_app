@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { FiMail, FiArrowLeft } from 'react-icons/fi'
 import axios from 'axios'
-import { toast } from 'react-toastify'
+import toast from '../../utils/toast'
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState('')

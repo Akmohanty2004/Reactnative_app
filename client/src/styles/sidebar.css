@@ -111,7 +111,7 @@
 
 .sidebar-user .user-info .name {
   font-weight: 600;
-  color: white;
+  color: var(--text-main);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

@@ -8,7 +8,7 @@ import {
   FiCheck, FiClock, FiCalendar, FiLock
 } from 'react-icons/fi'
 import { getExamById, updateExam } from '../../redux/slices/examSlice'
-import { toast } from 'react-toastify'
+import toast from '../../utils/toast'
 
 const EditExam = () => {
   const { examId } = useParams()

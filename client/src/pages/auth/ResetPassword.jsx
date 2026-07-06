@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { FiLock, FiEye, FiEyeOff, FiCheck } from 'react-icons/fi'
 import axios from 'axios'
-import { toast } from 'react-toastify'
+import toast from '../../utils/toast'
 
 const ResetPassword = () => {
   const { token } = useParams()

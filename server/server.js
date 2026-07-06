@@ -1,3 +1,4 @@
+process.env.TZ = 'Asia/Kolkata'; // Force IST timezone for all Date operations
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -24,22 +25,30 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false,
 }));
 
+// CORS (Must be before rate limiter so 429 errors get CORS headers)
+app.use(cors({
+  origin: function(origin, callback) {
+    if (!origin) return callback(null, true);
+    const allowedOrigins = ['http://localhost:5173'];
+    if (allowedOrigins.indexOf(origin) !== -1 || origin.endsWith('.vercel.app') || origin.endsWith('.netlify.app')) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+}));
+
 // Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100,
+  max: 1000, // Increased from 100 to 1000 to prevent false positives during active dev
   message: 'Too many requests from this IP, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
 });
 
 app.use('/api', limiter);
-
-// CORS
-app.use(cors({
-  origin: 'http://localhost:5173',
-  credentials: true,
-}));
 
 // Body parser
 app.use(express.json({ limit: '50mb' }));

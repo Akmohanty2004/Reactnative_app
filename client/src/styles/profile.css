@@ -77,7 +77,7 @@
 .profile-header .profile-info h2 {
   font-size: 26px;
   font-weight: 700;
-  color: white;
+  color: var(--text-main);
 }
 
 .profile-header .profile-info .role-badge {
@@ -151,7 +151,7 @@
 .profile-stats .stat-item .value {
   font-size: 24px;
   font-weight: 700;
-  color: white;
+  color: var(--text-main);
 }
 
 .profile-stats .stat-item .label {
@@ -173,7 +173,7 @@
 .profile-form h3 {
   font-size: 18px;
   font-weight: 600;
-  color: white;
+  color: var(--text-main);
   margin-bottom: 20px;
 }
 
@@ -224,7 +224,7 @@
 .profile-security h3 {
   font-size: 18px;
   font-weight: 600;
-  color: white;
+  color: var(--text-main);
   margin-bottom: 16px;
 }
 
@@ -246,7 +246,7 @@
 }
 
 .profile-security .security-item .info .title {
-  color: white;
+  color: var(--text-main);
   font-weight: 500;
 }
 

@@ -9,7 +9,7 @@ import {
 import Webcam from 'react-webcam'
 import { getStudentExam } from '../../redux/slices/examSlice'
 import { submitExam } from '../../redux/slices/resultSlice'
-import { toast } from 'react-toastify'
+import toast from '../../utils/toast'
 import Calculator from '../../components/common/Calculator'
 
 class ErrorBoundary extends React.Component {
@@ -98,25 +98,15 @@ const StudentExamContent = () => {
   }, [dispatch, examId])
 
   useEffect(() => {
-    if (!currentExam?.exam || !isStarted) return;
+    const examObject = currentExam?.exam || currentExam
+    if (!examObject || !isStarted || Object.keys(examObject).length === 0) return;
     
-    if (currentExam.exam.fullscreenMode !== false) {
-      // Enable fullscreen
-      const enableFullscreen = async () => {
-        try {
-          if (!document.fullscreenElement) {
-            await document.documentElement.requestFullscreen()
-          }
-        } catch (err) {
-          toast.warning('Please enable fullscreen mode for the exam')
-        }
-      }
-      enableFullscreen()
-
+    if (examObject.fullscreenMode !== false) {
       // Prevent tab switching
       const handleVisibilityChange = () => {
         if (document.hidden && !isSubmittedRef.current) {
           isSubmittedRef.current = true
+          tabSwitchCountRef.current += 1
           setTabSwitchCount(prev => prev + 1)
           toast.error('Warning: Tab switching detected! Exam auto-submitted.', { autoClose: false, toastId: 'tab-switch' })
           forceSubmitExamRef.current()
@@ -126,6 +116,7 @@ const StudentExamContent = () => {
       const handleBlur = () => {
         if (!isSubmittedRef.current) {
           isSubmittedRef.current = true
+          tabSwitchCountRef.current += 1
           setTabSwitchCount(prev => prev + 1)
           toast.error('Warning: Window unfocused! Exam auto-submitted.', { autoClose: false, toastId: 'window-blur' })
           forceSubmitExamRef.current()
@@ -133,23 +124,31 @@ const StudentExamContent = () => {
       }
       
       document.addEventListener('visibilitychange', handleVisibilityChange)
-      window.addEventListener('blur', handleBlur)
+      
+      // Mobile devices often fire blur events falsely (e.g. when opening keyboard or scrolling)
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      if (!isMobile) {
+        window.addEventListener('blur', handleBlur)
+      }
 
       return () => {
         document.removeEventListener('visibilitychange', handleVisibilityChange)
-        window.removeEventListener('blur', handleBlur)
+        if (!isMobile) {
+          window.removeEventListener('blur', handleBlur)
+        }
         if (document.fullscreenElement) {
           document.exitFullscreen().catch(err => console.log(err))
         }
       }
     }
-  }, [currentExam])
+  }, [currentExam, isStarted])
 
 
 
   useEffect(() => {
-    if (currentExam?.exam) {
-      const exam = currentExam.exam
+    const examObject = currentExam?.exam || currentExam
+    if (examObject && Object.keys(examObject).length > 0) {
+      const exam = examObject
       const now = new Date()
       const examDate = new Date(exam.date)
       const [hours, minutes] = exam.startTime.split(':')
@@ -209,9 +208,10 @@ const StudentExamContent = () => {
   }
 
   const handleAnswerSelect = (questionIndex, answer) => {
+    const questionsList = currentExam?.questions || []
     setAnswers(prev => ({
       ...prev,
-      [currentExam.questions[questionIndex]._id]: answer
+      [questionsList[questionIndex]?._id]: answer
     }))
     setQuestionStatus(prev => ({
       ...prev,
@@ -257,7 +257,8 @@ const StudentExamContent = () => {
       selectedAnswer
     }))
 
-    const timeTaken = Math.floor((currentExam.exam.duration * 60 - timeLeft) / 60)
+    const examObject = currentExam?.exam || currentExam
+    const timeTaken = Math.floor((examObject.duration * 60 - timeLeft) / 60)
     
     await dispatch(submitExam({
       examId,
@@ -314,8 +315,16 @@ const StudentExamContent = () => {
     )
   }
 
-  const exam = currentExam.exam
-  const questions = currentExam.questions || []
+  const exam = currentExam?.exam || currentExam
+  const questions = currentExam?.questions || []
+
+  if (!exam || Object.keys(exam).length === 0) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: 'var(--dark-900)' }}>
+        <div style={{ color: 'var(--dark-400)', fontSize: '18px' }}>Loading exam details...</div>
+      </div>
+    )
+  }
 
   if (!isStarted) {
     return (
@@ -326,7 +335,22 @@ const StudentExamContent = () => {
             Click the button below to begin your exam. 
             {exam.fullscreenMode !== false && " This will open the exam in fullscreen mode."}
           </p>
-          <button className="btn-primary" onClick={() => setIsStarted(true)} style={{ padding: '12px 24px', fontSize: '16px' }}>
+          <button 
+            className="btn-primary" 
+            onClick={async () => {
+              if (exam.fullscreenMode !== false) {
+                try {
+                  if (!document.fullscreenElement) {
+                    await document.documentElement.requestFullscreen()
+                  }
+                } catch (err) {
+                  toast.warning('Please enable fullscreen mode for the exam')
+                }
+              }
+              setIsStarted(true)
+            }} 
+            style={{ padding: '12px 24px', fontSize: '16px' }}
+          >
             Begin Exam
           </button>
         </div>

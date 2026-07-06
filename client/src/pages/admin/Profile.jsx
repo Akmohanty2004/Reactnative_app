@@ -6,12 +6,16 @@ import {
   FiTrendingUp, FiCheckCircle, FiX, FiUsers
 } from 'react-icons/fi'
 import { updateProfile, uploadProfileImage, getCurrentUser, changePassword } from '../../redux/slices/authSlice'
-import { toast } from 'react-toastify'
+import { getAdminDashboardStats } from '../../redux/slices/adminSlice'
+import toast from '../../utils/toast'
 
 const AdminProfile = () => {
   const { user } = useSelector(state => state.auth)
+  const { stats } = useSelector(state => state.admin)
   const dispatch = useDispatch()
   const fileInputRef = useRef(null)
+  
+  const [imageError, setImageError] = useState(false)
   
   const [isEditing, setIsEditing] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
@@ -46,6 +50,11 @@ const AdminProfile = () => {
       // Error handled in slice
     }
   }
+
+  useEffect(() => {
+    dispatch(getCurrentUser())
+    dispatch(getAdminDashboardStats())
+  }, [dispatch])
 
   useEffect(() => {
     if (user) {
@@ -95,12 +104,12 @@ const AdminProfile = () => {
     
     try {
       const result = await dispatch(uploadProfileImage(formData)).unwrap()
-      toast.success('Profile image updated successfully!')
       
       const imageUrl = result.imageUrl || result.user?.profileImage
       if (imageUrl) {
         setProfileImage(imageUrl)
         setPreviewImage(null)
+        setImageError(false)
         
         const userData = JSON.parse(localStorage.getItem('user') || '{}')
         userData.profileImage = imageUrl
@@ -119,7 +128,6 @@ const AdminProfile = () => {
     try {
       const result = await dispatch(updateProfile(formData)).unwrap()
       setIsEditing(false)
-      toast.success('Profile updated successfully!')
       
       const userData = JSON.parse(localStorage.getItem('user') || '{}')
       Object.assign(userData, formData)
@@ -150,18 +158,20 @@ const AdminProfile = () => {
     return user.name.charAt(0).toUpperCase()
   }
 
-  // Teacher stats from real data
-  const stats = [
-    { label: 'Total Exams', value: user?.totalExams || 0, icon: FiBook, color: '#6366f1' },
-    { label: 'Students', value: user?.totalStudents || 0, icon: FiUsers, color: '#10b981' },
-    { label: 'Avg Score', value: user?.avgScore ? `${user.avgScore}%` : '0%', icon: FiTrendingUp, color: '#8b5cf6' },
-    { label: 'Rating', value: user?.rating || '0', icon: FiAward, color: '#f59e0b' }
+  // Admin stats from real data
+  const statCards = [
+    { label: 'Total Users', value: stats?.totalUsers || 0, icon: FiUsers, color: '#6366f1' },
+    { label: 'Total Exams', value: stats?.totalExams || 0, icon: FiBook, color: '#8b5cf6' },
+    { label: 'Active Exams', value: stats?.activeExams || 0, icon: FiTrendingUp, color: '#10b981' },
+    { label: 'Results Published', value: stats?.totalResults || 0, icon: FiAward, color: '#f59e0b' }
   ]
 
   const getImageUrl = (path) => {
     if (!path) return null;
     if (path.startsWith('http')) return path;
-    return '/' + path.replace(/\\/g, '/').replace(/^\//, '');
+    if (path.startsWith('data:image')) return path;
+    const cleanPath = path.replace(/\\/g, '/').replace(/^\//, '');
+    return `https://online-exam-platform-server-5onvzuva2-try-best.vercel.app/${cleanPath}`;
   }
 
   return (
@@ -172,8 +182,8 @@ const AdminProfile = () => {
           <div className="avatar-img">
             {previewImage ? (
               <img src={previewImage} alt="Preview" />
-            ) : profileImage ? (
-              <img src={getImageUrl(profileImage)} alt={user?.name} />
+            ) : profileImage && !imageError ? (
+              <img src={getImageUrl(profileImage)} alt={user?.name} onError={() => setImageError(true)} />
             ) : (
               getInitials()
             )}
@@ -200,8 +210,8 @@ const AdminProfile = () => {
         </div>
         
         <div className="profile-info">
-          <h2>{user?.name || 'Teacher'}</h2>
-          <span className="role-badge teacher">Teacher</span>
+          <h2>{user?.name || 'Admin'}</h2>
+          <span className="role-badge admin">Admin</span>
           <div className="profile-meta">
             <span><FiMail /> {user?.email || 'N/A'}</span>
             <span><FiPhone /> {user?.phone || 'N/A'}</span>
@@ -230,7 +240,7 @@ const AdminProfile = () => {
 
       {/* Stats */}
       <div className="profile-stats">
-        {stats.map((stat, index) => {
+        {statCards.map((stat, index) => {
           const Icon = stat.icon
           return (
             <div className="stat-item" key={index}>

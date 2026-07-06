@@ -1,7 +1,7 @@
 import axios from 'axios'
 
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: 'https://online-exam-platform-server-5onvzuva2-try-best.vercel.app/api',
   headers: {
     'Content-Type': 'application/json'
   }

@@ -9,6 +9,17 @@
   .charts-grid {
     grid-template-columns: 1fr;
   }
+  
+  .auth-page-bg {
+    justify-content: center !important;
+    padding-left: 20px !important;
+    padding-right: 20px !important;
+    gap: 20px !important;
+    flex-direction: column !important;
+    height: auto !important;
+    min-height: 100vh !important;
+    overflow-y: auto !important;
+  }
 }
 
 /* Mobile */
@@ -46,6 +57,43 @@
   .recent-item .item-status {
     width: 100%;
     justify-content: flex-start;
+  }
+  
+  /* Layout fixes */
+  .main-content, .main-content.expanded {
+    margin-left: 0 !important;
+    width: 100% !important;
+  }
+  
+  /* Notification Dropdown Mobile Fix */
+  .notif-dropdown {
+    width: 280px !important;
+    right: -50px !important; /* Shift it slightly so it doesn't overflow left */
+    max-width: 90vw !important;
+  }
+  
+  /* Sidebar User Text Mobile Fix */
+  .sidebar-user .user-info .name {
+    white-space: normal !important; /* Allow the long name to wrap instead of cutting off */
+    line-height: 1.2 !important;
+  }
+  
+  /* Table Responsiveness */
+  table td, table th {
+    padding: 10px 12px !important;
+    font-size: 12px !important;
+  }
+  
+  table td {
+    max-width: 140px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  .badge {
+    padding: 4px 8px !important;
+    font-size: 10px !important;
   }
 }
 

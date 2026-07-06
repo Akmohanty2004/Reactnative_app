@@ -11,6 +11,10 @@ import './styles/sidebar.css'
 import './styles/exam.css'
 import './styles/profile.css'
 import './styles/responsive.css'
+import axios from 'axios'
+
+// Set global base URL for production backend
+axios.defaults.baseURL = 'https://online-exam-platform-server-5onvzuva2-try-best.vercel.app'
 
 // Component to load user data on app start
 const AppWithAuth = () => {

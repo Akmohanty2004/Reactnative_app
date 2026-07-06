@@ -7,7 +7,7 @@ import {
 } from 'react-icons/fi'
 import { updateProfile, uploadProfileImage, getCurrentUser, changePassword } from '../../redux/slices/authSlice'
 import { getStudentResults } from '../../redux/slices/resultSlice'
-import { toast } from 'react-toastify'
+import toast from '../../utils/toast'
 
 const StudentProfile = () => {
   const { user } = useSelector(state => state.auth)
@@ -49,7 +49,13 @@ const StudentProfile = () => {
     }
   }
 
-  // Load user data when component mounts or user changes
+  // Fetch latest data on mount
+  useEffect(() => {
+    dispatch(getCurrentUser())
+    dispatch(getStudentResults())
+  }, [dispatch])
+
+  // Update form when user data is available
   useEffect(() => {
     if (user) {
       setFormData({
@@ -63,8 +69,7 @@ const StudentProfile = () => {
       })
       setProfileImage(user.profileImage || null)
     }
-    dispatch(getStudentResults())
-  }, [user, dispatch])
+  }, [user])
 
   const handleInputChange = (e) => {
     const { name, value } = e.target
@@ -99,12 +104,12 @@ const StudentProfile = () => {
     
     try {
       const result = await dispatch(uploadProfileImage(formData)).unwrap()
-      toast.success('Profile image updated successfully!')
       
       const imageUrl = result.imageUrl || result.user?.profileImage
       if (imageUrl) {
         setProfileImage(imageUrl)
         setPreviewImage(null)
+        setImageError(false)
         
         // Update localStorage
         const userData = JSON.parse(localStorage.getItem('user') || '{}')
@@ -126,7 +131,6 @@ const StudentProfile = () => {
     try {
       const result = await dispatch(updateProfile(formData)).unwrap()
       setIsEditing(false)
-      toast.success('Profile updated successfully!')
       
       // Update localStorage
       const userData = JSON.parse(localStorage.getItem('user') || '{}')
@@ -188,7 +192,9 @@ const StudentProfile = () => {
   const getImageUrl = (path) => {
     if (!path) return null;
     if (path.startsWith('http')) return path;
-    return '/' + path.replace(/\\/g, '/').replace(/^\//, '');
+    if (path.startsWith('data:image')) return path;
+    const cleanPath = path.replace(/\\/g, '/').replace(/^\//, '');
+    return `https://online-exam-platform-server-5onvzuva2-try-best.vercel.app/${cleanPath}`;
   }
 
   return (

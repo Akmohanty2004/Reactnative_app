@@ -71,7 +71,13 @@ const adminSlice = createSlice({
       })
       .addCase(getAdminDashboardStats.fulfilled, (state, action) => {
         state.isLoading = false
-        state.stats = action.payload.stats
+        state.stats = {
+          ...action.payload.stats,
+          monthlyExams: action.payload.monthlyExams,
+          monthlyResults: action.payload.monthlyResults,
+          memoryUsage: action.payload.memoryUsage,
+          activeUsers: action.payload.activeUsers
+        }
       })
       .addCase(getAdminDashboardStats.rejected, (state, action) => {
         state.isLoading = false

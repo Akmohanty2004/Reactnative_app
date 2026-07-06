@@ -6,7 +6,7 @@ import {
   FiTrendingUp, FiCheckCircle, FiX, FiUsers
 } from 'react-icons/fi'
 import { updateProfile, uploadProfileImage, getCurrentUser, changePassword } from '../../redux/slices/authSlice'
-import { toast } from 'react-toastify'
+import toast from '../../utils/toast'
 
 const TeacherProfile = () => {
   const { user } = useSelector(state => state.auth)
@@ -46,6 +46,10 @@ const TeacherProfile = () => {
       // Error handled in slice
     }
   }
+
+  useEffect(() => {
+    dispatch(getCurrentUser())
+  }, [dispatch])
 
   useEffect(() => {
     if (user) {
@@ -95,12 +99,12 @@ const TeacherProfile = () => {
     
     try {
       const result = await dispatch(uploadProfileImage(formData)).unwrap()
-      toast.success('Profile image updated successfully!')
       
       const imageUrl = result.imageUrl || result.user?.profileImage
       if (imageUrl) {
         setProfileImage(imageUrl)
         setPreviewImage(null)
+        setImageError(false)
         
         const userData = JSON.parse(localStorage.getItem('user') || '{}')
         userData.profileImage = imageUrl
@@ -119,7 +123,6 @@ const TeacherProfile = () => {
     try {
       const result = await dispatch(updateProfile(formData)).unwrap()
       setIsEditing(false)
-      toast.success('Profile updated successfully!')
       
       const userData = JSON.parse(localStorage.getItem('user') || '{}')
       Object.assign(userData, formData)
@@ -161,7 +164,9 @@ const TeacherProfile = () => {
   const getImageUrl = (path) => {
     if (!path) return null;
     if (path.startsWith('http')) return path;
-    return '/' + path.replace(/\\/g, '/').replace(/^\//, '');
+    if (path.startsWith('data:image')) return path;
+    const cleanPath = path.replace(/\\/g, '/').replace(/^\//, '');
+    return `https://online-exam-platform-server-5onvzuva2-try-best.vercel.app/${cleanPath}`;
   }
 
   return (
