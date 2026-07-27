@@ -27,11 +27,11 @@ router.get('/dashboard-stats',
         User.countDocuments({ role: 'teacher' }),
         User.countDocuments({ role: 'student' }),
         Exam.countDocuments(),
-        Exam.countDocuments({ status: 'ongoing' }),
+        Exam.countDocuments({ status: { $in: ['published', 'ongoing'] } }),
         Exam.countDocuments({ status: 'completed' }),
-        Result.countDocuments({ status: 'submitted' }),
-        Result.countDocuments({ status: 'submitted', isPassed: true }),
-        Result.countDocuments({ status: 'submitted', isPassed: false })
+        Result.countDocuments(),
+        Result.countDocuments({ isPassed: true }),
+        Result.countDocuments({ isPassed: false })
       ]);
 
       // Get recent exams
