@@ -132,8 +132,11 @@ export default function ProfileScreen({ navigation }) {
   const initials = user?.name ? user.name.charAt(0).toUpperCase() : 'A';
   const getImageUrl = (path) => {
     if (!path) return null;
-    if (path.startsWith('http')) return path;
     if (path.startsWith('data:image')) return path;
+    if (path.startsWith('http')) {
+      const sep = path.includes('?') ? '&' : '?';
+      return `${path}${sep}t=${imageTimestamp}`;
+    }
     const cleanPath = path.replace(/\\/g, '/').replace(/^\//, '');
     return `https://exam-app-backend-vqos.vercel.app/${cleanPath}?t=${imageTimestamp}`;
   };
