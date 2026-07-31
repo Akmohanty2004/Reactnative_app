@@ -217,12 +217,6 @@ export default function ExamScreen({ route, navigation }) {
     return (
       <View style={[styles.container, styles.centered]}>
         <StatusBar hidden={false} barStyle="light-content" />
-        <TouchableOpacity 
-          style={{ position: 'absolute', top: 50, left: 20, padding: 8, zIndex: 10 }}
-          onPress={() => navigation.goBack()}
-        >
-          <Feather name="arrow-left" size={24} color="white" />
-        </TouchableOpacity>
         <View style={styles.startCard}>
           <Text style={styles.startTitle}>Ready to Start?</Text>
           <Text style={styles.startSubtitle}>

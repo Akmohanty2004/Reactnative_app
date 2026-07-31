@@ -9,7 +9,7 @@ import { getStudentResults } from '../../redux/slices/resultSlice';
 
 const { width } = Dimensions.get('window');
 
-export default function ResultsScreen() {
+export default function ResultsScreen({ navigation }) {
   const dispatch = useDispatch();
   const { results: rawResults } = useSelector(state => state.results);
   
@@ -44,7 +44,7 @@ export default function ResultsScreen() {
     dispatch(getStudentResults());
   }, [dispatch]);
 
-  const allPublishedResults = (rawResults || []).filter(r => r.isPublished || r.status === 'submitted' || r.status === 'published' || r.status === 'checked' || r.percentage !== undefined);
+  const allPublishedResults = rawResults?.filter(r => r.isPublished) || [];
 
   const stats = {
     total: rawResults?.length || 0,
@@ -68,19 +68,19 @@ export default function ResultsScreen() {
     </Svg>
   );
 
-  const chartResults = [...allPublishedResults].sort((a, b) => new Date(a.submittedAt) - new Date(b.submittedAt));
+  const chartResults = [...allPublishedResults].sort((a, b) => new Date(a.submittedAt || a.createdAt) - new Date(b.submittedAt || b.createdAt));
 
   const perfLabels = chartResults.length > 1
     ? chartResults.map(r => (r.examId?.title || 'Exam').substring(0, 5))
     : chartResults.length === 1
-      ? ['Prev', 'Last', 'Now']
-      : ['Prev', 'Last', 'Now'];
+      ? ['Start', (chartResults[0].examId?.title || 'Exam').substring(0, 5)]
+      : ['No Data'];
 
   const perfScores = chartResults.length > 1
     ? chartResults.map(r => r.percentage || 0)
     : chartResults.length === 1
-      ? [0, 0, chartResults[0].percentage || 0]
-      : [0, 0, 0];
+      ? [0, chartResults[0].percentage || 0]
+      : [0];
 
   const chartData = {
     labels: perfLabels,
@@ -110,18 +110,13 @@ export default function ResultsScreen() {
         }
       >
         {/* Custom Header */}
-        <View style={[styles.header, { backgroundColor: 'transparent', borderBottomWidth: 0, paddingHorizontal: 0, paddingBottom: 25 }]}>
-          <View style={{ flex: 1, paddingRight: 10, flexDirection: 'row', alignItems: 'center' }}>
-            <TouchableOpacity 
-              onPress={() => navigation?.canGoBack() ? navigation.goBack() : navigation?.navigate('Dashboard')}
-              style={{ marginRight: 10, padding: 4 }}
-            >
-              <Feather name="arrow-left" size={24} color={colors.text} />
-            </TouchableOpacity>
-            <View>
-              <Text style={[styles.headerTitle, { color: colors.text }]}>My <Text style={{color: '#8b5cf6'}}>Results</Text></Text>
-              <Text style={[styles.headerSubtitle, { color: colors.subText }]} numberOfLines={2}>View all your exam results and performance</Text>
-            </View>
+        <View style={[styles.header, { backgroundColor: 'transparent', borderBottomWidth: 0, paddingHorizontal: 0, paddingBottom: 25, flexDirection: 'row', alignItems: 'center' }]}>
+          <TouchableOpacity onPress={() => navigation.navigate('Home')} style={{ marginRight: 15 }}>
+            <Feather name="arrow-left" size={24} color={colors.text} />
+          </TouchableOpacity>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.headerTitle, { color: colors.text }]}>My <Text style={{color: '#8b5cf6'}}>Results</Text></Text>
+            <Text style={[styles.headerSubtitle, { color: colors.subText }]} numberOfLines={2}>Track your performance and progress</Text>
           </View>
           <TouchableOpacity style={[styles.iconBtn, { borderColor: isDarkMode ? 'rgba(255,255,255,0.1)' : colors.border }]}>
             <Feather name="calendar" size={20} color={colors.text} />
@@ -189,13 +184,14 @@ export default function ResultsScreen() {
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               <LineChart
                 data={chartData}
-                width={Math.max(width - 64, perfLabels.length * 70)}
+                width={Math.max(width - 48, perfLabels.length * 75)}
                 height={200}
                 chartConfig={chartConfig}
                 bezier
                 style={{ marginVertical: 8, borderRadius: 12 }}
                 withInnerLines
                 withOuterLines={false}
+                fromZero={true}
               />
             </ScrollView>
           ) : (
@@ -230,12 +226,8 @@ export default function ResultsScreen() {
           <TouchableOpacity 
             key={result._id} 
             style={[styles.resultCard, { backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc', borderColor: colors.border }]}
-            onPress={() => {
-              if (result.isPublished) {
-                setSelectedResult(result);
-              }
-            }}
-            activeOpacity={result.isPublished ? 0.7 : 1}
+            onPress={() => setSelectedResult(result)}
+            activeOpacity={0.7}
           >
             <View style={styles.resultHeader}>
               <View style={{ flex: 1 }}>
@@ -302,70 +294,118 @@ export default function ResultsScreen() {
       <Modal visible={true} transparent animationType="slide">
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'center', alignItems: 'center' }}>
           <View style={{ width: '90%', height: '80%', backgroundColor: '#1e293b', borderRadius: 16, overflow: 'hidden' }}>
-            <View style={{ padding: 20, backgroundColor: '#0f172a', alignItems: 'center', position: 'relative' }}>
-              <TouchableOpacity onPress={() => setSelectedResult(null)} style={{ position: 'absolute', top: 20, right: 20 }}>
-                <Feather name="x" size={24} color="#64748b" />
-              </TouchableOpacity>
-              <Text style={{ color: 'white', fontSize: 22, fontWeight: 'bold', marginTop: 10 }}>{selectedResult.examId?.title}</Text>
-              <Text style={{ color: '#94a3b8', fontSize: 16, marginTop: 5 }}>Score: {selectedResult.obtainedMarks} / {selectedResult.totalMarks}</Text>
-              <View style={{ flexDirection: 'row', gap: 20, marginTop: 15 }}>
-                <View style={{ alignItems: 'center' }}>
-                  <Text style={{ color: '#10b981', fontSize: 20, fontWeight: 'bold' }}>{selectedResult.correctAnswers}</Text>
-                  <Text style={{ color: '#64748b', fontSize: 12 }}>Correct</Text>
+            {!selectedResult.isPublished ? (
+              <View style={{ flex: 1, padding: 24, justifyContent: 'space-between' }}>
+                <View style={{ alignItems: 'center', marginTop: 20 }}>
+                  <View style={{ width: 76, height: 76, borderRadius: 38, backgroundColor: 'rgba(245,158,11,0.15)', justifyContent: 'center', alignItems: 'center', marginBottom: 16 }}>
+                    <Feather name="clock" size={36} color="#f59e0b" />
+                  </View>
+                  <Text style={{ color: 'white', fontSize: 22, fontWeight: 'bold', textAlign: 'center', marginBottom: 8 }}>
+                    Result Pending Evaluation
+                  </Text>
+                  <Text style={{ color: '#94a3b8', fontSize: 14, textAlign: 'center', lineHeight: 22, paddingHorizontal: 10 }}>
+                    Your exam "{selectedResult.examId?.title || 'Exam'}" was submitted successfully.
+                  </Text>
                 </View>
-                <View style={{ alignItems: 'center' }}>
-                  <Text style={{ color: '#ef4444', fontSize: 20, fontWeight: 'bold' }}>{selectedResult.wrongAnswers}</Text>
-                  <Text style={{ color: '#64748b', fontSize: 12 }}>Wrong</Text>
-                </View>
-                <View style={{ alignItems: 'center' }}>
-                  <Text style={{ color: '#f59e0b', fontSize: 20, fontWeight: 'bold' }}>{selectedResult.unattempted}</Text>
-                  <Text style={{ color: '#64748b', fontSize: 12 }}>Skipped</Text>
-                </View>
-              </View>
-            </View>
-            
-            <ScrollView style={{ flex: 1, padding: 20 }}>
-              <Text style={{ color: 'white', fontSize: 18, fontWeight: '600', marginBottom: 15 }}>Detailed Answers</Text>
-              {selectedResult.answers?.map((ans, idx) => {
-                const questionData = ans.questionId || {};
-                const qText = questionData.question || 'Unknown Question';
-                
-                const getAnswerText = (val) => {
-                  if (val === undefined || val === null || val === '') return null;
-                  const idx = parseInt(val, 10);
-                  if (!isNaN(idx) && questionData.options && questionData.options[idx]) {
-                    return questionData.options[idx].text || String(val);
-                  }
-                  return String(val);
-                };
 
-                const cAnswer = getAnswerText(questionData.correctAnswer) || 'N/A';
-                const sAnswer = getAnswerText(ans.selectedAnswer) || 'Not Attempted';
-                
-                return (
-                  <View key={idx} style={{ marginBottom: 20, padding: 15, backgroundColor: '#0f172a', borderRadius: 12, borderWidth: 1, borderColor: ans.isCorrect ? '#10b981' : (ans.selectedAnswer !== null && ans.selectedAnswer !== undefined ? '#ef4444' : '#f59e0b') }}>
-                    <Text style={{ color: 'white', fontSize: 15, marginBottom: 10 }}>Q{idx + 1}. {qText}</Text>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 5 }}>
-                      <Text style={{ color: '#94a3b8', width: 80 }}>Your Answer:</Text>
-                      <Text style={{ color: ans.isCorrect ? '#10b981' : (ans.selectedAnswer !== null && ans.selectedAnswer !== undefined ? '#ef4444' : '#f59e0b'), flex: 1 }}>{sAnswer}</Text>
+                <View style={{ width: '100%', backgroundColor: '#0f172a', padding: 18, borderRadius: 14, borderWidth: 1, borderColor: '#334155' }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 }}>
+                    <Text style={{ color: '#94a3b8', fontSize: 13 }}>Subject</Text>
+                    <Text style={{ color: 'white', fontSize: 13, fontWeight: '600' }}>{selectedResult.examId?.subject || 'N/A'}</Text>
+                  </View>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 }}>
+                    <Text style={{ color: '#94a3b8', fontSize: 13 }}>Status</Text>
+                    <Text style={{ color: '#f59e0b', fontSize: 13, fontWeight: '700' }}>Under Evaluation</Text>
+                  </View>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 }}>
+                    <Text style={{ color: '#94a3b8', fontSize: 13 }}>Submitted On</Text>
+                    <Text style={{ color: 'white', fontSize: 13, fontWeight: '600' }}>{new Date(selectedResult.submittedAt).toLocaleDateString()}</Text>
+                  </View>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                    <Text style={{ color: '#94a3b8', fontSize: 13 }}>Time Taken</Text>
+                    <Text style={{ color: 'white', fontSize: 13, fontWeight: '600' }}>{selectedResult.timeTaken || 0} minutes</Text>
+                  </View>
+                </View>
+
+                <Text style={{ color: '#64748b', fontSize: 12, textAlign: 'center', lineHeight: 18 }}>
+                  Detailed analysis, score breakdown, and correct answers will be available once your teacher publishes the results.
+                </Text>
+
+                <TouchableOpacity 
+                  style={{ backgroundColor: '#6366f1', padding: 15, borderRadius: 12, alignItems: 'center', marginTop: 10 }}
+                  onPress={() => setSelectedResult(null)}
+                >
+                  <Text style={{ color: 'white', fontSize: 16, fontWeight: 'bold' }}>Close</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <>
+                <View style={{ padding: 20, backgroundColor: '#0f172a', alignItems: 'center', position: 'relative' }}>
+                  <TouchableOpacity onPress={() => setSelectedResult(null)} style={{ position: 'absolute', top: 20, right: 20 }}>
+                    <Feather name="x" size={24} color="#64748b" />
+                  </TouchableOpacity>
+                  <Text style={{ color: 'white', fontSize: 22, fontWeight: 'bold', marginTop: 10 }}>{selectedResult.examId?.title}</Text>
+                  <Text style={{ color: '#94a3b8', fontSize: 16, marginTop: 5 }}>Score: {selectedResult.obtainedMarks} / {selectedResult.totalMarks}</Text>
+                  <View style={{ flexDirection: 'row', gap: 20, marginTop: 15 }}>
+                    <View style={{ alignItems: 'center' }}>
+                      <Text style={{ color: '#10b981', fontSize: 20, fontWeight: 'bold' }}>{selectedResult.correctAnswers}</Text>
+                      <Text style={{ color: '#64748b', fontSize: 12 }}>Correct</Text>
                     </View>
-                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                      <Text style={{ color: '#94a3b8', width: 80 }}>Correct:</Text>
-                      <Text style={{ color: '#10b981', flex: 1 }}>{cAnswer}</Text>
+                    <View style={{ alignItems: 'center' }}>
+                      <Text style={{ color: '#ef4444', fontSize: 20, fontWeight: 'bold' }}>{selectedResult.wrongAnswers}</Text>
+                      <Text style={{ color: '#64748b', fontSize: 12 }}>Wrong</Text>
+                    </View>
+                    <View style={{ alignItems: 'center' }}>
+                      <Text style={{ color: '#f59e0b', fontSize: 20, fontWeight: 'bold' }}>{selectedResult.unattempted}</Text>
+                      <Text style={{ color: '#64748b', fontSize: 12 }}>Skipped</Text>
                     </View>
                   </View>
-                );
-              })}
-            </ScrollView>
-            
-            <View style={{ padding: 20, borderTopWidth: 1, borderColor: '#334155' }}>
-              <TouchableOpacity 
-                style={{ backgroundColor: '#6366f1', padding: 15, borderRadius: 10, alignItems: 'center' }}
-                onPress={() => setSelectedResult(null)}
-              >
-                <Text style={{ color: 'white', fontSize: 16, fontWeight: 'bold' }}>Close</Text>
-              </TouchableOpacity>
-            </View>
+                </View>
+                
+                <ScrollView style={{ flex: 1, padding: 20 }}>
+                  <Text style={{ color: 'white', fontSize: 18, fontWeight: '600', marginBottom: 15 }}>Detailed Answers</Text>
+                  {selectedResult.answers?.map((ans, idx) => {
+                    const questionData = ans.questionId || {};
+                    const qText = questionData.question || 'Unknown Question';
+                    
+                    const getAnswerText = (val) => {
+                      if (val === undefined || val === null || val === '') return null;
+                      const idx = parseInt(val, 10);
+                      if (!isNaN(idx) && questionData.options && questionData.options[idx]) {
+                        return questionData.options[idx].text || String(val);
+                      }
+                      return String(val);
+                    };
+
+                    const cAnswer = getAnswerText(questionData.correctAnswer) || 'N/A';
+                    const sAnswer = getAnswerText(ans.selectedAnswer) || 'Not Attempted';
+                    
+                    return (
+                      <View key={idx} style={{ marginBottom: 20, padding: 15, backgroundColor: '#0f172a', borderRadius: 12, borderWidth: 1, borderColor: ans.isCorrect ? '#10b981' : (ans.selectedAnswer !== null && ans.selectedAnswer !== undefined ? '#ef4444' : '#f59e0b') }}>
+                        <Text style={{ color: 'white', fontSize: 15, marginBottom: 10 }}>Q{idx + 1}. {qText}</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 5 }}>
+                          <Text style={{ color: '#94a3b8', width: 80 }}>Your Answer:</Text>
+                          <Text style={{ color: ans.isCorrect ? '#10b981' : (ans.selectedAnswer !== null && ans.selectedAnswer !== undefined ? '#ef4444' : '#f59e0b'), flex: 1 }}>{sAnswer}</Text>
+                        </View>
+                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                          <Text style={{ color: '#94a3b8', width: 80 }}>Correct:</Text>
+                          <Text style={{ color: '#10b981', flex: 1 }}>{cAnswer}</Text>
+                        </View>
+                      </View>
+                    );
+                  })}
+                </ScrollView>
+                
+                <View style={{ padding: 20, borderTopWidth: 1, borderColor: '#334155' }}>
+                  <TouchableOpacity 
+                    style={{ backgroundColor: '#6366f1', padding: 15, borderRadius: 10, alignItems: 'center' }}
+                    onPress={() => setSelectedResult(null)}
+                  >
+                    <Text style={{ color: 'white', fontSize: 16, fontWeight: 'bold' }}>Close</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
           </View>
         </View>
       </Modal>

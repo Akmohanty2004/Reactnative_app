@@ -174,7 +174,7 @@ export default function ReportsScreen({ navigation }) {
       const csv = header + rows;
       
       const fileUri = FileSystem.documentDirectory + 'Exam_Report.csv';
-      await FileSystem.writeAsStringAsync(fileUri, csv, { encoding: FileSystem.EncodingType?.UTF8 || 'utf8' });
+      await FileSystem.writeAsStringAsync(fileUri, csv, { encoding: FileSystem.EncodingType.UTF8 });
       
       if (await Sharing.isAvailableAsync()) {
         await Sharing.shareAsync(fileUri, {
@@ -194,14 +194,11 @@ export default function ReportsScreen({ navigation }) {
   return (
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { flexDirection: 'row', alignItems: 'center' }]}>
+        <TouchableOpacity onPress={() => navigation.navigate('Home')} style={{ marginRight: 15 }}>
+          <Feather name="arrow-left" size={24} color={colors.text} />
+        </TouchableOpacity>
         <View style={styles.headerLeft}>
-          <TouchableOpacity 
-            onPress={() => navigation?.canGoBack() ? navigation.goBack() : navigation?.navigate('Dashboard')}
-            style={{ marginRight: 10, padding: 4 }}
-          >
-            <Feather name="arrow-left" size={24} color={colors.text} />
-          </TouchableOpacity>
           <View>
             <Text style={[styles.headerTitle, { color: colors.text }]}>Reports</Text>
             <View style={styles.breadcrumb}>
@@ -587,8 +584,8 @@ const getStyles = (colors) => ({
   statusText: { fontSize: 11, fontWeight: '600' },
 
   downloadBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.border, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6 },
-  tableHeader: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#334155', paddingBottom: 10, marginBottom: 10 },
+  tableHeader: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: colors.border, paddingBottom: 10, marginBottom: 10 },
   th: { color: colors.subText, fontSize: 12, fontWeight: '500' },
-  tableRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#334155' },
+  tableRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.border },
   td: { color: colors.subText, fontSize: 12 },
 });

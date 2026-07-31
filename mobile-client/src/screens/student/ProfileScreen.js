@@ -151,12 +151,16 @@ export default function ProfileScreen() {
   };
 
   const handlePasswordSubmit = async () => {
+    if (!passwordData.oldPassword || !passwordData.newPassword) {
+      return Toast.show({ type: 'error', text1: 'Error', text2: 'Please enter old and new password' });
+    }
     if (passwordData.newPassword !== passwordData.confirmPassword) {
       return Toast.show({ type: 'error', text1: 'Error', text2: 'New passwords do not match' });
     }
     setIsSaving(true);
     try {
       await dispatch(changePassword({ 
+        currentPassword: passwordData.oldPassword,
         oldPassword: passwordData.oldPassword, 
         newPassword: passwordData.newPassword 
       })).unwrap();
@@ -173,7 +177,7 @@ export default function ProfileScreen() {
   const handlePickImage = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ['images'],
         allowsEditing: false,
         quality: 0.5,
       });
@@ -212,18 +216,13 @@ export default function ProfileScreen() {
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
       <ScrollView contentContainerStyle={styles.content}>
         {/* Custom Header */}
-        <View style={[styles.header, { backgroundColor: 'transparent', borderBottomWidth: 0, paddingHorizontal: 0, paddingBottom: 25 }]}>
-          <View style={{ flex: 1, paddingRight: 10, flexDirection: 'row', alignItems: 'center' }}>
-            <TouchableOpacity 
-              onPress={() => navigation?.canGoBack() ? navigation.goBack() : navigation?.navigate('Dashboard')}
-              style={{ marginRight: 10, padding: 4 }}
-            >
-              <Feather name="arrow-left" size={24} color={colors.text} />
-            </TouchableOpacity>
-            <View>
-              <Text style={[styles.headerTitle, { color: colors.text }]}>My <Text style={{color: '#8b5cf6'}}>Profile</Text></Text>
-              <Text style={[styles.headerSubtitle, { color: colors.subText }]} numberOfLines={2}>Manage your account and track your performance</Text>
-            </View>
+        <View style={[styles.header, { backgroundColor: 'transparent', borderBottomWidth: 0, paddingHorizontal: 0, paddingBottom: 25, flexDirection: 'row', alignItems: 'center' }]}>
+          <TouchableOpacity onPress={() => navigation.navigate('Home')} style={{ marginRight: 15 }}>
+            <Feather name="arrow-left" size={24} color={colors.text} />
+          </TouchableOpacity>
+          <View style={{ flex: 1, paddingRight: 10 }}>
+            <Text style={[styles.headerTitle, { color: colors.text }]}>My <Text style={{color: '#8b5cf6'}}>Profile</Text></Text>
+            <Text style={[styles.headerSubtitle, { color: colors.subText }]} numberOfLines={2}>Manage your account and track your performance</Text>
           </View>
           <View style={styles.headerIcons}>
             <TouchableOpacity style={[styles.iconBtn, { borderColor: isDarkMode ? 'rgba(255,255,255,0.1)' : colors.border }]} onPress={() => navigation.navigate('Notifications')}>
@@ -545,6 +544,19 @@ export default function ProfileScreen() {
                 </TouchableOpacity>
 
                 <TouchableOpacity 
+                  style={[styles.settingsRow, { borderBottomColor: colors.border }]}
+                  onPress={() => { setIsSettingsVisible(false); setPrivacyModalVisible(true); }}
+                >
+                  <View style={styles.settingsRowLeft}>
+                    <View style={[styles.settingsIconWrapper, { backgroundColor: 'rgba(245,158,11,0.1)' }]}>
+                      <Feather name="shield" size={20} color="#f59e0b" />
+                    </View>
+                    <Text style={[styles.settingsRowText, { color: colors.text }]}>Manage Account Security</Text>
+                  </View>
+                  <Feather name="chevron-right" size={20} color={colors.subText} />
+                </TouchableOpacity>
+
+                <TouchableOpacity 
                   style={[styles.settingsRow, { borderBottomWidth: 0 }]}
                   onPress={() => { setIsSettingsVisible(false); setPrivacyModalVisible(true); }}
                 >
@@ -586,12 +598,48 @@ export default function ProfileScreen() {
           </View>
           <ScrollView style={styles.fsModalScroll}>
             <View style={[styles.fsRulesBox, { padding: 20 }]}>
+              <Feather name="info" size={32} color="#3b82f6" style={{ marginBottom: 15 }} />
+              <Text style={{ color: 'white', fontSize: 18, fontWeight: '700', marginBottom: 10 }}>About ExamHub</Text>
+              <Text style={{ color: '#cbd5e1', fontSize: 14, lineHeight: 22, marginBottom: 10 }}>
+                ExamHub is a modern, secure, and comprehensive online assessment platform designed to connect educators and students seamlessly. With real-time testing, automated grading, anti-cheat monitoring, and instant result analytics, ExamHub empowers educational institutions to conduct reliable examinations anytime, anywhere.
+              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(59, 130, 246, 0.1)', padding: 12, borderRadius: 8, marginTop: 10 }}>
+                <Feather name="award" size={18} color="#3b82f6" style={{ marginRight: 10 }} />
+                <Text style={{ color: '#3b82f6', fontWeight: 'bold' }}>Version 2.4.0 • Built for Excellence</Text>
+              </View>
+            </View>
+
+            <View style={[styles.fsRulesBox, { padding: 20 }]}>
+              <Feather name="shield" size={32} color="#10b981" style={{ marginBottom: 15 }} />
+              <Text style={{ color: 'white', fontSize: 18, fontWeight: '700', marginBottom: 10 }}>Security & Protection</Text>
+              <Text style={{ color: '#cbd5e1', fontSize: 14, lineHeight: 22, marginBottom: 10 }}>
+                ExamHub implements advanced multi-layered security protocols to safeguard examination integrity and user data. Features include automated full-screen anti-cheat monitoring, secure JWT token authentication, encrypted password storage, and strict session management.
+              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(16, 185, 129, 0.1)', padding: 12, borderRadius: 8, marginTop: 10 }}>
+                <Feather name="lock" size={18} color="#10b981" style={{ marginRight: 10 }} />
+                <Text style={{ color: '#10b981', fontWeight: 'bold' }}>256-bit Encryption • Anti-Cheat Active</Text>
+              </View>
+            </View>
+
+            <View style={[styles.fsRulesBox, { padding: 20 }]}>
+              <Feather name="key" size={32} color="#f59e0b" style={{ marginBottom: 15 }} />
+              <Text style={{ color: 'white', fontSize: 18, fontWeight: '700', marginBottom: 10 }}>Account Security & Access</Text>
+              <Text style={{ color: '#cbd5e1', fontSize: 14, lineHeight: 22, marginBottom: 10 }}>
+                Manage your account security settings. Your account is protected with automatic session timeouts, bcrypt password hashing, and active device monitoring. Never share your OTP or password with anyone.
+              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(245, 158, 11, 0.1)', padding: 12, borderRadius: 8, marginTop: 10 }}>
+                <Feather name="check-circle" size={18} color="#f59e0b" style={{ marginRight: 10 }} />
+                <Text style={{ color: '#f59e0b', fontWeight: 'bold' }}>Account Protected • 2FA Ready</Text>
+              </View>
+            </View>
+
+            <View style={[styles.fsRulesBox, { padding: 20 }]}>
               <Feather name="headphones" size={32} color="#a855f7" style={{ marginBottom: 15 }} />
               <Text style={{ color: 'white', fontSize: 18, fontWeight: '700', marginBottom: 10 }}>Need Support?</Text>
               <Text style={{ color: '#cbd5e1', fontSize: 14, lineHeight: 22, marginBottom: 10 }}>If you are experiencing any issues with your account or have questions about the platform, please contact our administrative team.</Text>
               <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(139, 92, 246, 0.1)', padding: 12, borderRadius: 8, marginTop: 10 }}>
                 <Feather name="mail" size={18} color="#a855f7" style={{ marginRight: 10 }} />
-                <Text style={{ color: '#a855f7', fontWeight: 'bold' }}>admin@examhub.com</Text>
+                <Text style={{ color: '#a855f7', fontWeight: 'bold' }}>testsbuddy@gmail.com</Text>
               </View>
             </View>
 
@@ -730,53 +778,97 @@ export default function ProfileScreen() {
 
       {/* Class Change Modal */}
       <Modal visible={showClassModal} transparent animationType="slide">
-        <View style={styles.fsModalOverlay}>
-          <View style={styles.fsModalHeader}>
+        <View style={[styles.fsModalOverlay, { backgroundColor: colors.bg }]}>
+          <View style={[styles.fsModalHeader, { borderBottomWidth: 1, borderBottomColor: colors.border }]}>
             <TouchableOpacity onPress={() => setShowClassModal(false)} style={styles.fsHeaderBtn}>
-              <Feather name="chevron-left" size={24} color="white" />
+              <Feather name="chevron-left" size={24} color={colors.text} />
             </TouchableOpacity>
-            <Text style={styles.fsModalTitle}>Change Class</Text>
-            <View style={{ width: 40 }} />
+            <Text style={[styles.fsModalTitle, { color: colors.text }]}>Change Class</Text>
+            <TouchableOpacity onPress={() => setShowClassModal(false)} style={styles.fsHeaderBtn}>
+              <Feather name="x" size={22} color={colors.text} />
+            </TouchableOpacity>
           </View>
-          <ScrollView style={[styles.fsModalContent, { backgroundColor: colors.modalBg }]}>
-            <View style={styles.fsFormGroup}>
-              <Text style={styles.fsLabel}>Select a new class</Text>
-              <Text style={{color: '#64748b', marginBottom: 20, fontSize: 13}}>Note: Your request will require teacher verification before taking effect.</Text>
-              <View style={{ gap: 12 }}>
-                {availableClasses.length === 0 ? (
-                  <Text style={{color: '#64748b', textAlign: 'center', marginTop: 20}}>No classes available.</Text>
-                ) : (
-                  availableClasses.map(c => (
+
+          <ScrollView style={styles.fsModalScroll} showsVerticalScrollIndicator={false}>
+            {/* Teacher Verification Banner */}
+            <View style={[styles.classInfoBanner, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <View style={styles.classBannerIconBox}>
+                <Feather name="shield" size={24} color="#8b5cf6" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.classBannerTitle, { color: colors.text }]}>Teacher Verification</Text>
+                <Text style={[styles.classBannerSub, { color: colors.subText }]}>
+                  Your request to join a new class group will require approval from your teacher before taking effect.
+                </Text>
+              </View>
+            </View>
+
+            <Text style={[styles.classSectionTitle, { color: colors.text }]}>Available Class Groups</Text>
+
+            <View style={{ gap: 14 }}>
+              {availableClasses.length === 0 ? (
+                <View style={[styles.noClassesBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                  <Feather name="inbox" size={36} color={colors.subText} style={{ marginBottom: 10 }} />
+                  <Text style={{ color: colors.text, fontSize: 16, fontWeight: '600' }}>No classes available</Text>
+                  <Text style={{ color: colors.subText, fontSize: 13, textAlign: 'center', marginTop: 4 }}>
+                    There are no other class groups to join right now.
+                  </Text>
+                </View>
+              ) : (
+                availableClasses.map(c => {
+                  const isCurrent = user?.classGroup === c.name;
+                  return (
                     <TouchableOpacity
                       key={c._id}
-                      style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        padding: 18,
-                        borderWidth: 1,
-                        borderColor: colors.border,
-                        borderRadius: 16,
-                        backgroundColor: colors.inputBg,
-                        ...(user?.classGroup === c.name && { borderColor: '#8b5cf6', backgroundColor: 'rgba(139, 92, 246, 0.1)' })
-                      }}
+                      style={[
+                        styles.classCardItem,
+                        {
+                          backgroundColor: isCurrent 
+                            ? (isDarkMode ? 'rgba(139, 92, 246, 0.12)' : 'rgba(139, 92, 246, 0.08)')
+                            : colors.card,
+                          borderColor: isCurrent ? '#8b5cf6' : colors.border
+                        }
+                      ]}
                       onPress={() => handleClassRequest(c.name)}
-                      disabled={isRequesting || user?.classGroup === c.name}
+                      disabled={isRequesting || isCurrent}
                     >
-                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                        <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(139, 92, 246, 0.15)', justifyContent: 'center', alignItems: 'center', marginRight: 15 }}>
-                          <Feather name="users" size={20} color="#8b5cf6" />
+                      <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                        <View style={[
+                          styles.classCardIconBox, 
+                          {
+                            backgroundColor: isCurrent ? 'rgba(139, 92, 246, 0.2)' : (isDarkMode ? '#0f172a' : '#f8fafc'),
+                            borderColor: isCurrent ? '#8b5cf6' : colors.border
+                          }
+                        ]}>
+                          <Feather name="users" size={20} color={isCurrent ? '#8b5cf6' : colors.subText} />
                         </View>
-                        <View>
-                          <Text style={{ color: colors.text, fontSize: 16, fontWeight: '600' }}>{c.name}</Text>
-                          {user?.classGroup === c.name && <Text style={{ color: '#8b5cf6', fontSize: 12, marginTop: 2 }}>Current Class</Text>}
+                        <View style={{ flex: 1, marginRight: 10 }}>
+                          <Text style={[styles.classCardName, { color: colors.text }]}>{c.name}</Text>
+                          {isCurrent ? (
+                            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+                              <Feather name="check-circle" size={12} color="#8b5cf6" />
+                              <Text style={{ color: '#8b5cf6', fontSize: 12, fontWeight: '600', marginLeft: 5 }}>Current Class</Text>
+                            </View>
+                          ) : (
+                            <Text style={{ color: colors.subText, fontSize: 12, marginTop: 4 }}>Tap to request transfer</Text>
+                          )}
                         </View>
                       </View>
-                      <Feather name="chevron-right" size={20} color={colors.subText} />
+
+                      {isCurrent ? (
+                        <View style={styles.activeBadge}>
+                          <Text style={styles.activeBadgeText}>Active</Text>
+                        </View>
+                      ) : (
+                        <View style={styles.selectBadge}>
+                          <Text style={styles.selectBadgeText}>Select</Text>
+                          <Feather name="arrow-right" size={14} color="#6366f1" style={{ marginLeft: 4 }} />
+                        </View>
+                      )}
                     </TouchableOpacity>
-                  ))
-                )}
-              </View>
+                  );
+                })
+              )}
             </View>
           </ScrollView>
         </View>
@@ -784,14 +876,14 @@ export default function ProfileScreen() {
 
       {/* Change Password Modal */}
       <Modal visible={showPasswordModal} transparent animationType="slide">
-        <View style={styles.fsModalOverlay}>
+        <View style={[styles.fsModalOverlay, { backgroundColor: colors.bg }]}>
           <View style={styles.fsModalHeader}>
             <TouchableOpacity onPress={() => setShowPasswordModal(false)} style={styles.fsHeaderBtn}>
-              <Feather name="chevron-left" size={24} color="white" />
+              <Feather name="chevron-left" size={24} color={colors.text} />
             </TouchableOpacity>
-            <Text style={styles.fsModalTitle}>Change Password</Text>
+            <Text style={[styles.fsModalTitle, { color: colors.text }]}>Change Password</Text>
             <TouchableOpacity onPress={() => setShowPasswordModal(false)} style={styles.fsHeaderBtn}>
-              <Feather name="x" size={24} color="white" />
+              <Feather name="x" size={24} color={colors.text} />
             </TouchableOpacity>
           </View>
 
@@ -805,28 +897,28 @@ export default function ProfileScreen() {
                   <Feather name="check" size={14} color="white" />
                 </View>
               </View>
-              <Text style={styles.fsShieldTitle}>Keep your account secure</Text>
-              <Text style={styles.fsShieldSub}>Choose a strong password to protect your account</Text>
+              <Text style={[styles.fsShieldTitle, { color: colors.text }]}>Keep your account secure</Text>
+              <Text style={[styles.fsShieldSub, { color: colors.subText }]}>Choose a strong password to protect your account</Text>
             </View>
 
             <View style={styles.fsFormGroup}>
-              <Text style={styles.fsLabel}>Old Password</Text>
-              <View style={styles.fsInputContainer}>
+              <Text style={[styles.fsLabel, { color: colors.subText }]}>Old Password</Text>
+              <View style={[styles.fsInputContainer, { backgroundColor: colors.inputBg, borderColor: colors.border }]}>
                 <Feather name="lock" size={18} color="#a78bfa" style={styles.fsInputIcon} />
-                <TextInput style={styles.fsInput} value={passwordData.oldPassword} onChangeText={(val) => setPasswordData({...passwordData, oldPassword: val})} secureTextEntry={!showOldPassword} placeholder="Enter your old password" placeholderTextColor="#475569" />
+                <TextInput style={[styles.fsInput, { color: colors.text }]} value={passwordData.oldPassword} onChangeText={(val) => setPasswordData({...passwordData, oldPassword: val})} secureTextEntry={!showOldPassword} placeholder="Enter your old password" placeholderTextColor={colors.subText} />
                 <TouchableOpacity onPress={() => setShowOldPassword(!showOldPassword)}>
-                  <Feather name={showOldPassword ? 'eye-off' : 'eye'} size={18} color="#64748b" style={styles.fsInputRightIcon} />
+                  <Feather name={showOldPassword ? 'eye-off' : 'eye'} size={18} color={colors.subText} style={styles.fsInputRightIcon} />
                 </TouchableOpacity>
               </View>
             </View>
 
             <View style={styles.fsFormGroup}>
-              <Text style={styles.fsLabel}>New Password</Text>
-              <View style={styles.fsInputContainer}>
+              <Text style={[styles.fsLabel, { color: colors.subText }]}>New Password</Text>
+              <View style={[styles.fsInputContainer, { backgroundColor: colors.inputBg, borderColor: colors.border }]}>
                 <Feather name="lock" size={18} color="#a78bfa" style={styles.fsInputIcon} />
-                <TextInput style={styles.fsInput} value={passwordData.newPassword} onChangeText={(val) => setPasswordData({...passwordData, newPassword: val})} secureTextEntry={!showNewPassword} placeholder="Enter new password" placeholderTextColor="#475569" />
+                <TextInput style={[styles.fsInput, { color: colors.text }]} value={passwordData.newPassword} onChangeText={(val) => setPasswordData({...passwordData, newPassword: val})} secureTextEntry={!showNewPassword} placeholder="Enter new password" placeholderTextColor={colors.subText} />
                 <TouchableOpacity onPress={() => setShowNewPassword(!showNewPassword)}>
-                  <Feather name={showNewPassword ? 'eye-off' : 'eye'} size={18} color="#64748b" style={styles.fsInputRightIcon} />
+                  <Feather name={showNewPassword ? 'eye-off' : 'eye'} size={18} color={colors.subText} style={styles.fsInputRightIcon} />
                 </TouchableOpacity>
               </View>
               {passwordData.newPassword.length > 0 && (
@@ -843,29 +935,29 @@ export default function ProfileScreen() {
             </View>
 
             <View style={styles.fsFormGroup}>
-              <Text style={styles.fsLabel}>Confirm New Password</Text>
-              <View style={styles.fsInputContainer}>
+              <Text style={[styles.fsLabel, { color: colors.subText }]}>Confirm New Password</Text>
+              <View style={[styles.fsInputContainer, { backgroundColor: colors.inputBg, borderColor: colors.border }]}>
                 <Feather name="lock" size={18} color="#a78bfa" style={styles.fsInputIcon} />
-                <TextInput style={styles.fsInput} value={passwordData.confirmPassword} onChangeText={(val) => setPasswordData({...passwordData, confirmPassword: val})} secureTextEntry={!showConfirmPassword} placeholder="Confirm new password" placeholderTextColor="#475569" />
+                <TextInput style={[styles.fsInput, { color: colors.text }]} value={passwordData.confirmPassword} onChangeText={(val) => setPasswordData({...passwordData, confirmPassword: val})} secureTextEntry={!showConfirmPassword} placeholder="Confirm new password" placeholderTextColor={colors.subText} />
                 <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)}>
-                  <Feather name={showConfirmPassword ? 'eye-off' : 'eye'} size={18} color="#64748b" style={styles.fsInputRightIcon} />
+                  <Feather name={showConfirmPassword ? 'eye-off' : 'eye'} size={18} color={colors.subText} style={styles.fsInputRightIcon} />
                 </TouchableOpacity>
               </View>
             </View>
 
-            <View style={styles.fsRulesBox}>
-              <Text style={styles.fsRulesTitle}>Password must contain:</Text>
+            <View style={[styles.fsRulesBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <Text style={[styles.fsRulesTitle, { color: colors.text }]}>Password must contain:</Text>
               <View style={styles.fsRuleRow}>
                 <Feather name="check-circle" size={16} color={hasMinLength ? '#8b5cf6' : '#334155'} />
-                <Text style={[styles.fsRuleText, { color: hasMinLength ? '#cbd5e1' : '#64748b' }]}>At least 8 characters</Text>
+                <Text style={[styles.fsRuleText, { color: hasMinLength ? colors.text : colors.subText }]}>At least 8 characters</Text>
               </View>
               <View style={styles.fsRuleRow}>
                 <Feather name="check-circle" size={16} color={hasUpper ? '#8b5cf6' : '#334155'} />
-                <Text style={[styles.fsRuleText, { color: hasUpper ? '#cbd5e1' : '#64748b' }]}>One uppercase letter</Text>
+                <Text style={[styles.fsRuleText, { color: hasUpper ? colors.text : colors.subText }]}>One uppercase letter</Text>
               </View>
               <View style={styles.fsRuleRow}>
                 <Feather name="check-circle" size={16} color={hasNumberOrSpecial ? '#8b5cf6' : '#334155'} />
-                <Text style={[styles.fsRuleText, { color: hasNumberOrSpecial ? '#cbd5e1' : '#64748b' }]}>One number or special character</Text>
+                <Text style={[styles.fsRuleText, { color: hasNumberOrSpecial ? colors.text : colors.subText }]}>One number or special character</Text>
               </View>
             </View>
 
@@ -1006,5 +1098,19 @@ const styles = StyleSheet.create({
   settingsRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 15, borderBottomWidth: 1 },
   settingsRowLeft: { flexDirection: 'row', alignItems: 'center' },
   settingsIconWrapper: { width: 36, height: 36, borderRadius: 10, justifyContent: 'center', alignItems: 'center', marginRight: 15 },
-  settingsRowText: { fontSize: 16, fontWeight: '500' }
+  settingsRowText: { fontSize: 16, fontWeight: '500' },
+
+  classInfoBanner: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: 18, padding: 16, marginBottom: 24 },
+  classBannerIconBox: { width: 44, height: 44, borderRadius: 14, backgroundColor: 'rgba(139,92,246,0.15)', justifyContent: 'center', alignItems: 'center', marginRight: 14 },
+  classBannerTitle: { fontSize: 15, fontWeight: '700', marginBottom: 4 },
+  classBannerSub: { fontSize: 12, lineHeight: 18 },
+  classSectionTitle: { fontSize: 16, fontWeight: '700', marginBottom: 14 },
+  noClassesBox: { padding: 30, borderRadius: 18, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  classCardItem: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderWidth: 1, borderRadius: 18, marginBottom: 12 },
+  classCardIconBox: { width: 42, height: 42, borderRadius: 14, borderWidth: 1, justifyContent: 'center', alignItems: 'center', marginRight: 14 },
+  classCardName: { fontSize: 16, fontWeight: '700' },
+  activeBadge: { backgroundColor: 'rgba(139, 92, 246, 0.15)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
+  activeBadgeText: { color: '#8b5cf6', fontSize: 12, fontWeight: '700' },
+  selectBadge: { backgroundColor: 'rgba(99, 102, 241, 0.15)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, flexDirection: 'row', alignItems: 'center' },
+  selectBadgeText: { color: '#6366f1', fontSize: 12, fontWeight: '700' }
 });

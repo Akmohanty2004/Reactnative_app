@@ -132,7 +132,8 @@ export default function ExamDetailsScreen({ route, navigation }) {
             <View key={r._id} style={styles.studentRow}>
               <View>
                 <Text style={styles.studentName}>{r.studentId?.name || 'Unknown'}</Text>
-                <Text style={styles.studentEmail}>Switched Tabs / Left Window</Text>
+                <Text style={styles.studentEmail}>{r.studentId?.email || '—'}</Text>
+                <Text style={[styles.studentEmail, { color: '#f59e0b', fontSize: 11, marginTop: 2 }]}>Switched Tabs / Left Window</Text>
               </View>
               <Text style={[styles.studentScore, { color: '#f59e0b' }]}>{r.tabSwitches} times</Text>
             </View>

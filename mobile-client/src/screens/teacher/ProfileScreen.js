@@ -27,6 +27,38 @@ export default function ProfileScreen() {
   const [imageTimestamp, setImageTimestamp] = useState(Date.now());
   const [notificationData, setNotificationData] = useState({ email: '', title: '', message: '' });
   const [isSendingNotif, setIsSendingNotif] = useState(false);
+  const [availableClasses, setAvailableClasses] = useState([]);
+
+  useEffect(() => {
+    const fetchClasses = async () => {
+      try {
+        const { default: api } = await import('../../services/api');
+        const res = await api.get('/api/classes');
+        setAvailableClasses(res.data.classes || []);
+      } catch (err) {}
+    };
+    fetchClasses();
+  }, []);
+
+  const classGroupsList = React.useMemo(() => {
+    const set = new Set(['General']);
+    if (availableClasses && availableClasses.length > 0) {
+      availableClasses.forEach(c => {
+        if (c.name) set.add(c.name);
+      });
+    }
+    if (exams && exams.length > 0) {
+      exams.forEach(ex => {
+        if (ex.classGroup) {
+          ex.classGroup.split(',').forEach(g => {
+            const trimmed = g.trim();
+            if (trimmed) set.add(trimmed);
+          });
+        }
+      });
+    }
+    return Array.from(set);
+  }, [availableClasses, exams]);
   
   const [formData, setFormData] = useState({
     name: '', phone: '', department: '', address: '', college: '', age: '', gender: ''
@@ -103,11 +135,15 @@ export default function ProfileScreen() {
   };
 
   const handlePasswordSubmit = async () => {
+    if (!passwordData.oldPassword || !passwordData.newPassword) {
+      return Toast.show({ type: 'error', text1: 'Error', text2: 'Please enter old and new password' });
+    }
     if (passwordData.newPassword !== passwordData.confirmPassword) {
       return Toast.show({ type: 'error', text1: 'Error', text2: 'New passwords do not match' });
     }
     try {
       await dispatch(changePassword({ 
+        currentPassword: passwordData.oldPassword,
         oldPassword: passwordData.oldPassword, 
         newPassword: passwordData.newPassword 
       })).unwrap();
@@ -126,7 +162,7 @@ export default function ProfileScreen() {
 
   const pickImage = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.5,
@@ -174,30 +210,31 @@ export default function ProfileScreen() {
     iconColor: isDarkMode ? 'white' : '#334155',
     modalBg: isDarkMode ? '#1e293b' : 'white',
     inputBg: isDarkMode ? '#0f172a' : '#f1f5f9',
+    modalOverlay: isDarkMode ? '#0B0E14' : '#f8fafc',
+    modalCard: isDarkMode ? '#131823' : '#ffffff',
+    modalBorder: isDarkMode ? '#1e293b' : '#e2e8f0',
+    modalInputBg: isDarkMode ? '#131823' : '#f1f5f9',
+    modalText: isDarkMode ? 'white' : '#0f172a',
+    modalSubText: isDarkMode ? '#cbd5e1' : '#475569',
   };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
       {/* Custom Header */}
-      <View style={[styles.header, { backgroundColor: 'transparent', borderBottomWidth: 0 }]}>
-        <View style={[styles.headerLeft, { flexDirection: 'row', alignItems: 'center' }]}>
-          <TouchableOpacity 
-            onPress={() => navigation?.canGoBack() ? navigation.goBack() : navigation?.navigate('Dashboard')}
-            style={{ marginRight: 10, padding: 4 }}
-          >
+        <View style={[styles.header, { backgroundColor: 'transparent', borderBottomWidth: 0, paddingHorizontal: 0, paddingBottom: 25, flexDirection: 'row', alignItems: 'center' }]}>
+          <TouchableOpacity onPress={() => navigation.navigate('Home')} style={{ marginRight: 18, padding: 4 }}>
             <Feather name="arrow-left" size={24} color={colors.text} />
           </TouchableOpacity>
-          <View>
+          <View style={{ flex: 1, paddingRight: 10 }}>
             <Text style={[styles.headerTitle, { color: colors.text }]}>My <Text style={{color: '#8b5cf6'}}>Profile</Text></Text>
-            <Text style={[styles.headerSubtitle, { color: colors.subText }]}>Manage your account and preferences</Text>
+            <Text style={[styles.headerSubtitle, { color: colors.subText }]} numberOfLines={2}>Manage your teacher account and details</Text>
           </View>
-        </View>
         <View style={[styles.headerRight, { flexDirection: 'row' }]}>
-          <TouchableOpacity style={[styles.iconBtn, { width: 42, height: 42, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginLeft: 10, borderWidth: 1, borderColor: isDarkMode ? 'rgba(255,255,255,0.1)' : colors.border, backgroundColor: 'transparent' }]} onPress={() => navigation.navigate('Notifications')}>
+          <TouchableOpacity style={[styles.iconBtn, { width: 42, height: 42, borderRadius: 21, justifyContent: 'center', alignItems: 'center', marginLeft: 10, borderWidth: 1, borderColor: isDarkMode ? 'rgba(255,255,255,0.1)' : colors.border, backgroundColor: 'rgba(139, 92, 246, 0.1)' }]} onPress={() => navigation.navigate('Notifications')}>
             <Feather name="bell" size={20} color={colors.text} />
             {unreadCount > 0 && <View style={styles.badgeDot} />}
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.iconBtn, { width: 42, height: 42, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginLeft: 10, borderWidth: 1, borderColor: isDarkMode ? 'rgba(255,255,255,0.1)' : colors.border, backgroundColor: 'transparent' }]} onPress={() => setSettingsModalVisible(true)}>
+          <TouchableOpacity style={[styles.iconBtn, { width: 42, height: 42, borderRadius: 21, justifyContent: 'center', alignItems: 'center', marginLeft: 10, borderWidth: 1, borderColor: isDarkMode ? 'rgba(255,255,255,0.1)' : colors.border, backgroundColor: 'rgba(139, 92, 246, 0.1)' }]} onPress={() => setSettingsModalVisible(true)}>
             <Feather name="settings" size={20} color={colors.text} />
           </TouchableOpacity>
         </View>
@@ -207,8 +244,8 @@ export default function ProfileScreen() {
 
         {/* Profile Card */}
         <View style={[styles.profileCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <View style={styles.profileCardInner}>
-            <TouchableOpacity style={styles.avatarContainer} onPress={pickImage}>
+          <View style={styles.profileTopSection}>
+            <TouchableOpacity style={styles.avatarContainer} onPress={pickImage} activeOpacity={0.85}>
               <View style={styles.avatarRing}>
                 {user?.profileImage ? (
                   <Image source={{ uri: getImageUrl(user.profileImage) }} style={styles.avatarImage} />
@@ -219,39 +256,54 @@ export default function ProfileScreen() {
                 )}
               </View>
               <View style={styles.onlineDot} />
-              <View style={[styles.cameraIconBadge, { backgroundColor: colors.iconBg, borderColor: colors.border }]}>
-                <Feather name="camera" size={12} color={colors.iconColor} />
+              <View style={[styles.cameraIconBadge, { backgroundColor: '#8b5cf6', borderColor: '#0f172a' }]}>
+                <Feather name="camera" size={13} color="#fff" />
               </View>
             </TouchableOpacity>
 
-            <View style={styles.profileInfo}>
-              <Text style={[styles.userName, { color: colors.text }]}>{user?.name || 'Teacher Name'}</Text>
-              
+            <View style={styles.profileTitleArea}>
+              <Text style={[styles.userName, { color: colors.text }]} numberOfLines={1}>{user?.name || 'Teacher Name'}</Text>
               <View style={styles.roleBadgeContainer}>
                 <Feather name="award" size={12} color="#a855f7" />
                 <Text style={styles.roleText}>Teacher</Text>
               </View>
-              
-              <View style={styles.infoRow}>
-                <Feather name="mail" size={12} color={colors.subText} />
-                <Text style={[styles.infoText, { color: colors.subText }]}>{user?.email || 'email@example.com'}</Text>
-              </View>
-              
-              <View style={styles.infoRow}>
-                <Feather name="phone" size={12} color={colors.subText} />
-                <Text style={[styles.infoText, { color: colors.subText }]}>{user?.phone || '+91 0000000000'}</Text>
-              </View>
-              
-              <View style={styles.infoRow}>
-                <Feather name="book" size={12} color={colors.subText} />
-                <Text style={[styles.infoText, { color: colors.subText }]}>{user?.department || 'Department'}</Text>
-              </View>
             </View>
 
-            <TouchableOpacity style={styles.editBtn} onPress={() => setEditModalVisible(true)}>
-              <Feather name="edit-2" size={12} color="#a855f7" />
+            <TouchableOpacity style={styles.editBtn} onPress={() => setEditModalVisible(true)} activeOpacity={0.8}>
+              <Feather name="edit-2" size={13} color="#a855f7" />
               <Text style={styles.editBtnText}>Edit Profile</Text>
             </TouchableOpacity>
+          </View>
+
+          <View style={[styles.cardDivider, { backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)' }]} />
+
+          <View style={styles.profileDetailsSection}>
+            <View style={styles.detailRow}>
+              <View style={styles.detailIconBox}>
+                <Feather name="mail" size={15} color="#8b5cf6" />
+              </View>
+              <Text style={[styles.detailText, { color: colors.subText }]} numberOfLines={1}>
+                {user?.email || 'email@example.com'}
+              </Text>
+            </View>
+
+            <View style={styles.detailRow}>
+              <View style={styles.detailIconBox}>
+                <Feather name="phone" size={15} color="#8b5cf6" />
+              </View>
+              <Text style={[styles.detailText, { color: colors.subText }]} numberOfLines={1}>
+                {user?.phone || '+91 0000000000'}
+              </Text>
+            </View>
+
+            <View style={styles.detailRow}>
+              <View style={styles.detailIconBox}>
+                <Feather name="book" size={15} color="#8b5cf6" />
+              </View>
+              <Text style={[styles.detailText, { color: colors.subText }]} numberOfLines={1}>
+                {user?.department || 'Department'}
+              </Text>
+            </View>
           </View>
         </View>
 
@@ -328,6 +380,17 @@ export default function ProfileScreen() {
             <Feather name="chevron-right" size={20} color={colors.subText} />
           </TouchableOpacity>
 
+          <TouchableOpacity style={[styles.listItem, { borderBottomColor: colors.listBorder }]} onPress={() => setPrivacyModalVisible(true)}>
+            <View style={[styles.listIconWrapper, {backgroundColor: 'rgba(245, 158, 11, 0.1)'}]}>
+              <Feather name="shield" size={18} color="#fbbf24" />
+            </View>
+            <View style={styles.listTextContainer}>
+              <Text style={[styles.listTitle, { color: colors.text }]}>Security</Text>
+              <Text style={[styles.listSubtitle, { color: colors.subText }]}>Manage your account security</Text>
+            </View>
+            <Feather name="chevron-right" size={20} color={colors.subText} />
+          </TouchableOpacity>
+
           <TouchableOpacity style={[styles.listItem, { borderBottomColor: colors.listBorder }]} onPress={() => dispatch(toggleTheme())}>
             <View style={[styles.listIconWrapper, {backgroundColor: 'rgba(59, 130, 246, 0.1)'}]}>
               <Feather name={isDarkMode ? 'moon' : 'sun'} size={18} color="#60a5fa" />
@@ -378,89 +441,89 @@ export default function ProfileScreen() {
 
       {/* Edit Profile Modal */}
       <Modal visible={isEditModalVisible} transparent animationType="slide">
-        <View style={styles.fsModalOverlay}>
+        <View style={[styles.fsModalOverlay, { backgroundColor: colors.bg }]}>
           <View style={styles.fsModalHeader}>
             <TouchableOpacity onPress={() => setEditModalVisible(false)} style={styles.fsHeaderBtn}>
-              <Feather name="chevron-left" size={24} color="white" />
+              <Feather name="chevron-left" size={24} color={colors.text} />
             </TouchableOpacity>
-            <Text style={styles.fsModalTitle}>Edit Profile</Text>
+            <Text style={[styles.fsModalTitle, { color: colors.text }]}>Edit Profile</Text>
             <TouchableOpacity onPress={() => setEditModalVisible(false)} style={styles.fsHeaderBtn}>
-              <Feather name="x" size={24} color="white" />
+              <Feather name="x" size={24} color={colors.text} />
             </TouchableOpacity>
           </View>
 
           <ScrollView style={styles.fsModalScroll} showsVerticalScrollIndicator={false}>
             <View style={styles.fsAvatarSection}>
               <View style={styles.fsAvatarOuterRing}>
-                <View style={styles.fsAvatarInner}>
+                <View style={[styles.fsAvatarInner, { backgroundColor: colors.inputBg }]}>
                   {user?.profileImage ? (
                     <Image source={{ uri: getImageUrl(user.profileImage) }} style={styles.fsAvatarImage} />
                   ) : (
-                    <Text style={styles.fsAvatarInitials}>{initials}</Text>
+                    <Text style={[styles.fsAvatarInitials, { color: colors.text }]}>{initials}</Text>
                   )}
                 </View>
                 <TouchableOpacity style={styles.fsCameraBtn} onPress={pickImage}>
                   <Feather name="camera" size={14} color="white" />
                 </TouchableOpacity>
               </View>
-              <Text style={styles.fsAvatarHint}>Tap to change profile picture</Text>
+              <Text style={[styles.fsAvatarHint, { color: colors.subText }]}>Tap to change profile picture</Text>
             </View>
 
             <View style={styles.fsFormGroup}>
-              <Text style={styles.fsLabel}>Full Name</Text>
-              <View style={styles.fsInputContainer}>
+              <Text style={[styles.fsLabel, { color: colors.subText }]}>Full Name</Text>
+              <View style={[styles.fsInputContainer, { backgroundColor: colors.inputBg, borderColor: colors.border }]}>
                 <Feather name="user" size={18} color="#a78bfa" style={styles.fsInputIcon} />
-                <TextInput style={styles.fsInput} value={formData.name} onChangeText={(val) => setFormData({...formData, name: val})} placeholderTextColor="#64748b" />
+                <TextInput style={[styles.fsInput, { color: colors.text }]} value={formData.name} onChangeText={(val) => setFormData({...formData, name: val})} placeholderTextColor={colors.subText} />
               </View>
             </View>
 
             <View style={styles.fsFormGroup}>
-              <Text style={styles.fsLabel}>Email (Read Only)</Text>
-              <View style={styles.fsInputContainer}>
+              <Text style={[styles.fsLabel, { color: colors.subText }]}>Email (Read Only)</Text>
+              <View style={[styles.fsInputContainer, { backgroundColor: colors.inputBg, borderColor: colors.border }]}>
                 <Feather name="mail" size={18} color="#a78bfa" style={styles.fsInputIcon} />
-                <TextInput style={[styles.fsInput, { color: '#64748b' }]} value={user?.email || ''} editable={false} />
+                <TextInput style={[styles.fsInput, { color: colors.subText }]} value={user?.email || ''} editable={false} />
               </View>
             </View>
 
             <View style={styles.fsFormGroup}>
-              <Text style={styles.fsLabel}>Phone</Text>
-              <View style={styles.fsInputContainer}>
+              <Text style={[styles.fsLabel, { color: colors.subText }]}>Phone</Text>
+              <View style={[styles.fsInputContainer, { backgroundColor: colors.inputBg, borderColor: colors.border }]}>
                 <Feather name="phone" size={18} color="#a78bfa" style={styles.fsInputIcon} />
-                <TextInput style={styles.fsInput} value={formData.phone} onChangeText={(val) => setFormData({...formData, phone: val})} placeholderTextColor="#64748b" keyboardType="phone-pad" />
+                <TextInput style={[styles.fsInput, { color: colors.text }]} value={formData.phone} onChangeText={(val) => setFormData({...formData, phone: val})} placeholderTextColor={colors.subText} keyboardType="phone-pad" />
               </View>
             </View>
 
             <View style={styles.fsFormGroup}>
-              <Text style={styles.fsLabel}>Age</Text>
-              <View style={styles.fsInputContainer}>
+              <Text style={[styles.fsLabel, { color: colors.subText }]}>Age</Text>
+              <View style={[styles.fsInputContainer, { backgroundColor: colors.inputBg, borderColor: colors.border }]}>
                 <Feather name="calendar" size={18} color="#a78bfa" style={styles.fsInputIcon} />
-                <TextInput style={styles.fsInput} value={formData.age} onChangeText={(val) => setFormData({...formData, age: val})} keyboardType="numeric" placeholderTextColor="#64748b" />
+                <TextInput style={[styles.fsInput, { color: colors.text }]} value={formData.age} onChangeText={(val) => setFormData({...formData, age: val})} keyboardType="numeric" placeholderTextColor={colors.subText} />
               </View>
             </View>
 
             <View style={styles.fsFormGroup}>
-              <Text style={styles.fsLabel}>Department</Text>
-              <View style={styles.fsInputContainer}>
+              <Text style={[styles.fsLabel, { color: colors.subText }]}>Department</Text>
+              <View style={[styles.fsInputContainer, { backgroundColor: colors.inputBg, borderColor: colors.border }]}>
                 <Feather name="book-open" size={18} color="#a78bfa" style={styles.fsInputIcon} />
-                <TextInput style={styles.fsInput} value={formData.department} onChangeText={(val) => setFormData({...formData, department: val})} placeholderTextColor="#64748b" />
-                <Feather name="chevron-down" size={18} color="#64748b" style={styles.fsInputRightIcon} />
+                <TextInput style={[styles.fsInput, { color: colors.text }]} value={formData.department} onChangeText={(val) => setFormData({...formData, department: val})} placeholderTextColor={colors.subText} />
+                <Feather name="chevron-down" size={18} color={colors.subText} style={styles.fsInputRightIcon} />
               </View>
             </View>
 
             <View style={styles.fsFormGroup}>
-              <Text style={styles.fsLabel}>College</Text>
-              <View style={styles.fsInputContainer}>
+              <Text style={[styles.fsLabel, { color: colors.subText }]}>College</Text>
+              <View style={[styles.fsInputContainer, { backgroundColor: colors.inputBg, borderColor: colors.border }]}>
                 <Feather name="briefcase" size={18} color="#a78bfa" style={styles.fsInputIcon} />
-                <TextInput style={styles.fsInput} value={formData.college} onChangeText={(val) => setFormData({...formData, college: val})} placeholderTextColor="#64748b" />
-                <Feather name="chevron-down" size={18} color="#64748b" style={styles.fsInputRightIcon} />
+                <TextInput style={[styles.fsInput, { color: colors.text }]} value={formData.college} onChangeText={(val) => setFormData({...formData, college: val})} placeholderTextColor={colors.subText} />
+                <Feather name="chevron-down" size={18} color={colors.subText} style={styles.fsInputRightIcon} />
               </View>
             </View>
 
             <View style={styles.fsFormGroup}>
-              <Text style={styles.fsLabel}>Address</Text>
-              <View style={[styles.fsInputContainer, { alignItems: 'flex-start', paddingTop: 14 }]}>
+              <Text style={[styles.fsLabel, { color: colors.subText }]}>Address</Text>
+              <View style={[styles.fsInputContainer, { backgroundColor: colors.inputBg, borderColor: colors.border, alignItems: 'flex-start', paddingTop: 14 }]}>
                 <Feather name="map-pin" size={18} color="#a78bfa" style={styles.fsInputIcon} />
-                <TextInput style={[styles.fsInput, { height: 80, textAlignVertical: 'top' }]} value={formData.address} onChangeText={(val) => setFormData({...formData, address: val})} multiline placeholderTextColor="#64748b" />
+                <TextInput style={[styles.fsInput, { color: colors.text, height: 80, textAlignVertical: 'top' }]} value={formData.address} onChangeText={(val) => setFormData({...formData, address: val})} multiline placeholderTextColor={colors.subText} />
               </View>
             </View>
 
@@ -474,14 +537,14 @@ export default function ProfileScreen() {
 
       {/* Change Password Modal */}
       <Modal visible={isPasswordModalVisible} transparent animationType="slide">
-        <View style={styles.fsModalOverlay}>
+        <View style={[styles.fsModalOverlay, { backgroundColor: colors.bg }]}>
           <View style={styles.fsModalHeader}>
             <TouchableOpacity onPress={() => setPasswordModalVisible(false)} style={styles.fsHeaderBtn}>
-              <Feather name="chevron-left" size={24} color="white" />
+              <Feather name="chevron-left" size={24} color={colors.text} />
             </TouchableOpacity>
-            <Text style={styles.fsModalTitle}>Change Password</Text>
+            <Text style={[styles.fsModalTitle, { color: colors.text }]}>Change Password</Text>
             <TouchableOpacity onPress={() => setPasswordModalVisible(false)} style={styles.fsHeaderBtn}>
-              <Feather name="x" size={24} color="white" />
+              <Feather name="x" size={24} color={colors.text} />
             </TouchableOpacity>
           </View>
 
@@ -495,28 +558,28 @@ export default function ProfileScreen() {
                   <Feather name="check" size={14} color="white" />
                 </View>
               </View>
-              <Text style={styles.fsShieldTitle}>Keep your account secure</Text>
-              <Text style={styles.fsShieldSub}>Choose a strong password to protect your account</Text>
+              <Text style={[styles.fsShieldTitle, { color: colors.text }]}>Keep your account secure</Text>
+              <Text style={[styles.fsShieldSub, { color: colors.subText }]}>Choose a strong password to protect your account</Text>
             </View>
 
             <View style={styles.fsFormGroup}>
-              <Text style={styles.fsLabel}>Old Password</Text>
-              <View style={styles.fsInputContainer}>
+              <Text style={[styles.fsLabel, { color: colors.subText }]}>Old Password</Text>
+              <View style={[styles.fsInputContainer, { backgroundColor: colors.inputBg, borderColor: colors.border }]}>
                 <Feather name="lock" size={18} color="#a78bfa" style={styles.fsInputIcon} />
-                <TextInput style={styles.fsInput} value={passwordData.oldPassword} onChangeText={(val) => setPasswordData({...passwordData, oldPassword: val})} secureTextEntry={!showOldPassword} placeholder="Enter your old password" placeholderTextColor="#475569" />
+                <TextInput style={[styles.fsInput, { color: colors.text }]} value={passwordData.oldPassword} onChangeText={(val) => setPasswordData({...passwordData, oldPassword: val})} secureTextEntry={!showOldPassword} placeholder="Enter your old password" placeholderTextColor={colors.subText} />
                 <TouchableOpacity onPress={() => setShowOldPassword(!showOldPassword)}>
-                  <Feather name={showOldPassword ? 'eye-off' : 'eye'} size={18} color="#64748b" style={styles.fsInputRightIcon} />
+                  <Feather name={showOldPassword ? 'eye-off' : 'eye'} size={18} color={colors.subText} style={styles.fsInputRightIcon} />
                 </TouchableOpacity>
               </View>
             </View>
 
             <View style={styles.fsFormGroup}>
-              <Text style={styles.fsLabel}>New Password</Text>
-              <View style={styles.fsInputContainer}>
+              <Text style={[styles.fsLabel, { color: colors.subText }]}>New Password</Text>
+              <View style={[styles.fsInputContainer, { backgroundColor: colors.inputBg, borderColor: colors.border }]}>
                 <Feather name="lock" size={18} color="#a78bfa" style={styles.fsInputIcon} />
-                <TextInput style={styles.fsInput} value={passwordData.newPassword} onChangeText={(val) => setPasswordData({...passwordData, newPassword: val})} secureTextEntry={!showNewPassword} placeholder="Enter new password" placeholderTextColor="#475569" />
+                <TextInput style={[styles.fsInput, { color: colors.text }]} value={passwordData.newPassword} onChangeText={(val) => setPasswordData({...passwordData, newPassword: val})} secureTextEntry={!showNewPassword} placeholder="Enter new password" placeholderTextColor={colors.subText} />
                 <TouchableOpacity onPress={() => setShowNewPassword(!showNewPassword)}>
-                  <Feather name={showNewPassword ? 'eye-off' : 'eye'} size={18} color="#64748b" style={styles.fsInputRightIcon} />
+                  <Feather name={showNewPassword ? 'eye-off' : 'eye'} size={18} color={colors.subText} style={styles.fsInputRightIcon} />
                 </TouchableOpacity>
               </View>
               {passwordData.newPassword.length > 0 && (
@@ -533,29 +596,29 @@ export default function ProfileScreen() {
             </View>
 
             <View style={styles.fsFormGroup}>
-              <Text style={styles.fsLabel}>Confirm New Password</Text>
-              <View style={styles.fsInputContainer}>
+              <Text style={[styles.fsLabel, { color: colors.subText }]}>Confirm New Password</Text>
+              <View style={[styles.fsInputContainer, { backgroundColor: colors.inputBg, borderColor: colors.border }]}>
                 <Feather name="lock" size={18} color="#a78bfa" style={styles.fsInputIcon} />
-                <TextInput style={styles.fsInput} value={passwordData.confirmPassword} onChangeText={(val) => setPasswordData({...passwordData, confirmPassword: val})} secureTextEntry={!showConfirmPassword} placeholder="Confirm new password" placeholderTextColor="#475569" />
+                <TextInput style={[styles.fsInput, { color: colors.text }]} value={passwordData.confirmPassword} onChangeText={(val) => setPasswordData({...passwordData, confirmPassword: val})} secureTextEntry={!showConfirmPassword} placeholder="Confirm new password" placeholderTextColor={colors.subText} />
                 <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)}>
-                  <Feather name={showConfirmPassword ? 'eye-off' : 'eye'} size={18} color="#64748b" style={styles.fsInputRightIcon} />
+                  <Feather name={showConfirmPassword ? 'eye-off' : 'eye'} size={18} color={colors.subText} style={styles.fsInputRightIcon} />
                 </TouchableOpacity>
               </View>
             </View>
 
-            <View style={styles.fsRulesBox}>
-              <Text style={styles.fsRulesTitle}>Password must contain:</Text>
+            <View style={[styles.fsRulesBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <Text style={[styles.fsRulesTitle, { color: colors.text }]}>Password must contain:</Text>
               <View style={styles.fsRuleRow}>
                 <Feather name="check-circle" size={16} color={hasMinLength ? '#8b5cf6' : '#334155'} />
-                <Text style={[styles.fsRuleText, { color: hasMinLength ? '#cbd5e1' : '#64748b' }]}>At least 8 characters</Text>
+                <Text style={[styles.fsRuleText, { color: hasMinLength ? colors.text : colors.subText }]}>At least 8 characters</Text>
               </View>
               <View style={styles.fsRuleRow}>
                 <Feather name="check-circle" size={16} color={hasUpper ? '#8b5cf6' : '#334155'} />
-                <Text style={[styles.fsRuleText, { color: hasUpper ? '#cbd5e1' : '#64748b' }]}>One uppercase letter</Text>
+                <Text style={[styles.fsRuleText, { color: hasUpper ? colors.text : colors.subText }]}>One uppercase letter</Text>
               </View>
               <View style={styles.fsRuleRow}>
                 <Feather name="check-circle" size={16} color={hasNumberOrSpecial ? '#8b5cf6' : '#334155'} />
-                <Text style={[styles.fsRuleText, { color: hasNumberOrSpecial ? '#cbd5e1' : '#64748b' }]}>One number or special character</Text>
+                <Text style={[styles.fsRuleText, { color: hasNumberOrSpecial ? colors.text : colors.subText }]}>One number or special character</Text>
               </View>
             </View>
 
@@ -569,14 +632,14 @@ export default function ProfileScreen() {
 
       {/* Send Notification Modal */}
       <Modal visible={isSendNotificationModalVisible} transparent animationType="slide">
-        <View style={styles.fsModalOverlay}>
+        <View style={[styles.fsModalOverlay, { backgroundColor: colors.bg }]}>
           <View style={styles.fsModalHeader}>
             <TouchableOpacity onPress={() => setSendNotificationModalVisible(false)} style={styles.fsHeaderBtn}>
-              <Feather name="chevron-left" size={24} color="white" />
+              <Feather name="chevron-left" size={24} color={colors.text} />
             </TouchableOpacity>
-            <Text style={styles.fsModalTitle}>Send Notification</Text>
+            <Text style={[styles.fsModalTitle, { color: colors.text }]}>Send Notification</Text>
             <TouchableOpacity onPress={() => setSendNotificationModalVisible(false)} style={styles.fsHeaderBtn}>
-              <Feather name="x" size={24} color="white" />
+              <Feather name="x" size={24} color={colors.text} />
             </TouchableOpacity>
           </View>
 
@@ -587,39 +650,72 @@ export default function ProfileScreen() {
                   <Feather name="send" size={40} color="#a855f7" />
                 </View>
               </View>
-              <Text style={styles.fsShieldTitle}>Send Personal Notification</Text>
-              <Text style={styles.fsShieldSub}>Send an alert directly to a student's device</Text>
+              <Text style={[styles.fsShieldTitle, { color: colors.text }]}>Send Personal Notification</Text>
+              <Text style={[styles.fsShieldSub, { color: colors.subText }]}>Send an alert directly to a student's device</Text>
             </View>
 
             <View style={styles.fsFormGroup}>
-              <Text style={styles.fsLabel}>Target Audience (Email or Class)</Text>
-              <View style={styles.fsInputContainer}>
+              <Text style={[styles.fsLabel, { color: colors.subText }]}>Target Audience (Email or Class)</Text>
+              <View style={[styles.fsInputContainer, { backgroundColor: colors.inputBg, borderColor: colors.border }]}>
                 <Feather name="users" size={18} color="#a78bfa" style={styles.fsInputIcon} />
-                <TextInput style={styles.fsInput} value={notificationData.email} onChangeText={(val) => setNotificationData({...notificationData, email: val})} placeholder="student@email.com, 'all', or 'class:10th'" placeholderTextColor="#64748b" autoCapitalize="none" />
+                <TextInput style={[styles.fsInput, { color: colors.text }]} value={notificationData.email} onChangeText={(val) => setNotificationData({...notificationData, email: val})} placeholder="student@email.com, 'all', or 'class:10th'" placeholderTextColor={colors.subText} autoCapitalize="none" />
               </View>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 }}>
-                <TouchableOpacity onPress={() => setNotificationData({...notificationData, email: 'all'})}>
-                  <Text style={{ color: '#8b5cf6', fontSize: 12, fontWeight: '500' }}>+ Broadcast to All</Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => setNotificationData({...notificationData, email: 'class:General'})}>
-                  <Text style={{ color: '#ec4899', fontSize: 12, fontWeight: '500' }}>+ Send to Class</Text>
-                </TouchableOpacity>
+              <View style={{ marginTop: 10 }}>
+                <Text style={{ color: colors.subText, fontSize: 12, marginBottom: 6, fontWeight: '600' }}>Quick Select:</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ paddingVertical: 4 }}>
+                  <TouchableOpacity
+                    style={{
+                      paddingHorizontal: 12,
+                      paddingVertical: 6,
+                      borderRadius: 16,
+                      backgroundColor: notificationData.email === 'all' ? '#8b5cf6' : 'rgba(139, 92, 246, 0.1)',
+                      marginRight: 8,
+                      borderWidth: 1,
+                      borderColor: '#8b5cf6'
+                    }}
+                    onPress={() => setNotificationData({...notificationData, email: 'all'})}
+                  >
+                    <Text style={{ color: notificationData.email === 'all' ? 'white' : '#8b5cf6', fontSize: 12, fontWeight: '600' }}>+ Broadcast to All</Text>
+                  </TouchableOpacity>
+
+                  {classGroupsList.map(cg => {
+                    const targetVal = `class:${cg}`;
+                    const isSelected = notificationData.email === targetVal;
+                    return (
+                      <TouchableOpacity
+                        key={cg}
+                        style={{
+                          paddingHorizontal: 12,
+                          paddingVertical: 6,
+                          borderRadius: 16,
+                          backgroundColor: isSelected ? '#ec4899' : 'rgba(236, 72, 153, 0.1)',
+                          marginRight: 8,
+                          borderWidth: 1,
+                          borderColor: '#ec4899'
+                        }}
+                        onPress={() => setNotificationData({...notificationData, email: targetVal})}
+                      >
+                        <Text style={{ color: isSelected ? 'white' : '#ec4899', fontSize: 12, fontWeight: '600' }}>+ Class: {cg}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
               </View>
             </View>
 
             <View style={styles.fsFormGroup}>
-              <Text style={styles.fsLabel}>Notification Title</Text>
-              <View style={styles.fsInputContainer}>
+              <Text style={[styles.fsLabel, { color: colors.subText }]}>Notification Title</Text>
+              <View style={[styles.fsInputContainer, { backgroundColor: colors.inputBg, borderColor: colors.border }]}>
                 <Feather name="type" size={18} color="#a78bfa" style={styles.fsInputIcon} />
-                <TextInput style={styles.fsInput} value={notificationData.title} onChangeText={(val) => setNotificationData({...notificationData, title: val})} placeholder="Important Update" placeholderTextColor="#64748b" />
+                <TextInput style={[styles.fsInput, { color: colors.text }]} value={notificationData.title} onChangeText={(val) => setNotificationData({...notificationData, title: val})} placeholder="Important Update" placeholderTextColor={colors.subText} />
               </View>
             </View>
             
             <View style={styles.fsFormGroup}>
-              <Text style={styles.fsLabel}>Message</Text>
-              <View style={[styles.fsInputContainer, { alignItems: 'flex-start', paddingTop: 14 }]}>
+              <Text style={[styles.fsLabel, { color: colors.subText }]}>Message</Text>
+              <View style={[styles.fsInputContainer, { backgroundColor: colors.inputBg, borderColor: colors.border, alignItems: 'flex-start', paddingTop: 14 }]}>
                 <Feather name="message-square" size={18} color="#a78bfa" style={styles.fsInputIcon} />
-                <TextInput style={[styles.fsInput, { height: 80, textAlignVertical: 'top' }]} value={notificationData.message} onChangeText={(val) => setNotificationData({...notificationData, message: val})} multiline placeholder="Type your message here..." placeholderTextColor="#64748b" />
+                <TextInput style={[styles.fsInput, { color: colors.text, height: 80, textAlignVertical: 'top' }]} value={notificationData.message} onChangeText={(val) => setNotificationData({...notificationData, message: val})} multiline placeholder="Type your message here..." placeholderTextColor={colors.subText} />
               </View>
             </View>
 
@@ -632,24 +728,24 @@ export default function ProfileScreen() {
 
       {/* Settings Modal */}
       <Modal visible={isSettingsModalVisible} transparent animationType="slide">
-        <View style={styles.fsModalOverlay}>
+        <View style={[styles.fsModalOverlay, { backgroundColor: colors.bg }]}>
           <View style={styles.fsModalHeader}>
             <TouchableOpacity onPress={() => setSettingsModalVisible(false)} style={styles.fsHeaderBtn}>
-              <Feather name="chevron-left" size={24} color="white" />
+              <Feather name="chevron-left" size={24} color={colors.text} />
             </TouchableOpacity>
-            <Text style={styles.fsModalTitle}>Settings</Text>
+            <Text style={[styles.fsModalTitle, { color: colors.text }]}>Settings</Text>
             <TouchableOpacity onPress={() => setSettingsModalVisible(false)} style={styles.fsHeaderBtn}>
-              <Feather name="x" size={24} color="white" />
+              <Feather name="x" size={24} color={colors.text} />
             </TouchableOpacity>
           </View>
           <ScrollView style={styles.fsModalScroll}>
-            <View style={[styles.listCard, { backgroundColor: '#131823', borderColor: '#1e293b' }]}>
-              <View style={[styles.listItem, { borderBottomColor: '#1e293b' }]}>
+            <View style={[styles.listCard, { backgroundColor: colors.modalCard, borderColor: colors.modalBorder }]}>
+              <View style={[styles.listItem, { borderBottomColor: colors.modalBorder }]}>
                 <View style={[styles.listIconWrapper, {backgroundColor: 'rgba(59, 130, 246, 0.1)'}]}>
                   <Feather name={isDarkMode ? 'moon' : 'sun'} size={18} color="#60a5fa" />
                 </View>
                 <View style={styles.listTextContainer}>
-                  <Text style={[styles.listTitle, { color: 'white' }]}>Dark Mode</Text>
+                  <Text style={[styles.listTitle, { color: colors.text }]}>Dark Mode</Text>
                 </View>
                 <Switch value={isDarkMode} onValueChange={() => dispatch(toggleTheme())} />
               </View>
@@ -658,37 +754,37 @@ export default function ProfileScreen() {
                   <Feather name="bell" size={18} color="#34d399" />
                 </View>
                 <View style={styles.listTextContainer}>
-                  <Text style={[styles.listTitle, { color: 'white' }]}>Push Notifications</Text>
+                  <Text style={[styles.listTitle, { color: colors.text }]}>Push Notifications</Text>
                 </View>
                 <Switch value={true} onValueChange={() => Toast.show({ type: 'info', text1: 'Preferences saved' })} />
               </View>
             </View>
 
-            <View style={[styles.listCard, { backgroundColor: '#131823', borderColor: '#1e293b', marginTop: 15 }]}>
+            <View style={[styles.listCard, { backgroundColor: colors.modalCard, borderColor: colors.modalBorder, marginTop: 15 }]}>
               <TouchableOpacity 
-                style={[styles.listItem, { borderBottomColor: '#1e293b' }]}
+                style={[styles.listItem, { borderBottomColor: colors.modalBorder }]}
                 onPress={() => { setSettingsModalVisible(false); setEditModalVisible(true); }}
               >
                 <View style={[styles.listIconWrapper, {backgroundColor: 'rgba(139, 92, 246, 0.1)'}]}>
                   <Feather name="user" size={18} color="#8b5cf6" />
                 </View>
                 <View style={styles.listTextContainer}>
-                  <Text style={[styles.listTitle, { color: 'white' }]}>Edit Profile</Text>
+                  <Text style={[styles.listTitle, { color: colors.text }]}>Edit Profile</Text>
                 </View>
-                <Feather name="chevron-right" size={20} color="#64748b" />
+                <Feather name="chevron-right" size={20} color={colors.subText} />
               </TouchableOpacity>
 
               <TouchableOpacity 
-                style={[styles.listItem, { borderBottomColor: '#1e293b' }]}
+                style={[styles.listItem, { borderBottomColor: colors.modalBorder }]}
                 onPress={() => { setSettingsModalVisible(false); setPasswordModalVisible(true); }}
               >
                 <View style={[styles.listIconWrapper, {backgroundColor: 'rgba(245, 158, 11, 0.1)'}]}>
                   <Feather name="lock" size={18} color="#f59e0b" />
                 </View>
                 <View style={styles.listTextContainer}>
-                  <Text style={[styles.listTitle, { color: 'white' }]}>Change Password</Text>
+                  <Text style={[styles.listTitle, { color: colors.text }]}>Change Password</Text>
                 </View>
-                <Feather name="chevron-right" size={20} color="#64748b" />
+                <Feather name="chevron-right" size={20} color={colors.subText} />
               </TouchableOpacity>
 
               <TouchableOpacity 
@@ -701,7 +797,7 @@ export default function ProfileScreen() {
                 <View style={styles.listTextContainer}>
                   <Text style={[styles.listTitle, { color: '#ef4444' }]}>Log Out</Text>
                 </View>
-                <Feather name="chevron-right" size={20} color="#64748b" />
+                <Feather name="chevron-right" size={20} color={colors.subText} />
               </TouchableOpacity>
             </View>
           </ScrollView>
@@ -710,39 +806,75 @@ export default function ProfileScreen() {
 
       {/* Privacy Policy & Help Modal */}
       <Modal visible={isPrivacyModalVisible} transparent animationType="slide">
-        <View style={styles.fsModalOverlay}>
+        <View style={[styles.fsModalOverlay, { backgroundColor: colors.bg }]}>
           <View style={styles.fsModalHeader}>
             <TouchableOpacity onPress={() => setPrivacyModalVisible(false)} style={styles.fsHeaderBtn}>
-              <Feather name="chevron-left" size={24} color="white" />
+              <Feather name="chevron-left" size={24} color={colors.text} />
             </TouchableOpacity>
-            <Text style={styles.fsModalTitle}>Help & Privacy</Text>
+            <Text style={[styles.fsModalTitle, { color: colors.text }]}>Help & Privacy</Text>
             <TouchableOpacity onPress={() => setPrivacyModalVisible(false)} style={styles.fsHeaderBtn}>
-              <Feather name="x" size={24} color="white" />
+              <Feather name="x" size={24} color={colors.text} />
             </TouchableOpacity>
           </View>
           <ScrollView style={styles.fsModalScroll}>
-            <View style={[styles.listCard, { backgroundColor: '#131823', borderColor: '#1e293b', padding: 20 }]}>
-              <Feather name="headphones" size={32} color="#a855f7" style={{ marginBottom: 15 }} />
-              <Text style={[styles.sectionTitle, { marginLeft: 0 }]}>Need Support?</Text>
-              <Text style={{ color: '#cbd5e1', fontSize: 14, lineHeight: 22, marginBottom: 10 }}>If you are experiencing any issues with your account or have questions about the platform, please contact our administrative team.</Text>
-              <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(139, 92, 246, 0.1)', padding: 12, borderRadius: 8, marginTop: 10 }}>
-                <Feather name="mail" size={18} color="#a855f7" style={{ marginRight: 10 }} />
-                <Text style={{ color: '#a855f7', fontWeight: 'bold' }}>admin@examhub.com</Text>
+            <View style={[styles.listCard, { backgroundColor: colors.modalCard, borderColor: colors.modalBorder, padding: 20 }]}>
+              <Feather name="info" size={32} color="#3b82f6" style={{ marginBottom: 15 }} />
+              <Text style={[styles.sectionTitle, { marginLeft: 0 }]}>About ExamHub</Text>
+              <Text style={{ color: colors.modalSubText, fontSize: 14, lineHeight: 22, marginBottom: 10 }}>
+                ExamHub is a modern, secure, and comprehensive online assessment platform designed to connect educators and students seamlessly. With real-time testing, automated grading, anti-cheat monitoring, and instant result analytics, ExamHub empowers educational institutions to conduct reliable examinations anytime, anywhere.
+              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(59, 130, 246, 0.1)', padding: 12, borderRadius: 8, marginTop: 10 }}>
+                <Feather name="award" size={18} color="#3b82f6" style={{ marginRight: 10 }} />
+                <Text style={{ color: '#3b82f6', fontWeight: 'bold' }}>Version 2.4.0 • Built for Excellence</Text>
               </View>
             </View>
 
-            <View style={[styles.listCard, { backgroundColor: '#131823', borderColor: '#1e293b', padding: 20 }]}>
+            <View style={[styles.listCard, { backgroundColor: colors.modalCard, borderColor: colors.modalBorder, padding: 20 }]}>
+              <Feather name="shield" size={32} color="#10b981" style={{ marginBottom: 15 }} />
+              <Text style={[styles.sectionTitle, { marginLeft: 0 }]}>Security & Protection</Text>
+              <Text style={{ color: colors.modalSubText, fontSize: 14, lineHeight: 22, marginBottom: 10 }}>
+                ExamHub implements advanced multi-layered security protocols to safeguard examination integrity and user data. Features include automated full-screen anti-cheat monitoring, secure JWT token authentication, encrypted password storage, and strict session management.
+              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(16, 185, 129, 0.1)', padding: 12, borderRadius: 8, marginTop: 10 }}>
+                <Feather name="lock" size={18} color="#10b981" style={{ marginRight: 10 }} />
+                <Text style={{ color: '#10b981', fontWeight: 'bold' }}>256-bit Encryption • Anti-Cheat Active</Text>
+              </View>
+            </View>
+
+            <View style={[styles.listCard, { backgroundColor: colors.modalCard, borderColor: colors.modalBorder, padding: 20 }]}>
+              <Feather name="key" size={32} color="#f59e0b" style={{ marginBottom: 15 }} />
+              <Text style={[styles.sectionTitle, { marginLeft: 0 }]}>Account Security & Access</Text>
+              <Text style={{ color: colors.modalSubText, fontSize: 14, lineHeight: 22, marginBottom: 10 }}>
+                Manage your account security settings. Your account is protected with automatic session timeouts, bcrypt password hashing, and active device monitoring. Never share your OTP or password with anyone.
+              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(245, 158, 11, 0.1)', padding: 12, borderRadius: 8, marginTop: 10 }}>
+                <Feather name="check-circle" size={18} color="#f59e0b" style={{ marginRight: 10 }} />
+                <Text style={{ color: '#f59e0b', fontWeight: 'bold' }}>Account Protected • 2FA Ready</Text>
+              </View>
+            </View>
+
+            <View style={[styles.listCard, { backgroundColor: colors.modalCard, borderColor: colors.modalBorder, padding: 20 }]}>
+              <Feather name="headphones" size={32} color="#a855f7" style={{ marginBottom: 15 }} />
+              <Text style={[styles.sectionTitle, { marginLeft: 0 }]}>Need Support?</Text>
+              <Text style={{ color: colors.modalSubText, fontSize: 14, lineHeight: 22, marginBottom: 10 }}>If you are experiencing any issues with your account or have questions about the platform, please contact our administrative team.</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(139, 92, 246, 0.1)', padding: 12, borderRadius: 8, marginTop: 10 }}>
+                <Feather name="mail" size={18} color="#a855f7" style={{ marginRight: 10 }} />
+                <Text style={{ color: '#a855f7', fontWeight: 'bold' }}>testsbuddy@gmail.com</Text>
+              </View>
+            </View>
+
+            <View style={[styles.listCard, { backgroundColor: colors.modalCard, borderColor: colors.modalBorder, padding: 20 }]}>
               <Feather name="shield" size={32} color="#10b981" style={{ marginBottom: 15 }} />
               <Text style={[styles.sectionTitle, { marginLeft: 0 }]}>Privacy Policy</Text>
-              <Text style={{ color: '#cbd5e1', fontSize: 14, lineHeight: 22, marginBottom: 15 }}>
+              <Text style={{ color: colors.modalSubText, fontSize: 14, lineHeight: 22, marginBottom: 15 }}>
                 Your privacy is important to us. It is ExamHub's policy to respect your privacy regarding any information we may collect from you across our application.
               </Text>
-              <Text style={{ color: 'white', fontWeight: 'bold', marginBottom: 5 }}>1. Information we collect</Text>
-              <Text style={{ color: '#94a3b8', fontSize: 13, lineHeight: 20, marginBottom: 15 }}>We only ask for personal information when we truly need it to provide a service to you. We collect it by fair and lawful means, with your knowledge and consent.</Text>
-              <Text style={{ color: 'white', fontWeight: 'bold', marginBottom: 5 }}>2. How we use your data</Text>
-              <Text style={{ color: '#94a3b8', fontSize: 13, lineHeight: 20, marginBottom: 15 }}>We only retain collected information for as long as necessary to provide you with your requested service. What data we store, we'll protect within commercially acceptable means to prevent loss and theft.</Text>
-              <Text style={{ color: 'white', fontWeight: 'bold', marginBottom: 5 }}>3. Third-party access</Text>
-              <Text style={{ color: '#94a3b8', fontSize: 13, lineHeight: 20, marginBottom: 15 }}>We don't share any personally identifying information publicly or with third-parties, except when required to by law.</Text>
+              <Text style={{ color: colors.text, fontWeight: 'bold', marginBottom: 5 }}>1. Information we collect</Text>
+              <Text style={{ color: colors.subText, fontSize: 13, lineHeight: 20, marginBottom: 15 }}>We only ask for personal information when we truly need it to provide a service to you. We collect it by fair and lawful means, with your knowledge and consent.</Text>
+              <Text style={{ color: colors.text, fontWeight: 'bold', marginBottom: 5 }}>2. How we use your data</Text>
+              <Text style={{ color: colors.subText, fontSize: 13, lineHeight: 20, marginBottom: 15 }}>We only retain collected information for as long as necessary to provide you with your requested service. What data we store, we'll protect within commercially acceptable means to prevent loss and theft.</Text>
+              <Text style={{ color: colors.text, fontWeight: 'bold', marginBottom: 5 }}>3. Third-party access</Text>
+              <Text style={{ color: colors.subText, fontSize: 13, lineHeight: 20, marginBottom: 15 }}>We don't share any personally identifying information publicly or with third-parties, except when required to by law.</Text>
             </View>
           </ScrollView>
         </View>
@@ -763,25 +895,29 @@ const styles = StyleSheet.create({
   
   content: { padding: 15, paddingBottom: 40 },
 
-  profileCard: { borderRadius: 20, padding: 2, marginBottom: 20, borderWidth: 1 },
-  profileCardInner: { flexDirection: 'row', padding: 20, position: 'relative' },
-  avatarContainer: { marginRight: 20, position: 'relative' },
-  avatarRing: { width: 90, height: 90, borderRadius: 45, borderWidth: 2, borderColor: '#8b5cf6', padding: 3, backgroundColor: 'transparent' },
-  avatarImage: { width: '100%', height: '100%', borderRadius: 45 },
-  avatarPlaceholder: { width: '100%', height: '100%', borderRadius: 45, backgroundColor: '#334155', justifyContent: 'center', alignItems: 'center' },
-  avatarText: { fontSize: 30, color: 'white', fontWeight: 'bold' },
-  onlineDot: { position: 'absolute', bottom: 5, right: 5, width: 14, height: 14, borderRadius: 7, backgroundColor: '#22c55e', borderWidth: 2, borderColor: '#13102b' },
-  cameraIconBadge: { position: 'absolute', bottom: -5, left: -5, width: 26, height: 26, borderRadius: 13, justifyContent: 'center', alignItems: 'center', borderWidth: 1 },
+  profileCard: { borderRadius: 24, padding: 22, marginBottom: 24, borderWidth: 1, shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.25, shadowRadius: 16, elevation: 8 },
+  profileTopSection: { flexDirection: 'row', alignItems: 'center' },
+  avatarContainer: { width: 84, height: 84, position: 'relative' },
+  avatarRing: { width: 84, height: 84, borderRadius: 42, borderWidth: 3, borderColor: '#8b5cf6', padding: 3, backgroundColor: 'transparent' },
+  avatarImage: { width: '100%', height: '100%', borderRadius: 42 },
+  avatarPlaceholder: { width: '100%', height: '100%', borderRadius: 42, backgroundColor: '#334155', justifyContent: 'center', alignItems: 'center' },
+  avatarText: { fontSize: 28, color: 'white', fontWeight: 'bold' },
+  onlineDot: { position: 'absolute', top: 4, right: 4, width: 14, height: 14, borderRadius: 7, backgroundColor: '#22c55e', borderWidth: 2, borderColor: '#0f172a' },
+  cameraIconBadge: { position: 'absolute', bottom: 0, right: 0, width: 28, height: 28, borderRadius: 14, justifyContent: 'center', alignItems: 'center', borderWidth: 2 },
 
-  profileInfo: { flex: 1, justifyContent: 'center', paddingRight: 95 },
-  userName: { fontSize: 18, fontWeight: 'bold', marginBottom: 6 },
-  roleBadgeContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(168, 85, 247, 0.1)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12, alignSelf: 'flex-start', marginBottom: 12 },
-  roleText: { color: '#a855f7', fontSize: 11, fontWeight: 'bold', marginLeft: 4 },
-  infoRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 6 },
-  infoText: { fontSize: 12, marginLeft: 8 },
+  profileTitleArea: { flex: 1, marginLeft: 16, justifyContent: 'center' },
+  userName: { fontSize: 20, fontWeight: '800', marginBottom: 6 },
+  roleBadgeContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(168, 85, 247, 0.15)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, alignSelf: 'flex-start' },
+  roleText: { color: '#a855f7', fontSize: 12, fontWeight: 'bold', marginLeft: 6 },
 
-  editBtn: { position: 'absolute', top: 20, right: 20, flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(168, 85, 247, 0.1)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, borderWidth: 1, borderColor: 'rgba(168, 85, 247, 0.3)' },
-  editBtnText: { color: '#a855f7', fontSize: 11, fontWeight: 'bold', marginLeft: 6 },
+  editBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(168, 85, 247, 0.15)', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: 'rgba(168, 85, 247, 0.35)' },
+  editBtnText: { color: '#a855f7', fontSize: 12, fontWeight: 'bold', marginLeft: 6 },
+
+  cardDivider: { height: 1, marginVertical: 18 },
+  profileDetailsSection: { gap: 14 },
+  detailRow: { flexDirection: 'row', alignItems: 'center' },
+  detailIconBox: { width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(139, 92, 246, 0.12)', justifyContent: 'center', alignItems: 'center', marginRight: 14 },
+  detailText: { fontSize: 14, fontWeight: '500', flex: 1 },
 
   statsCard: { flexDirection: 'row', borderRadius: 16, padding: 15, marginBottom: 25, justifyContent: 'space-between', alignItems: 'center', borderWidth: 1 },
   statItem: { flex: 1, alignItems: 'center' },

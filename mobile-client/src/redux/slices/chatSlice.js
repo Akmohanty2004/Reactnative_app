@@ -35,7 +35,9 @@ export const sendMessage = createAsyncThunk(
           formData.append(key, messageData[key]);
         }
       });
-      const response = await api.post('/api/chat/send', formData);
+      const response = await api.post('/api/chat/send', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
       return response.data;
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Failed to send message');
@@ -69,9 +71,11 @@ const chatSlice = createSlice({
   reducers: {
     receiveMessage: (state, action) => {
       const message = action.payload;
-      const senderId = String(message.sender?._id || message.sender);
-      const receiverId = String(message.receiver?._id || message.receiver);
+      const senderId = String(message.sender?._id || message.sender?.id || (typeof message.sender === 'string' || typeof message.sender === 'number' ? message.sender : ''));
+      const receiverId = String(message.receiver?._id || message.receiver?.id || (typeof message.receiver === 'string' || typeof message.receiver === 'number' ? message.receiver : ''));
       const currentId = String(state.currentUserId);
+      if (!currentId || currentId === 'null' || currentId === 'undefined') return;
+      if (senderId !== currentId && receiverId !== currentId) return;
       const otherUserId = senderId === currentId ? receiverId : senderId;
       
       if (!state.messagesByUserId[otherUserId]) {
@@ -79,7 +83,7 @@ const chatSlice = createSlice({
       }
       
       // Avoid duplicates
-      const exists = state.messagesByUserId[otherUserId].find(m => m._id === message._id);
+      const exists = state.messagesByUserId[otherUserId].find(m => String(m._id) === String(message._id));
       if (!exists) {
         state.messagesByUserId[otherUserId].push(message);
         state.hasUnreadMessages = true;
@@ -107,12 +111,21 @@ const chatSlice = createSlice({
           m => m._id !== messageId
         );
       }
+    },
+    setContactOnlineStatus: (state, action) => {
+      const { userId, isOnline } = action.payload;
+      const contactIndex = state.contacts.findIndex(c => String(c._id) === String(userId));
+      if (contactIndex !== -1) {
+        state.contacts[contactIndex].isOnline = isOnline;
+      }
     }
   },
   extraReducers: (builder) => {
     builder
       .addCase(getContacts.pending, (state) => {
-        state.isLoadingContacts = true;
+        if (!state.contacts || state.contacts.length === 0) {
+          state.isLoadingContacts = true;
+        }
         state.error = null;
       })
       .addCase(getContacts.fulfilled, (state, action) => {
@@ -152,7 +165,10 @@ const chatSlice = createSlice({
         if (!state.messagesByUserId[otherUserId]) {
           state.messagesByUserId[otherUserId] = [];
         }
-        state.messagesByUserId[otherUserId].push(message);
+        const exists = state.messagesByUserId[otherUserId].find(m => String(m._id) === String(message._id));
+        if (!exists) {
+          state.messagesByUserId[otherUserId].push(message);
+        }
       })
       .addCase(sendMessage.rejected, (state, action) => {
         state.isSending = false;
@@ -170,5 +186,5 @@ const chatSlice = createSlice({
   }
 });
 
-export const { receiveMessage, setCurrentUserId, clearUnreadMessages, removeMessageLocally } = chatSlice.actions;
+export const { receiveMessage, setCurrentUserId, clearUnreadMessages, removeMessageLocally, setContactOnlineStatus } = chatSlice.actions;
 export default chatSlice.reducer;

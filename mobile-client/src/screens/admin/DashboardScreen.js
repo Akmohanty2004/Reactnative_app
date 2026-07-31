@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
-import { View, Text, StyleSheet, ScrollView, Dimensions, TouchableOpacity, Alert, FlatList, Modal, TextInput, ActivityIndicator, StatusBar, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Dimensions, TouchableOpacity, Alert, FlatList, Modal, TextInput, ActivityIndicator, StatusBar, RefreshControl, Image } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { Feather } from '@expo/vector-icons';
 import { PieChart } from 'react-native-chart-kit';
@@ -8,6 +8,22 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Toast from 'react-native-toast-message';
 import { getAdminDashboardStats } from '../../redux/slices/adminSlice';
 import { getToppers, likeTopper } from '../../redux/slices/resultSlice';
+import api from '../../services/api';
+
+const getImageUrl = (path) => {
+  if (!path) return null;
+  if (typeof path !== 'string') return null;
+  if (path.startsWith('data:') || path.startsWith('file://')) return path;
+  const normalized = path.replace(/\\/g, '/');
+  if (normalized.includes('uploads/')) {
+    const baseUrl = api.defaults.baseURL || 'https://exam-app-backend-vqos.vercel.app';
+    const cleanPath = normalized.replace(/^.*(uploads\/)/, 'uploads/');
+    return `${baseUrl}/${cleanPath.replace(/^\//, '')}`;
+  }
+  if (path.startsWith('http')) return path;
+  const baseUrl = api.defaults.baseURL || 'https://exam-app-backend-vqos.vercel.app';
+  return `${baseUrl}/${normalized.replace(/^\//, '')}`;
+};
 
 const { width } = Dimensions.get('window');
 
@@ -34,6 +50,7 @@ export default function DashboardScreen({ navigation }) {
   const { theme } = useSelector(state => state.ui || { theme: 'dark' });
   const [selectedPieItem, setSelectedPieItem] = useState(null);
   const [showAllToppers, setShowAllToppers] = useState(false);
+  const [selectedTopper, setSelectedTopper] = useState(null);
   const [showMoreOptions, setShowMoreOptions] = useState(false);
   const [isBroadcastModalVisible, setBroadcastModalVisible] = useState(false);
   const [broadcastData, setBroadcastData] = useState({ title: '', message: '' });
@@ -146,27 +163,9 @@ export default function DashboardScreen({ navigation }) {
 
       {/* Top Header */}
       <View style={styles.topHeader}>
+        <Text style={[styles.topHeaderTitle, { color: colors.text }]}>Home</Text>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <TouchableOpacity 
-            onPress={() => navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Login')}
-            style={{ marginRight: 10, padding: 4 }}
-          >
-            <Feather name="arrow-left" size={22} color={colors.text} />
-          </TouchableOpacity>
-          <Text style={[styles.topHeaderTitle, { color: colors.text }]}>Home</Text>
-        </View>
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <TouchableOpacity 
-            style={[styles.menuBtn, { backgroundColor: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)', marginRight: 10 }]} 
-            onPress={handleRefresh}
-            disabled={refreshing || isLoading}
-          >
-            {refreshing || isLoading ? (
-              <ActivityIndicator size="small" color="#8b5cf6" />
-            ) : (
-              <Feather name="refresh-cw" size={18} color={colors.text} />
-            )}
-          </TouchableOpacity>
+
           <TouchableOpacity 
             style={[styles.menuBtn, { backgroundColor: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)', marginRight: 15 }]} 
             onPress={() => setBroadcastModalVisible(true)}
@@ -193,7 +192,7 @@ export default function DashboardScreen({ navigation }) {
           />
         }
       >
-        {!stats ? (
+        {(isLoading && !stats) || refreshing ? (
           <AdminSkeleton isDarkMode={isDarkMode} />
         ) : (
           <>
@@ -205,10 +204,10 @@ export default function DashboardScreen({ navigation }) {
             style={styles.bannerGrad}
           >
             <View style={styles.bannerTextContainer}>
-              <Text style={styles.bannerTitle}>
-                <Text style={{ color: '#a78bfa' }}>Welcome back,</Text>{'\n'}Admin! 👑
+              <Text style={[styles.bannerTitle, { color: '#ffffff' }]}>
+                <Text style={{ color: '#e0e7ff' }}>Welcome back,</Text>{'\n'}Admin! 👑
               </Text>
-              <Text style={styles.bannerSubtitle}>Here's what's happening{'\n'}on your platform today.</Text>
+              <Text style={[styles.bannerSubtitle, { color: '#c4b5fd' }]}>Here's what's happening{'\n'}on your platform today.</Text>
             </View>
             {/* Dashboard illustration */}
             <View style={styles.bannerIllustration}>
@@ -243,8 +242,8 @@ export default function DashboardScreen({ navigation }) {
               <View style={[styles.iconWrapper, { backgroundColor: stat.color + '22' }]}>
                 <Feather name={stat.icon} size={20} color={stat.color} />
               </View>
-              <Text style={[styles.statValue, { color: colors.text }]}>{stat.value}</Text>
-              <Text style={[styles.statLabel, { color: colors.subText }]}>{stat.label}</Text>
+              <Text style={[styles.statValue, { color: colors.text }]} numberOfLines={1} adjustsFontSizeToFit>{stat.value}</Text>
+              <Text style={[styles.statLabel, { color: colors.subText }]} numberOfLines={1}>{stat.label}</Text>
             </TouchableOpacity>
           ))}
         </View>
@@ -344,25 +343,38 @@ export default function DashboardScreen({ navigation }) {
 
           {toppers && toppers.length > 0 ? (
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 8 }}>
-              {toppers.slice(0, 2).map((item, idx) => (
-                <View key={item.resultId} style={[styles.leaderCard, { width: 260, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}>
+              {toppers.slice(0, 5).map((item, idx) => (
+                <View key={item.resultId || idx} style={[styles.leaderCard, { width: 260, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                    <View style={[styles.rankBadge, { backgroundColor: idx === 0 ? '#fbbf24' : idx === 1 ? '#94a3b8' : idx === 2 ? '#b45309' : '#334155', marginRight: 10 }]}>
-                      <Text style={styles.rankText}>{idx + 1}</Text>
-                    </View>
+                    <TouchableOpacity 
+                      onPress={() => setSelectedTopper(item)} 
+                      style={{ position: 'relative', marginRight: 12 }}
+                      activeOpacity={0.8}
+                    >
+                      {item.student?.profileImage ? (
+                        <Image source={{ uri: getImageUrl(item.student.profileImage) }} style={{ width: 44, height: 44, borderRadius: 22, borderWidth: 2, borderColor: idx === 0 ? '#fbbf24' : idx === 1 ? '#94a3b8' : idx === 2 ? '#b45309' : '#334155' }} />
+                      ) : (
+                        <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: idx === 0 ? '#fbbf24' : idx === 1 ? '#94a3b8' : idx === 2 ? '#b45309' : '#334155', justifyContent: 'center', alignItems: 'center' }}>
+                          <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold' }}>{(item.student?.name || 'U').charAt(0).toUpperCase()}</Text>
+                        </View>
+                      )}
+                      <View style={{ position: 'absolute', bottom: -2, right: -2, backgroundColor: idx === 0 ? '#fbbf24' : idx === 1 ? '#94a3b8' : idx === 2 ? '#b45309' : '#334155', width: 20, height: 20, borderRadius: 10, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#0f172a' }}>
+                        <Text style={{ color: '#fff', fontSize: 10, fontWeight: '900' }}>{idx + 1}</Text>
+                      </View>
+                    </TouchableOpacity>
                     <View style={{ flex: 1, marginRight: 8 }}>
-                      <Text style={[styles.leaderName, { textAlign: 'left', marginBottom: 2 }]} numberOfLines={1}>{item.student?.name || 'Unknown'}</Text>
-                      <Text style={[styles.recentSub, { textAlign: 'left' }]} numberOfLines={1}>{item.examTitle}</Text>
+                      <Text style={[styles.leaderName, { color: colors.text, textAlign: 'left', marginBottom: 2 }]} numberOfLines={1}>{item.student?.name || 'Unknown'}</Text>
+                      <Text style={[styles.recentSub, { color: colors.subText, textAlign: 'left' }]} numberOfLines={1}>{item.examTitle}</Text>
                     </View>
                   </View>
                   <View style={{ alignItems: 'flex-end' }}>
                     <Text style={styles.leaderScore}>{item.score?.toFixed(1)}%</Text>
                     <TouchableOpacity 
-                      style={[styles.likeBtn, item.likedByMe && styles.likeBtnActive, { marginTop: 6, paddingVertical: 4, paddingHorizontal: 10, width: 'auto' }]} 
+                      style={[styles.likeBtn, item.likedByMe && styles.likeBtnActive, { marginTop: 6, paddingVertical: 4, paddingHorizontal: 10, width: 'auto', borderColor: item.likedByMe ? 'rgba(236,72,153,0.4)' : colors.cardBorder, backgroundColor: item.likedByMe ? 'rgba(236,72,153,0.15)' : isDarkMode ? '#0f172a' : '#f1f5f9' }]} 
                       onPress={() => handleLike(item.resultId)}
                     >
                       <Feather name="heart" size={12} color={item.likedByMe ? "#ec4899" : "#94a3b8"} />
-                      <Text style={[styles.likeText, item.likedByMe && { color: '#ec4899' }]}>
+                      <Text style={[styles.likeText, { color: item.likedByMe ? '#ec4899' : colors.subText }]}>
                         {item.likes?.length || 0}
                       </Text>
                     </TouchableOpacity>
@@ -373,7 +385,7 @@ export default function DashboardScreen({ navigation }) {
           ) : (
             <View style={styles.emptyLeader}>
               <Feather name="award" size={24} color="#475569" />
-              <Text style={[styles.emptyText, { marginTop: 8 }]}>No toppers available yet.</Text>
+              <Text style={[styles.emptyText, { color: colors.subText, marginTop: 8 }]}>No toppers available yet.</Text>
             </View>
           )}
         </View>
@@ -418,24 +430,40 @@ export default function DashboardScreen({ navigation }) {
             keyExtractor={item => item.resultId}
             contentContainerStyle={{ padding: 16 }}
             renderItem={({ item, index }) => (
-              <View style={[styles.leaderCard, { width: '100%', marginBottom: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16 }]}>
+              <View style={[styles.leaderCard, { width: '100%', marginBottom: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                  <View style={[styles.rankBadge, { backgroundColor: index === 0 ? '#fbbf24' : index === 1 ? '#94a3b8' : index === 2 ? '#b45309' : '#334155', marginRight: 12 }]}>
-                    <Text style={styles.rankText}>{index + 1}</Text>
-                  </View>
+                  <TouchableOpacity 
+                    onPress={() => {
+                      setShowAllToppers(false);
+                      setSelectedTopper(item);
+                    }} 
+                    style={{ position: 'relative', marginRight: 12 }}
+                    activeOpacity={0.8}
+                  >
+                    {item.student?.profileImage ? (
+                      <Image source={{ uri: getImageUrl(item.student.profileImage) }} style={{ width: 44, height: 44, borderRadius: 22, borderWidth: 2, borderColor: index === 0 ? '#fbbf24' : index === 1 ? '#94a3b8' : index === 2 ? '#b45309' : '#334155' }} />
+                    ) : (
+                      <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: index === 0 ? '#fbbf24' : index === 1 ? '#94a3b8' : index === 2 ? '#b45309' : '#334155', justifyContent: 'center', alignItems: 'center' }}>
+                        <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold' }}>{(item.student?.name || 'U').charAt(0).toUpperCase()}</Text>
+                      </View>
+                    )}
+                    <View style={{ position: 'absolute', bottom: -2, right: -2, backgroundColor: index === 0 ? '#fbbf24' : index === 1 ? '#94a3b8' : index === 2 ? '#b45309' : '#334155', width: 20, height: 20, borderRadius: 10, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#0f172a' }}>
+                      <Text style={{ color: '#fff', fontSize: 10, fontWeight: '900' }}>{index + 1}</Text>
+                    </View>
+                  </TouchableOpacity>
                   <View style={{ flex: 1 }}>
-                    <Text style={[styles.leaderName, { marginBottom: 2, textAlign: 'left', fontSize: 15 }]} numberOfLines={1}>{item.student?.name || 'Unknown'}</Text>
-                    <Text style={[styles.recentSub, { textAlign: 'left', fontSize: 13 }]}>{item.examTitle}</Text>
+                    <Text style={[styles.leaderName, { color: colors.text, marginBottom: 2, textAlign: 'left', fontSize: 15 }]} numberOfLines={1}>{item.student?.name || 'Unknown'}</Text>
+                    <Text style={[styles.recentSub, { color: colors.subText, textAlign: 'left', fontSize: 13 }]}>{item.examTitle}</Text>
                   </View>
                 </View>
                 <View style={{ alignItems: 'flex-end' }}>
                   <Text style={[styles.leaderScore, { fontSize: 18 }]}>{item.score?.toFixed(1)}%</Text>
                   <TouchableOpacity 
-                    style={[styles.likeBtn, item.likedByMe && styles.likeBtnActive, { marginTop: 8, paddingVertical: 6, paddingHorizontal: 12, width: 'auto' }]} 
+                    style={[styles.likeBtn, item.likedByMe && styles.likeBtnActive, { marginTop: 8, paddingVertical: 6, paddingHorizontal: 12, width: 'auto', borderColor: item.likedByMe ? 'rgba(236,72,153,0.4)' : colors.cardBorder, backgroundColor: item.likedByMe ? 'rgba(236,72,153,0.15)' : isDarkMode ? '#0f172a' : '#f1f5f9' }]} 
                     onPress={() => handleLike(item.resultId)}
                   >
                     <Feather name="heart" size={14} color={item.likedByMe ? "#ec4899" : "#94a3b8"} />
-                    <Text style={[styles.likeText, item.likedByMe && { color: '#ec4899' }, { fontSize: 13 }]}>
+                    <Text style={[styles.likeText, { color: item.likedByMe ? '#ec4899' : colors.subText }, { fontSize: 13 }]}>
                       {item.likes?.length || 0}
                     </Text>
                   </TouchableOpacity>
@@ -509,30 +537,18 @@ export default function DashboardScreen({ navigation }) {
                   if (!broadcastData.title.trim() || !broadcastData.message.trim()) return;
                   setIsBroadcasting(true);
                   try {
-                    const token = await require('@react-native-async-storage/async-storage').default.getItem('token');
-                    const response = await fetch('https://exam-app-backend-vqos.vercel.app/api/notifications/send', {
-                      method: 'POST',
-                      headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                      },
-                      body: JSON.stringify({
-                        email: 'all',
-                        title: broadcastData.title,
-                        message: broadcastData.message,
-                        type: 'system_alert'
-                      })
+                    await api.post('/api/notifications/send', {
+                      email: 'all',
+                      title: broadcastData.title,
+                      message: broadcastData.message,
+                      type: 'system_alert'
                     });
                     
-                    if (response.ok) {
-                      Toast.show({ type: 'success', text1: 'Success', text2: 'Broadcast message sent to all users!' });
-                      setBroadcastModalVisible(false);
-                      setBroadcastData({ title: '', message: '' });
-                    } else {
-                      Toast.show({ type: 'error', text1: 'Error', text2: 'Failed to send broadcast message.' });
-                    }
+                    Toast.show({ type: 'success', text1: 'Success', text2: 'Broadcast message sent to all users!' });
+                    setBroadcastModalVisible(false);
+                    setBroadcastData({ title: '', message: '' });
                   } catch (error) {
-                    Toast.show({ type: 'error', text1: 'Error', text2: 'Network error. Please try again.' });
+                    Toast.show({ type: 'error', text1: 'Error', text2: error.response?.data?.message || 'Failed to send broadcast message.' });
                   } finally {
                     setIsBroadcasting(false);
                   }
@@ -551,6 +567,66 @@ export default function DashboardScreen({ navigation }) {
           </View>
         </View>
       </Modal>
+
+      {/* ── Topper Student Profile Modal ── */}
+      {selectedTopper && (
+        <Modal visible={true} transparent animationType="fade" onRequestClose={() => setSelectedTopper(null)}>
+          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+            <View style={{ width: '90%', backgroundColor: colors.card, borderRadius: 20, overflow: 'hidden', borderWidth: 1, borderColor: colors.border, padding: 24, alignItems: 'center', position: 'relative' }}>
+              <TouchableOpacity style={{ position: 'absolute', top: 16, right: 16, zIndex: 10 }} onPress={() => setSelectedTopper(null)}>
+                <Feather name="x" size={24} color={colors.subText} />
+              </TouchableOpacity>
+
+              <View style={{ width: 110, height: 110, borderRadius: 55, marginBottom: 16, borderWidth: 3, borderColor: '#6366f1', justifyContent: 'center', alignItems: 'center', backgroundColor: colors.card, overflow: 'hidden' }}>
+                {selectedTopper.student?.profileImage ? (
+                  <Image source={{ uri: getImageUrl(selectedTopper.student.profileImage) }} style={{ width: 110, height: 110 }} resizeMode="cover" />
+                ) : (
+                  <Text style={{ color: colors.text, fontSize: 44, fontWeight: 'bold' }}>{(selectedTopper.student?.name || 'U').charAt(0).toUpperCase()}</Text>
+                )}
+              </View>
+
+              <Text style={{ fontSize: 22, fontWeight: '800', color: colors.text, textAlign: 'center' }}>
+                {selectedTopper.student?.name || 'Unknown Student'}
+              </Text>
+
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6, backgroundColor: 'rgba(139,92,246,0.15)', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 16 }}>
+                <Feather name="users" size={14} color="#a855f7" style={{ marginRight: 6 }} />
+                <Text style={{ fontSize: 14, fontWeight: '700', color: '#a855f7' }}>
+                  {selectedTopper.student?.classGroup || selectedTopper.student?.department || 'General Class'}
+                </Text>
+              </View>
+
+              {selectedTopper.student?.email && (
+                <Text style={{ fontSize: 13, color: colors.subText, marginTop: 8 }}>
+                  {selectedTopper.student.email}
+                </Text>
+              )}
+
+              <View style={{ width: '100%', marginTop: 22, padding: 16, backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc', borderRadius: 14, borderWidth: 1, borderColor: colors.border }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
+                  <Text style={{ fontSize: 13, color: colors.subText }}>Achievement</Text>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: '#fbbf24' }}>🏆 Exam Topper</Text>
+                </View>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
+                  <Text style={{ fontSize: 13, color: colors.subText }}>Exam Title</Text>
+                  <Text style={{ fontSize: 13, fontWeight: '600', color: colors.text }}>{selectedTopper.examTitle}</Text>
+                </View>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                  <Text style={{ fontSize: 13, color: colors.subText }}>Score</Text>
+                  <Text style={{ fontSize: 14, fontWeight: '800', color: '#10b981' }}>{selectedTopper.score?.toFixed(1)}%</Text>
+                </View>
+              </View>
+
+              <TouchableOpacity 
+                style={{ width: '100%', backgroundColor: '#6366f1', paddingVertical: 14, borderRadius: 12, alignItems: 'center', marginTop: 22 }}
+                onPress={() => setSelectedTopper(null)}
+              >
+                <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700' }}>Close Profile</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+      )}
 
     </View>
   );
@@ -604,7 +680,7 @@ const styles = StyleSheet.create({
   /* Stats Grid */
   statsGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginBottom: 15 },
   statCard: {
-    width: '31.5%', padding: 12, borderRadius: 16, marginBottom: 12, borderWidth: 1,
+    width: '48%', padding: 12, borderRadius: 16, marginBottom: 12, borderWidth: 1,
     shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 4, elevation: 2,
   },
   iconWrapper: { width: 40, height: 40, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginBottom: 10 },
@@ -657,17 +733,17 @@ const styles = StyleSheet.create({
   quickActionLabel: { fontSize: 10, textAlign: 'center', fontWeight: '600' },
 
   /* Toppers */
-  leaderCard: { backgroundColor: '#0f172a', borderRadius: 14, padding: 14, marginRight: 10, borderWidth: 1, borderColor: '#334155' },
+  leaderCard: { borderRadius: 14, padding: 14, marginRight: 10, borderWidth: 1 },
   rankBadge: { width: 28, height: 28, borderRadius: 14, justifyContent: 'center', alignItems: 'center' },
-  rankText: { color: '#fff', fontWeight: '800', fontSize: 13 },
-  leaderName: { color: '#fff', fontSize: 12, fontWeight: '600' },
-  recentSub: { color: '#94a3b8', fontSize: 11 },
+  rankText: { fontWeight: '800', fontSize: 13 },
+  leaderName: { fontSize: 12, fontWeight: '600' },
+  recentSub: { fontSize: 11 },
   leaderScore: { color: '#10b981', fontSize: 14, fontWeight: '800' },
-  likeBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#1e293b', borderRadius: 20, borderWidth: 1, borderColor: '#334155' },
+  likeBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, borderRadius: 20, borderWidth: 1 },
   likeBtnActive: { backgroundColor: 'rgba(236,72,153,0.15)', borderColor: 'rgba(236,72,153,0.4)' },
-  likeText: { fontSize: 13, fontWeight: '700', color: '#94a3b8' },
+  likeText: { fontSize: 13, fontWeight: '700' },
   emptyLeader: { alignItems: 'center', paddingVertical: 20 },
-  emptyText: { color: '#64748b', fontSize: 13, textAlign: 'center' },
+  emptyText: { fontSize: 13, textAlign: 'center' },
   viewAll: { color: '#818cf8', fontSize: 13, fontWeight: '600' },
   modalContainer: { flex: 1 },
   modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, paddingTop: 48, borderBottomWidth: 1 },

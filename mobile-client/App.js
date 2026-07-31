@@ -9,12 +9,14 @@ import { LogBox } from 'react-native';
 LogBox.ignoreLogs(['[expo-av]']);
 
 import NotificationManager from './src/components/NotificationManager';
+import OfflineNetworkBanner from './src/components/OfflineNetworkBanner';
 
 export default function App() {
   return (
     <Provider store={store}>
       <AppNavigator />
       <NotificationManager />
+      <OfflineNetworkBanner />
       <Toast />
     </Provider>
   );

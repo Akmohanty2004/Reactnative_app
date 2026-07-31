@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Image, Modal, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Image, Modal, Alert, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { Feather } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
@@ -60,11 +60,15 @@ export default function ProfileScreen({ navigation }) {
   };
 
   const handlePasswordSubmit = async () => {
+    if (!passwordData.oldPassword || !passwordData.newPassword) {
+      return Toast.show({ type: 'error', text1: 'Error', text2: 'Please enter old and new password' });
+    }
     if (passwordData.newPassword !== passwordData.confirmPassword) {
       return Toast.show({ type: 'error', text1: 'Error', text2: 'New passwords do not match' });
     }
     try {
       await dispatch(changePassword({ 
+        currentPassword: passwordData.oldPassword,
         oldPassword: passwordData.oldPassword, 
         newPassword: passwordData.newPassword 
       })).unwrap();
@@ -91,9 +95,10 @@ export default function ProfileScreen({ navigation }) {
       await api.post('/api/notifications/send', {
         email: 'all',
         title: broadcastData.title,
-        message: broadcastData.message
+        message: broadcastData.message,
+        type: 'system_alert'
       });
-      Toast.show({ type: 'success', text1: 'Broadcast Sent', text2: 'Message sent to all students' });
+      Toast.show({ type: 'success', text1: 'Broadcast Sent', text2: 'Message sent to all users' });
       setBroadcastModalVisible(false);
       setBroadcastData({ title: '', message: '' });
     } catch (error) {
@@ -105,7 +110,7 @@ export default function ProfileScreen({ navigation }) {
 
   const pickImage = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.5,
@@ -158,18 +163,13 @@ export default function ProfileScreen({ navigation }) {
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
       <ScrollView contentContainerStyle={styles.content}>
         {/* Header */}
-        <View style={styles.header}>
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <TouchableOpacity 
-              onPress={() => navigation?.canGoBack() ? navigation.goBack() : navigation?.navigate('Dashboard')}
-              style={{ marginRight: 10, padding: 4 }}
-            >
-              <Feather name="arrow-left" size={24} color={colors.text} />
-            </TouchableOpacity>
-            <View>
-              <Text style={[styles.headerTitle, { color: colors.text }]}>My <Text style={{color: '#8b5cf6'}}>Profile</Text></Text>
-              <Text style={styles.headerSubtitle}>Manage your account and preferences</Text>
-            </View>
+        <View style={[styles.header, { flexDirection: 'row', alignItems: 'center' }]}>
+          <TouchableOpacity onPress={() => navigation.navigate('Home')} style={{ marginRight: 15 }}>
+            <Feather name="arrow-left" size={24} color={colors.text} />
+          </TouchableOpacity>
+          <View style={styles.headerTitles}>
+            <Text style={[styles.headerTitle, { color: colors.text }]}>My <Text style={{color: '#8b5cf6'}}>Profile</Text></Text>
+            <Text style={styles.headerSubtitle}>Manage your account and preferences</Text>
           </View>
           <View style={styles.headerIcons}>
             <TouchableOpacity style={[styles.iconBtn, { backgroundColor: colors.iconBg }]} onPress={() => navigation.navigate('Notifications')}>
@@ -298,7 +298,7 @@ export default function ProfileScreen({ navigation }) {
             <Feather name="chevron-right" size={20} color={colors.subText} />
           </TouchableOpacity>
           
-          <TouchableOpacity style={[styles.listItem, {borderBottomWidth: 0}]}>
+          <TouchableOpacity style={[styles.listItem, {borderBottomWidth: 0}]} onPress={() => setPrivacyModalVisible(true)}>
             <View style={[styles.listIconWrapper, {backgroundColor: 'rgba(245, 158, 11, 0.1)'}]}>
               <Feather name="shield" size={18} color="#fbbf24" />
             </View>
@@ -443,13 +443,13 @@ export default function ProfileScreen({ navigation }) {
               </TouchableOpacity>
             </View>
             <ScrollView style={styles.modalBody}>
-              <Text style={styles.inputLabel}>Old Password</Text>
+              <Text style={[styles.inputLabel, { color: colors.subText }]}>Old Password</Text>
               <TextInput style={[styles.input, { backgroundColor: colors.inputBg, borderColor: colors.listBorder, color: colors.text }]} secureTextEntry value={passwordData.oldPassword} onChangeText={t => setPasswordData({...passwordData, oldPassword: t})} />
               
-              <Text style={styles.inputLabel}>New Password</Text>
+              <Text style={[styles.inputLabel, { color: colors.subText }]}>New Password</Text>
               <TextInput style={[styles.input, { backgroundColor: colors.inputBg, borderColor: colors.listBorder, color: colors.text }]} secureTextEntry value={passwordData.newPassword} onChangeText={t => setPasswordData({...passwordData, newPassword: t})} />
               
-              <Text style={styles.inputLabel}>Confirm New Password</Text>
+              <Text style={[styles.inputLabel, { color: colors.subText }]}>Confirm New Password</Text>
               <TextInput style={[styles.input, { backgroundColor: colors.inputBg, borderColor: colors.listBorder, color: colors.text }]} secureTextEntry value={passwordData.confirmPassword} onChangeText={t => setPasswordData({...passwordData, confirmPassword: t})} />
               
               <TouchableOpacity style={styles.primaryBtn} onPress={handlePasswordSubmit}>
@@ -510,12 +510,48 @@ export default function ProfileScreen({ navigation }) {
             </View>
             <ScrollView style={{ flexGrow: 0 }}>
               <View style={{ backgroundColor: isDarkMode ? '#111827' : '#f8fafc', borderRadius: 12, padding: 20, borderWidth: 1, borderColor: colors.listBorder, marginBottom: 20 }}>
+                <Feather name="info" size={32} color="#3b82f6" style={{ marginBottom: 15 }} />
+                <Text style={{ color: colors.text, fontSize: 18, fontWeight: '700', marginBottom: 10 }}>About ExamHub</Text>
+                <Text style={{ color: colors.subText, fontSize: 14, lineHeight: 22, marginBottom: 10 }}>
+                  ExamHub is a modern, secure, and comprehensive online assessment platform designed to connect educators and students seamlessly. With real-time testing, automated grading, anti-cheat monitoring, and instant result analytics, ExamHub empowers educational institutions to conduct reliable examinations anytime, anywhere.
+                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(59, 130, 246, 0.1)', padding: 12, borderRadius: 8, marginTop: 10 }}>
+                  <Feather name="award" size={18} color="#3b82f6" style={{ marginRight: 10 }} />
+                  <Text style={{ color: '#3b82f6', fontWeight: 'bold' }}>Version 2.4.0 • Built for Excellence</Text>
+                </View>
+              </View>
+
+              <View style={{ backgroundColor: isDarkMode ? '#111827' : '#f8fafc', borderRadius: 12, padding: 20, borderWidth: 1, borderColor: colors.listBorder, marginBottom: 20 }}>
+                <Feather name="shield" size={32} color="#10b981" style={{ marginBottom: 15 }} />
+                <Text style={{ color: colors.text, fontSize: 18, fontWeight: '700', marginBottom: 10 }}>Security & Protection</Text>
+                <Text style={{ color: colors.subText, fontSize: 14, lineHeight: 22, marginBottom: 10 }}>
+                  ExamHub implements advanced multi-layered security protocols to safeguard examination integrity and user data. Features include automated full-screen anti-cheat monitoring, secure JWT token authentication, encrypted password storage, and strict session management.
+                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(16, 185, 129, 0.1)', padding: 12, borderRadius: 8, marginTop: 10 }}>
+                  <Feather name="lock" size={18} color="#10b981" style={{ marginRight: 10 }} />
+                  <Text style={{ color: '#10b981', fontWeight: 'bold' }}>256-bit Encryption • Anti-Cheat Active</Text>
+                </View>
+              </View>
+
+              <View style={{ backgroundColor: isDarkMode ? '#111827' : '#f8fafc', borderRadius: 12, padding: 20, borderWidth: 1, borderColor: colors.listBorder, marginBottom: 20 }}>
+                <Feather name="key" size={32} color="#f59e0b" style={{ marginBottom: 15 }} />
+                <Text style={{ color: colors.text, fontSize: 18, fontWeight: '700', marginBottom: 10 }}>Account Security & Access</Text>
+                <Text style={{ color: colors.subText, fontSize: 14, lineHeight: 22, marginBottom: 10 }}>
+                  Manage your account security settings. Your account is protected with automatic session timeouts, bcrypt password hashing, and active device monitoring. Never share your OTP or password with anyone.
+                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(245, 158, 11, 0.1)', padding: 12, borderRadius: 8, marginTop: 10 }}>
+                  <Feather name="check-circle" size={18} color="#f59e0b" style={{ marginRight: 10 }} />
+                  <Text style={{ color: '#f59e0b', fontWeight: 'bold' }}>Account Protected • 2FA Ready</Text>
+                </View>
+              </View>
+
+              <View style={{ backgroundColor: isDarkMode ? '#111827' : '#f8fafc', borderRadius: 12, padding: 20, borderWidth: 1, borderColor: colors.listBorder, marginBottom: 20 }}>
                 <Feather name="headphones" size={32} color="#a855f7" style={{ marginBottom: 15 }} />
                 <Text style={{ color: colors.text, fontSize: 18, fontWeight: '700', marginBottom: 10 }}>Need Support?</Text>
                 <Text style={{ color: colors.subText, fontSize: 14, lineHeight: 22, marginBottom: 10 }}>If you are experiencing any issues with your account or have questions about the platform, please contact our administrative team.</Text>
                 <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(139, 92, 246, 0.1)', padding: 12, borderRadius: 8, marginTop: 10 }}>
                   <Feather name="mail" size={18} color="#a855f7" style={{ marginRight: 10 }} />
-                  <Text style={{ color: '#a855f7', fontWeight: 'bold' }}>admin@examhub.com</Text>
+                  <Text style={{ color: '#a855f7', fontWeight: 'bold' }}>testsbuddy@gmail.com</Text>
                 </View>
               </View>
 

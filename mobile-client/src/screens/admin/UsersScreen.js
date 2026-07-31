@@ -26,6 +26,7 @@ export default function UsersScreen({ navigation }) {
   const dispatch = useDispatch();
   const { users, isLoading } = useSelector(state => state.admin);
   const { theme } = useSelector(state => state.ui || { theme: 'dark' });
+  const currentUser = useSelector(state => state.auth.user);
   const [searchTerm, setSearchTerm] = useState('');
   const [refreshing, setRefreshing] = useState(false);
 
@@ -41,7 +42,11 @@ export default function UsersScreen({ navigation }) {
     setRefreshing(false);
   }, [dispatch]);
 
-  const handleDelete = (userId, userName) => {
+  const handleDelete = (userId, userName, userRole) => {
+    if (userRole === 'admin' || userId === currentUser?._id) {
+      Alert.alert("Protected Account", "Admin accounts and your own account cannot be deleted.");
+      return;
+    }
     Alert.alert(
       "Delete User",
       `Are you sure you want to permanently delete "${userName}"? This will also delete their exams and results.`,
@@ -96,11 +101,8 @@ export default function UsersScreen({ navigation }) {
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
       <View style={[styles.header, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <TouchableOpacity 
-            onPress={() => navigation?.canGoBack() ? navigation.goBack() : navigation?.navigate('Dashboard')}
-            style={{ marginRight: 10, padding: 4 }}
-          >
-            <Feather name="arrow-left" size={24} color={colors.headerTitle} />
+          <TouchableOpacity onPress={() => navigation.navigate('Home')} style={{ marginRight: 15 }}>
+            <Feather name="arrow-left" size={24} color={colors.text} />
           </TouchableOpacity>
           <View>
             <Text style={[styles.title, { color: colors.headerTitle }]}>User Management</Text>
@@ -187,12 +189,18 @@ export default function UsersScreen({ navigation }) {
                       )}
                     </View>
                     
-                    <TouchableOpacity 
-                      style={[styles.deleteBtn, { backgroundColor: colors.deleteBtnBg }]}
-                      onPress={() => handleDelete(user._id, user.name)}
-                    >
-                      <Feather name="trash-2" size={18} color={colors.deleteBtnColor} />
-                    </TouchableOpacity>
+                    {user.role !== 'admin' && user._id !== currentUser?._id ? (
+                      <TouchableOpacity 
+                        style={[styles.deleteBtn, { backgroundColor: colors.deleteBtnBg }]}
+                        onPress={() => handleDelete(user._id, user.name, user.role)}
+                      >
+                        <Feather name="trash-2" size={18} color={colors.deleteBtnColor} />
+                      </TouchableOpacity>
+                    ) : (
+                      <View style={[styles.deleteBtn, { backgroundColor: isDarkMode ? 'rgba(148,163,184,0.1)' : '#f1f5f9' }]}>
+                        <Feather name="shield" size={16} color={colors.subText} />
+                      </View>
+                    )}
                   </View>
                 </View>
               );

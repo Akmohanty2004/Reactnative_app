@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   View, Text, TextInput, TouchableOpacity, StyleSheet, 
   KeyboardAvoidingView, Platform, ActivityIndicator, 
-  ImageBackground, ScrollView, Animated
+  ImageBackground, ScrollView, Animated, Image
 } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { Feather } from '@expo/vector-icons';
@@ -11,6 +11,8 @@ import { registerUser, verifyRegisterUser, clearError } from '../../redux/slices
 import registerBg from '../../../assets/registerbackground.png';
 
 export default function RegisterScreen({ navigation }) {
+  const otpInputRef = useRef(null);
+  const adminOtpInputRef = useRef(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [role, setRole] = useState('student');
@@ -55,10 +57,10 @@ export default function RegisterScreen({ navigation }) {
       try {
         const { default: api } = await import('../../services/api');
         const res = await api.get('/api/classes');
-        const fetched = res.data?.classes || [];
-        setAvailableClasses(fetched);
+        setAvailableClasses(res.data.classes || []);
       } catch (err) {
         console.log('Error fetching classes:', err);
+        setAvailableClasses([]);
       }
     };
     fetchClasses();
@@ -82,7 +84,7 @@ export default function RegisterScreen({ navigation }) {
     else if (formData.password.length < 6) newErrors.password = 'Min 6 chars';
     if (formData.confirmPassword !== formData.password) newErrors.confirmPassword = 'Passwords mismatch';
     if (!formData.address) newErrors.address = 'Required';
-    if (!formData.classGroup) newErrors.classGroup = 'Required';
+    if (role !== 'teacher' && !formData.classGroup) newErrors.classGroup = 'Required';
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -124,6 +126,38 @@ export default function RegisterScreen({ navigation }) {
     });
   };
 
+  const handleResendOTP = () => {
+    const finalData = registrationData || formData;
+    if (finalData && finalData.email) {
+      dispatch(registerUser({
+        ...finalData,
+        email: finalData.email.trim(),
+        role: finalData.role || role
+      }));
+    }
+  };
+
+  const renderOtpBoxes = (val = '') => {
+    const boxes = [];
+    for (let i = 0; i < 6; i++) {
+      const digit = val[i] || '';
+      const isCurrent = val.length === i;
+      boxes.push(
+        <View 
+          key={i} 
+          style={[
+            styles.otpBox,
+            isCurrent && styles.otpBoxActive,
+            digit && styles.otpBoxFilled
+          ]}
+        >
+          <Text style={styles.otpDigit}>{digit}</Text>
+        </View>
+       );
+    }
+    return boxes;
+  };
+
   const roles = [
     { id: 'student', label: 'Student', icon: 'user', color: '#6366f1' },
     { id: 'teacher', label: 'Teacher', icon: 'user-check', color: '#8b5cf6' },
@@ -143,14 +177,8 @@ export default function RegisterScreen({ navigation }) {
             {!registerOtpSent ? (
               <View>
                 <View style={styles.headerContainer}>
-                  <TouchableOpacity 
-                    onPress={() => navigation.goBack()} 
-                    style={{ position: 'absolute', left: 0, top: 0, padding: 8, zIndex: 10 }}
-                  >
-                    <Feather name="arrow-left" size={24} color="white" />
-                  </TouchableOpacity>
-                  <View style={[styles.logoIcon, { backgroundColor: '#10b981' }]}>
-                    <Text style={{fontSize: 28}}>🚀</Text>
+                  <View style={[styles.logoIcon, { backgroundColor: 'transparent' }]}>
+                    <Image source={require('../../../assets/Applogo.png')} style={{ width: 64, height: 64, borderRadius: 16 }} resizeMode="contain" />
                   </View>
                   <Text style={styles.title}>Create Account</Text>
                   <Text style={styles.subtitle}>Join ExamHub today</Text>
@@ -260,29 +288,31 @@ export default function RegisterScreen({ navigation }) {
 
                   {/* Class Group & Address */}
                   <View style={styles.row}>
-                    <View style={styles.halfInputContainer}>
-                      <Text style={styles.label}>Class / Group *</Text>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 5, backgroundColor: '#0f172a', borderRadius: 10, borderWidth: 1, borderColor: '#334155', paddingHorizontal: 5 }}>
-                        <Feather name="chevron-left" size={16} color="#64748b" />
-                        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1, paddingVertical: 5 }}>
-                          {availableClasses.map(c => (
-                            <TouchableOpacity
-                              key={c._id}
-                              style={[
-                                { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, borderWidth: 1, marginRight: 8, borderColor: '#334155', backgroundColor: '#1e293b' },
-                                formData.classGroup === c.name && { borderColor: '#a78bfa', backgroundColor: '#4c1d95' }
-                              ]}
-                              onPress={() => handleChange('classGroup', c.name)}
-                            >
-                              <Text style={{ color: formData.classGroup === c.name ? 'white' : '#94a3b8', fontSize: 12 }}>{c.name}</Text>
-                            </TouchableOpacity>
-                          ))}
-                        </ScrollView>
-                        <Feather name="chevron-right" size={16} color="#64748b" />
+                    {role !== 'teacher' && (
+                      <View style={styles.halfInputContainer}>
+                        <Text style={styles.label}>Class / Group *</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 5, backgroundColor: '#0f172a', borderRadius: 10, borderWidth: 1, borderColor: '#334155', paddingHorizontal: 5 }}>
+                          <Feather name="chevron-left" size={16} color="#64748b" />
+                          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1, paddingVertical: 5 }}>
+                            {availableClasses.map(c => (
+                              <TouchableOpacity
+                                key={c._id}
+                                style={[
+                                  { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, borderWidth: 1, marginRight: 8, borderColor: '#334155', backgroundColor: '#1e293b' },
+                                  formData.classGroup === c.name && { borderColor: '#a78bfa', backgroundColor: '#4c1d95' }
+                                ]}
+                                onPress={() => handleChange('classGroup', c.name)}
+                              >
+                                <Text style={{ color: formData.classGroup === c.name ? 'white' : '#94a3b8', fontSize: 12 }}>{c.name}</Text>
+                              </TouchableOpacity>
+                            ))}
+                          </ScrollView>
+                          <Feather name="chevron-right" size={16} color="#64748b" />
+                        </View>
+                        {errors.classGroup && <Text style={styles.errorText}>{errors.classGroup}</Text>}
                       </View>
-                      {errors.classGroup && <Text style={styles.errorText}>{errors.classGroup}</Text>}
-                    </View>
-                    <View style={styles.halfInputContainer}>
+                    )}
+                    <View style={[styles.halfInputContainer, role === 'teacher' && { width: '100%' }]}>
                       <Text style={styles.label}>Address *</Text>
                       <View style={styles.inputBox}>
                         <Feather name="map-pin" size={16} color="#64748b" style={styles.inputIcon} />
@@ -309,48 +339,100 @@ export default function RegisterScreen({ navigation }) {
               </View>
             ) : (
               <View>
-                <TouchableOpacity onPress={() => { dispatch(clearError()); setOtp(''); }} style={styles.closeBtn}>
-                  <Feather name="x" size={20} color="white" />
+                <TouchableOpacity onPress={() => { dispatch(clearError()); setOtp(''); }} style={styles.backBtnCircle}>
+                  <Feather name="arrow-left" size={20} color="#10b981" />
                 </TouchableOpacity>
 
                 <View style={styles.headerContainer}>
-                  <View style={[styles.logoIcon, { backgroundColor: '#3b82f6' }]}>
-                    <Text style={{fontSize: 28}}>✉️</Text>
+                  <View style={[styles.iconWrapper, { backgroundColor: 'rgba(16, 185, 129, 0.15)', borderColor: 'rgba(16, 185, 129, 0.3)', borderWidth: 1 }]}>
+                    <Feather name="shield" size={32} color="#10b981" />
                   </View>
                   <Text style={styles.title}>Check Your Email</Text>
                   <Text style={styles.subtitle}>
-                    {role === 'teacher' || loginRole === 'teacher' ? "We've sent one OTP to your email and another to Admin." : `We've sent a 6-digit OTP to ${formData.email || loginEmail}`}
+                    {role === 'teacher' || loginRole === 'teacher' ? "We've sent one OTP to your email and another to Admin." : "We've sent a 6-digit code to"}
                   </Text>
+                  <Text style={[styles.subtitle, { color: '#10b981', fontWeight: '700', marginTop: 4 }]}>{formData.email || loginEmail}</Text>
                 </View>
 
                 <View style={styles.formContainer}>
-                  <Text style={styles.label}>{role === 'teacher' ? 'Your OTP' : 'Enter OTP'}</Text>
-                  <View style={styles.inputBox}>
-                    <Feather name="key" size={18} color="#64748b" style={styles.inputIcon} />
-                    <TextInput style={[styles.input, { letterSpacing: 4, textAlign: 'center' }]} value={otp} onChangeText={(val) => setOtp(val.replace(/\D/g, ''))} placeholder="6-digit code" placeholderTextColor="#64748b" keyboardType="numeric" maxLength={6} />
+                  <Text style={[styles.label, { textAlign: 'center', marginBottom: 4 }]}>{role === 'teacher' ? 'Your OTP' : 'Enter OTP'}</Text>
+                  <View style={styles.otpContainer}>
+                    <TouchableOpacity activeOpacity={1} onPress={() => otpInputRef.current?.focus()} style={styles.otpBoxesRow}>
+                      {renderOtpBoxes(otp)}
+                    </TouchableOpacity>
+                    <TextInput
+                      ref={otpInputRef}
+                      style={styles.hiddenOtpInput}
+                      value={otp}
+                      onChangeText={(val) => setOtp(val.replace(/\D/g, '').slice(0, 6))}
+                      keyboardType="numeric"
+                      maxLength={6}
+                      caretHidden={true}
+                      selectTextOnFocus={false}
+                      autoFocus
+                    />
                   </View>
-                  {errors.otp && <Text style={styles.errorText}>{errors.otp}</Text>}
+                  {errors.otp && <Text style={[styles.errorText, { textAlign: 'center' }]}>{errors.otp}</Text>}
 
                   {role === 'teacher' && (
                     <>
-                      <Text style={[styles.label, { marginTop: 15 }]}>Admin OTP</Text>
-                      <View style={styles.inputBox}>
-                        <Feather name="key" size={18} color="#64748b" style={styles.inputIcon} />
-                        <TextInput style={[styles.input, { letterSpacing: 4, textAlign: 'center' }]} value={adminOtp} onChangeText={(val) => setAdminOtp(val.replace(/\D/g, ''))} placeholder="Admin code" placeholderTextColor="#64748b" keyboardType="numeric" maxLength={6} />
+                      <Text style={[styles.label, { textAlign: 'center', marginTop: 15, marginBottom: 4 }]}>Admin OTP</Text>
+                      <View style={styles.otpContainer}>
+                        <TouchableOpacity activeOpacity={1} onPress={() => adminOtpInputRef.current?.focus()} style={styles.otpBoxesRow}>
+                          {renderOtpBoxes(adminOtp)}
+                        </TouchableOpacity>
+                        <TextInput
+                          ref={adminOtpInputRef}
+                          style={styles.hiddenOtpInput}
+                          value={adminOtp}
+                          onChangeText={(val) => setAdminOtp(val.replace(/\D/g, '').slice(0, 6))}
+                          keyboardType="numeric"
+                          maxLength={6}
+                          caretHidden={true}
+                          selectTextOnFocus={false}
+                        />
                       </View>
-                      {errors.adminOtp && <Text style={styles.errorText}>{errors.adminOtp}</Text>}
+                      {errors.adminOtp && <Text style={[styles.errorText, { textAlign: 'center' }]}>{errors.adminOtp}</Text>}
                     </>
                   )}
 
+                  <View style={styles.validityBadge}>
+                    <Feather name="shield" size={15} color="#10b981" />
+                    <Text style={styles.validityText}>Your code is valid for 10 minutes</Text>
+                  </View>
+
                   {error && (
                     <View style={styles.serverError}>
-                      <Text style={styles.serverErrorText}>⚠️ {error}</Text>
+                      <Feather name="alert-circle" size={16} color="#ef4444" />
+                      <Text style={styles.serverErrorText}>{error}</Text>
                     </View>
                   )}
 
-                  <TouchableOpacity style={[styles.submitButton, { backgroundColor: '#3b82f6' }, isLoading && styles.disabledButton]} onPress={handleVerifyOTP} disabled={isLoading}>
-                    {isLoading ? <ActivityIndicator color="white" /> : <Text style={styles.submitButtonText}>Verify & Register</Text>}
+                  <TouchableOpacity 
+                    style={[styles.submitButton, { backgroundColor: '#10b981', flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8 }, isLoading && styles.disabledButton]} 
+                    onPress={handleVerifyOTP} 
+                    disabled={isLoading}
+                  >
+                    {isLoading ? (
+                      <ActivityIndicator color="white" />
+                    ) : (
+                      <>
+                        <Feather name="lock" size={18} color="white" />
+                        <Text style={styles.submitButtonText}>Verify & Register</Text>
+                        <Feather name="chevron-right" size={20} color="white" />
+                      </>
+                    )}
                   </TouchableOpacity>
+
+                  <View style={styles.resendContainer}>
+                    <Text style={styles.resendText}>Didn't receive the code? </Text>
+                    <TouchableOpacity onPress={handleResendOTP}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                        <Text style={styles.resendLink}>Resend Code</Text>
+                        <Feather name="refresh-cw" size={14} color="#10b981" />
+                      </View>
+                    </TouchableOpacity>
+                  </View>
                 </View>
               </View>
             )}
@@ -392,5 +474,98 @@ const styles = StyleSheet.create({
   loginLink: { marginTop: 20, alignItems: 'center' },
   loginText: { color: '#94a3b8', fontSize: 13 },
   loginTextBold: { color: '#3b82f6', fontWeight: 'bold' },
-  closeBtn: { alignSelf: 'flex-end', padding: 8, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 20, marginBottom: 5 }
+  closeBtn: { alignSelf: 'flex-end', padding: 8, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 20, marginBottom: 5 },
+
+  /* OTP Verification UI styles */
+  backBtnCircle: {
+    width: 40, height: 40, borderRadius: 20,
+    backgroundColor: 'rgba(16, 185, 129, 0.15)',
+    justifyContent: 'center', alignItems: 'center',
+    alignSelf: 'flex-start', marginBottom: 12
+  },
+  iconWrapper: {
+    width: 64, height: 64, borderRadius: 20,
+    backgroundColor: 'rgba(16, 185, 129, 0.15)',
+    justifyContent: 'center', alignItems: 'center',
+    marginBottom: 12,
+  },
+  otpContainer: {
+    width: '100%',
+    alignItems: 'center',
+    marginVertical: 12
+  },
+  otpBoxesRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    gap: 6
+  },
+  otpBox: {
+    width: 44, height: 52,
+    borderRadius: 12,
+    backgroundColor: 'rgba(15, 23, 42, 0.8)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+  otpBoxActive: {
+    borderColor: '#10b981',
+    backgroundColor: 'rgba(16, 185, 129, 0.12)',
+    shadowColor: '#10b981',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 4
+  },
+  otpBoxFilled: {
+    borderColor: '#10b981',
+    backgroundColor: 'rgba(15, 23, 42, 0.9)'
+  },
+  otpDigit: {
+    color: 'white',
+    fontSize: 20,
+    fontWeight: '800'
+  },
+  hiddenOtpInput: {
+    ...StyleSheet.absoluteFillObject,
+    width: '100%',
+    height: '100%',
+    opacity: 0.01,
+    color: 'transparent',
+    backgroundColor: 'transparent'
+  },
+  validityBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    alignSelf: 'center',
+    marginTop: 12,
+    marginBottom: 8
+  },
+  validityText: {
+    color: '#94a3b8',
+    fontSize: 12,
+    fontWeight: '500'
+  },
+  resendContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 20
+  },
+  resendText: {
+    color: '#94a3b8',
+    fontSize: 14
+  },
+  resendLink: {
+    color: '#10b981',
+    fontSize: 14,
+    fontWeight: '700'
+  }
 });

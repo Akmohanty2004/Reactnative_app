@@ -90,17 +90,14 @@ export default function ManageClassesScreen({ navigation }) {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
-      <View style={styles.header}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
-          <TouchableOpacity 
-            onPress={() => navigation?.canGoBack() ? navigation.goBack() : navigation?.navigate('Dashboard')}
-            style={{ marginRight: 10, padding: 4 }}
-          >
-            <Feather name="arrow-left" size={24} color={colors.text} />
-          </TouchableOpacity>
-          <Text style={[styles.title, { color: colors.text, marginBottom: 0 }]}>Manage Classes</Text>
+      <View style={[styles.header, { flexDirection: 'row', alignItems: 'center' }]}>
+        <TouchableOpacity onPress={() => navigation.navigate('Home')} style={{ marginRight: 15 }}>
+          <Feather name="arrow-left" size={24} color={colors.text} />
+        </TouchableOpacity>
+        <View>
+          <Text style={[styles.title, { color: colors.text }]}>Manage Classes</Text>
+          <Text style={[styles.subtitle, { color: colors.subText }]}>Create and organize class groups</Text>
         </View>
-        <Text style={[styles.subtitle, { color: colors.subText }]}>Add or remove classes for students to join.</Text>
       </View>
       
       <View style={[styles.addSection, { backgroundColor: colors.card, borderColor: colors.border }]}>

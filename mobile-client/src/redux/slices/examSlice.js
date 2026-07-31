@@ -191,7 +191,9 @@ const examSlice = createSlice({
     builder
       // Get student exams
       .addCase(getStudentExams.pending, (state) => {
-        state.isLoading = true
+        if (!state.exams || state.exams.length === 0) {
+          state.isLoading = true
+        }
         state.error = null
       })
       .addCase(getStudentExams.fulfilled, (state, action) => {
@@ -205,7 +207,9 @@ const examSlice = createSlice({
       
       // Get teacher exams
       .addCase(getTeacherExams.pending, (state) => {
-        state.isLoading = true
+        if (!state.exams || state.exams.length === 0) {
+          state.isLoading = true
+        }
         state.error = null
       })
       .addCase(getTeacherExams.fulfilled, (state, action) => {

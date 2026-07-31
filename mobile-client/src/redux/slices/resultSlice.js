@@ -142,7 +142,9 @@ const resultSlice = createSlice({
   extraReducers: (builder) => {
     builder
       .addCase(getStudentResults.pending, (state) => {
-        state.isLoading = true
+        if (!state.results || state.results.length === 0) {
+          state.isLoading = true
+        }
       })
       .addCase(getStudentResults.fulfilled, (state, action) => {
         state.isLoading = false
@@ -153,7 +155,9 @@ const resultSlice = createSlice({
         state.error = action.payload
       })
       .addCase(getTeacherResults.pending, (state) => {
-        state.isLoading = true
+        if (!state.results || state.results.length === 0) {
+          state.isLoading = true
+        }
       })
       .addCase(getTeacherResults.fulfilled, (state, action) => {
         state.isLoading = false

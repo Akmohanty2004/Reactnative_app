@@ -18,7 +18,7 @@ export const loginUser = createAsyncThunk(
       Toast.show({ type: 'success', text1: response.data.message || 'OTP Sent successfully!' })
       return { ...response.data, email, role, password }
     } catch (error) {
-      const message = error.response?.data?.message || 'Login failed'
+      const message = error.response?.data?.message || error.message || 'Login failed'
       Toast.show({ type: 'error', text1: message })
       return rejectWithValue(message)
     }
@@ -46,7 +46,7 @@ export const verifyLoginUser = createAsyncThunk(
       Toast.show({ type: 'success', text1: 'Login successful!' })
       return response.data
     } catch (error) {
-      const message = error.response?.data?.message || 'OTP Verification failed'
+      const message = error.response?.data?.message || error.message || 'OTP Verification failed'
       Toast.show({ type: 'error', text1: message })
       return rejectWithValue(message)
     }
@@ -62,7 +62,7 @@ export const registerUser = createAsyncThunk(
       Toast.show({ type: 'success', text1: response.data.message || 'OTP Sent successfully!' })
       return { ...response.data, userData }
     } catch (error) {
-      const message = error.response?.data?.message || 'Registration failed'
+      const message = error.response?.data?.message || error.message || 'Registration failed'
       Toast.show({ type: 'error', text1: message })
       return rejectWithValue(message)
     }
@@ -79,7 +79,7 @@ export const verifyRegisterUser = createAsyncThunk(
       Toast.show({ type: 'success', text1: response.data.message || 'Registration successful! Please login.' })
       return response.data
     } catch (error) {
-      const message = error.response?.data?.message || 'OTP Verification failed'
+      const message = error.response?.data?.message || error.message || 'OTP Verification failed'
       Toast.show({ type: 'error', text1: message })
       return rejectWithValue(message)
     }
@@ -100,7 +100,7 @@ export const getCurrentUser = createAsyncThunk(
       const response = await api.get(`${API_URL}/auth/me`)
       return response.data
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to get user')
+      return rejectWithValue(error.response?.data?.message || error.message || 'Failed to get user')
     }
   }
 )
@@ -164,7 +164,7 @@ export const updateProfile = createAsyncThunk(
       Toast.show({ type: 'success', text1: 'Profile updated successfully' })
       return response.data
     } catch (error) {
-      const message = error.response?.data?.message || 'Failed to update profile'
+      const message = error.response?.data?.message || error.message || 'Failed to update profile'
       Toast.show({ type: 'error', text1: message })
       return rejectWithValue(message)
     }
@@ -190,7 +190,7 @@ export const uploadProfileImage = createAsyncThunk(
       Toast.show({ type: 'success', text1: 'Profile image updated successfully' })
       return response.data
     } catch (error) {
-      const message = error.response?.data?.message || 'Failed to upload image'
+      const message = error.response?.data?.message || error.message || 'Failed to upload image'
       Toast.show({ type: 'error', text1: message })
       return rejectWithValue(message)
     }
@@ -200,16 +200,16 @@ export const uploadProfileImage = createAsyncThunk(
 // Change password
 export const changePassword = createAsyncThunk(
   'auth/changePassword',
-  async ({ currentPassword, newPassword }, { rejectWithValue }) => {
+  async ({ currentPassword, oldPassword, newPassword }, { rejectWithValue }) => {
     try {
       const response = await api.put(`${API_URL}/users/change-password`, {
-        currentPassword,
+        currentPassword: currentPassword || oldPassword,
         newPassword
       })
       Toast.show({ type: 'success', text1: 'Password changed successfully' })
       return response.data
     } catch (error) {
-      const message = error.response?.data?.message || 'Failed to change password'
+      const message = error.response?.data?.message || error.message || 'Failed to change password'
       Toast.show({ type: 'error', text1: message })
       return rejectWithValue(message)
     }

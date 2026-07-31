@@ -131,18 +131,13 @@ export default function ExamsScreen({ navigation }) {
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
       <ScrollView contentContainerStyle={styles.contentContainer} showsVerticalScrollIndicator={false}>
         {/* Custom Header */}
-        <View style={[styles.header, { backgroundColor: 'transparent', borderBottomWidth: 0, paddingHorizontal: 0, paddingBottom: 25 }]}>
-          <View style={{ flex: 1, paddingRight: 10, flexDirection: 'row', alignItems: 'center' }}>
-            <TouchableOpacity 
-              onPress={() => navigation?.canGoBack() ? navigation.goBack() : navigation?.navigate('Dashboard')}
-              style={{ marginRight: 10, padding: 4 }}
-            >
-              <Feather name="arrow-left" size={24} color={colors.text} />
-            </TouchableOpacity>
-            <View>
-              <Text style={[styles.headerTitle, { color: colors.text }]}>Available <Text style={{color: '#8b5cf6'}}>Exams</Text></Text>
-              <Text style={[styles.headerSubtitle, { color: colors.subText }]} numberOfLines={2}>Find and take your examinations</Text>
-            </View>
+        <View style={[styles.header, { backgroundColor: 'transparent', borderBottomWidth: 0, paddingHorizontal: 0, paddingBottom: 25, flexDirection: 'row', alignItems: 'center' }]}>
+          <TouchableOpacity onPress={() => navigation.navigate('Home')} style={{ marginRight: 15 }}>
+            <Feather name="arrow-left" size={24} color={colors.text} />
+          </TouchableOpacity>
+          <View style={{ flex: 1, paddingRight: 10 }}>
+            <Text style={[styles.headerTitle, { color: colors.text }]}>Available <Text style={{color: '#8b5cf6'}}>Exams</Text></Text>
+            <Text style={[styles.headerSubtitle, { color: colors.subText }]} numberOfLines={2}>Find and take your examinations</Text>
           </View>
           <TouchableOpacity style={[styles.iconBtn, { borderColor: isDarkMode ? 'rgba(255,255,255,0.1)' : colors.border }]}>
             <Feather name="filter" size={20} color={colors.text} />
@@ -314,24 +309,44 @@ export default function ExamsScreen({ navigation }) {
       <Modal visible={showPasswordModal} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: colors.modalBg, borderColor: colors.border }]}>
-            <Text style={[styles.modalTitle, { color: colors.text }]}>Enter Password</Text>
-            <Text style={[styles.modalSubtitle, { color: colors.subText }]}>This exam is protected. Enter password to continue.</Text>
+            <View style={styles.modalHeaderIcon}>
+              <Feather name="lock" size={26} color="#8b5cf6" />
+            </View>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>Protected Exam</Text>
+            <Text style={[styles.modalSubtitle, { color: colors.subText }]}>This exam is password protected. Enter the code provided by your teacher to continue.</Text>
             
-            <TextInput
-              style={[styles.modalInput, { backgroundColor: colors.inputBg, borderColor: colors.border, color: colors.text }]}
-              value={password}
-              onChangeText={setPassword}
-              placeholder="Exam password"
-              placeholderTextColor={colors.subText}
-              secureTextEntry
-            />
+            <View style={[styles.passwordInputContainer, { backgroundColor: colors.inputBg, borderColor: colors.border }]}>
+              <Feather name="key" size={18} color="#8b5cf6" style={{ marginRight: 12 }} />
+              <TextInput
+                style={{ flex: 1, color: colors.text, fontSize: 16 }}
+                value={password}
+                onChangeText={setPassword}
+                placeholder="Enter exam password..."
+                placeholderTextColor={colors.subText}
+                secureTextEntry
+              />
+            </View>
 
             <View style={styles.modalActions}>
-              <TouchableOpacity onPress={() => setShowPasswordModal(false)} style={[styles.secondaryBtn, { flex: 1, marginRight: 10, backgroundColor: isDarkMode ? '#334155' : '#f1f5f9' }]}>
+              <TouchableOpacity 
+                onPress={() => setShowPasswordModal(false)} 
+                style={[styles.secondaryBtn, { flex: 1, marginRight: 12, backgroundColor: isDarkMode ? '#1e293b' : '#f1f5f9', borderColor: colors.border }]}
+              >
                 <Text style={[styles.btnText, { color: colors.text }]}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={handlePasswordSubmit} style={[styles.primaryBtn, { flex: 1 }]} disabled={verifying}>
-                {verifying ? <ActivityIndicator color="white" size="small" /> : <Text style={[styles.btnText, { color: 'white' }]}>Start Exam</Text>}
+              <TouchableOpacity 
+                onPress={handlePasswordSubmit} 
+                style={[styles.primaryBtn, { flex: 1, backgroundColor: '#6366f1' }]} 
+                disabled={verifying}
+              >
+                {verifying ? (
+                  <ActivityIndicator color="white" size="small" />
+                ) : (
+                  <>
+                    <Text style={[styles.btnText, { color: 'white', marginRight: 8 }]}>Start Exam</Text>
+                    <Feather name="arrow-right" size={18} color="white" />
+                  </>
+                )}
               </TouchableOpacity>
             </View>
           </View>
@@ -397,13 +412,18 @@ const styles = StyleSheet.create({
   endOfListTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 8 },
   endOfListSubtitle: { fontSize: 13, textAlign: 'center', lineHeight: 20 },
   
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center', padding: 20 },
-  modalContent: { width: '100%', maxWidth: 400, borderRadius: 20, padding: 24, borderWidth: 1 },
-  modalTitle: { fontSize: 20, fontWeight: 'bold', marginBottom: 8 },
-  modalSubtitle: { fontSize: 14, marginBottom: 20 },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.75)', justifyContent: 'center', alignItems: 'center', padding: 20 },
+  modalContent: { width: '100%', maxWidth: 400, borderRadius: 24, padding: 24, borderWidth: 1 },
+  modalHeaderIcon: { width: 56, height: 56, borderRadius: 18, backgroundColor: 'rgba(139,92,246,0.15)', justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
+  modalTitle: { fontSize: 20, fontWeight: 'bold', marginBottom: 6 },
+  modalSubtitle: { fontSize: 13, marginBottom: 20, lineHeight: 20 },
+  passwordInputContainer: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: 14, paddingHorizontal: 16, height: 54, marginBottom: 24 },
   infoScroll: { maxHeight: 300 },
   infoText: { fontSize: 14, marginBottom: 8, lineHeight: 20 },
   bold: { fontWeight: '700' },
   modalInput: { borderWidth: 1, borderRadius: 12, padding: 15, fontSize: 15, marginBottom: 20 },
-  modalActions: { flexDirection: 'row', justifyContent: 'space-between' }
+  modalActions: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  primaryBtn: { height: 50, borderRadius: 14, justifyContent: 'center', alignItems: 'center', flexDirection: 'row' },
+  secondaryBtn: { height: 50, borderRadius: 14, justifyContent: 'center', alignItems: 'center', borderWidth: 1 },
+  btnText: { fontSize: 15, fontWeight: '700' }
 });

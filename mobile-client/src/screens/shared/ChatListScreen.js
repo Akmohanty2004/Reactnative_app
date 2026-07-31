@@ -4,7 +4,8 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useFocusEffect } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { getContacts } from '../../redux/slices/chatSlice';
+import { getContacts, setContactOnlineStatus } from '../../redux/slices/chatSlice';
+import { io } from 'socket.io-client';
 
 import api from '../../services/api';
 
@@ -28,7 +29,18 @@ export default function ChatListScreen({ navigation }) {
   const insets = useSafeAreaInsets();
   const { contacts, isLoadingContacts } = useSelector(state => state.chat);
   const { user } = useSelector(state => state.auth);
+  const { theme } = useSelector(state => state.ui || { theme: 'dark' });
   const isTeacher = user?.role === 'teacher';
+
+  const isDarkMode = theme === 'dark';
+  const colors = {
+    bg: isDarkMode ? '#0f172a' : '#f8fafc',
+    headerBg: isDarkMode ? '#1e293b' : '#ffffff',
+    headerText: isDarkMode ? '#ffffff' : '#0f172a',
+    card: isDarkMode ? '#1e293b' : '#ffffff',
+    border: isDarkMode ? '#334155' : '#e2e8f0',
+    subText: isDarkMode ? '#94a3b8' : '#64748b',
+  };
 
   useFocusEffect(
     useCallback(() => {
@@ -36,9 +48,27 @@ export default function ChatListScreen({ navigation }) {
     }, [dispatch])
   );
 
+  useEffect(() => {
+    const baseUrl = api.defaults.baseURL || 'https://exam-app-backend-vqos.vercel.app';
+    const newSocket = io(baseUrl);
+
+    if (user?._id) {
+      newSocket.emit('join_room', String(user._id));
+    }
+
+    newSocket.on('user_online', (uid) => {
+      dispatch(setContactOnlineStatus({ userId: uid, isOnline: true }));
+    });
+    newSocket.on('user_offline', (uid) => {
+      dispatch(setContactOnlineStatus({ userId: uid, isOnline: false }));
+    });
+
+    return () => newSocket.disconnect();
+  }, [dispatch, user?._id]);
+
   const renderItem = ({ item }) => (
     <TouchableOpacity
-      style={styles.chatItem}
+      style={[styles.chatItem, { backgroundColor: colors.card, borderColor: colors.border }]}
       onPress={() => navigation.navigate('ChatRoom', { user: item })}
     >
       <View style={styles.avatarContainer}>
@@ -52,26 +82,26 @@ export default function ChatListScreen({ navigation }) {
         {item.isOnline && <View style={styles.onlineBadge} />}
       </View>
       <View style={styles.chatInfo}>
-        <Text style={styles.chatName}>{item.name}</Text>
-        <Text style={styles.chatRole}>{item.role.charAt(0).toUpperCase() + item.role.slice(1)}</Text>
+        <Text style={[styles.chatName, { color: colors.headerText }]}>{item.name}</Text>
+        <Text style={[styles.chatRole, { color: colors.subText }]}>{item.role.charAt(0).toUpperCase() + item.role.slice(1)}</Text>
       </View>
       {item.unreadCount > 0 && (
         <View style={styles.unreadBadge}>
           <Text style={styles.unreadText}>{item.unreadCount > 99 ? '99+' : item.unreadCount}</Text>
         </View>
       )}
-      <Feather name="chevron-right" size={20} color="#64748b" style={{ marginLeft: 10 }} />
+      <Feather name="chevron-right" size={20} color={colors.subText} style={{ marginLeft: 10 }} />
     </TouchableOpacity>
   );
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
-      <View style={[styles.header, { paddingTop: Math.max(insets.top, 20) + 10 }]}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.bg }]}>
+      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} translucent backgroundColor="transparent" />
+      <View style={[styles.header, { paddingTop: Math.max(insets.top, 20) + 10, backgroundColor: colors.headerBg, borderBottomColor: colors.border }]}>
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-          <Feather name="arrow-left" size={24} color="#fff" />
+          <Feather name="arrow-left" size={24} color={colors.headerText} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Messages</Text>
+        <Text style={[styles.headerTitle, { color: colors.headerText }]}>Messages</Text>
       </View>
 
       {isLoadingContacts ? (
@@ -86,8 +116,8 @@ export default function ChatListScreen({ navigation }) {
           contentContainerStyle={styles.list}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
-              <Feather name="message-square" size={48} color="#475569" />
-              <Text style={styles.emptyText}>No contacts found</Text>
+              <Feather name="message-square" size={48} color={colors.subText} />
+              <Text style={[styles.emptyText, { color: colors.subText }]}>No contacts found</Text>
             </View>
           }
         />

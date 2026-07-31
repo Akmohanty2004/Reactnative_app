@@ -67,7 +67,9 @@ const adminSlice = createSlice({
   extraReducers: (builder) => {
     builder
       .addCase(getAdminDashboardStats.pending, (state) => {
-        state.isLoading = true
+        if (!state.stats) {
+          state.isLoading = true
+        }
       })
       .addCase(getAdminDashboardStats.fulfilled, (state, action) => {
         state.isLoading = false
@@ -86,7 +88,9 @@ const adminSlice = createSlice({
         state.error = action.payload
       })
       .addCase(getUsers.pending, (state) => {
-        state.isLoading = true
+        if (!state.users || state.users.length === 0) {
+          state.isLoading = true
+        }
       })
       .addCase(getUsers.fulfilled, (state, action) => {
         state.isLoading = false
@@ -97,7 +101,9 @@ const adminSlice = createSlice({
         state.error = action.payload
       })
       .addCase(getAdminExams.pending, (state) => {
-        state.isLoading = true
+        if (!state.exams || state.exams.length === 0) {
+          state.isLoading = true
+        }
       })
       .addCase(getAdminExams.fulfilled, (state, action) => {
         state.isLoading = false

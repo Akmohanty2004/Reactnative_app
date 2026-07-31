@@ -1,10 +1,30 @@
 import axios from 'axios'
 import AsyncStorage from '@react-native-async-storage/async-storage'
-import { Alert } from 'react-native'
+import { Alert, Platform } from 'react-native'
+import Constants from 'expo-constants'
+
+const getBaseUrl = () => {
+  try {
+    const hostUri = 
+      Constants.expoConfig?.hostUri || 
+      Constants.manifest2?.extra?.expoClient?.hostUri || 
+      Constants.manifest?.debuggerHost;
+    if (hostUri) {
+      const ip = hostUri.split(':')[0];
+      if (ip && ip !== 'localhost' && ip !== '127.0.0.1') {
+        return `http://${ip}:5000`;
+      }
+    }
+  } catch (err) {
+    console.warn('Could not detect Expo host IP:', err);
+  }
+  return 'http://10.200.189.83:5000';
+};
 
 const api = axios.create({
-  baseURL: 'https://exam-app-backend-vqos.vercel.app',
-
+  // baseURL: 'https://exam-app-backend-vqos.vercel.app',
+  baseURL: getBaseUrl(),
+  timeout: 30000,
   headers: {
     'Content-Type': 'application/json'
   }

@@ -1,24 +1,27 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   View, Text, TextInput, TouchableOpacity, StyleSheet, 
   KeyboardAvoidingView, ActivityIndicator, 
-  Animated, Dimensions, Easing
+  Animated, Dimensions, Easing, Alert, Image
 } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { Feather } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { loginUser, verifyLoginUser, clearError } from '../../redux/slices/authSlice';
 import { LinearGradient } from 'expo-linear-gradient';
+import api from '../../services/api';
 
 const { width, height } = Dimensions.get('window');
 
 export default function LoginScreen({ navigation }) {
+  const otpInputRef = useRef(null);
   const [showPassword, setShowPassword] = useState(false);
   const [selectedRole, setSelectedRole] = useState('student');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [otp, setOtp] = useState('');
   const [errors, setErrors] = useState({});
+  const [isSendingForgot, setIsSendingForgot] = useState(false);
   const [fadeAnim] = useState(new Animated.Value(0));
   const [slideAnim] = useState(new Animated.Value(50));
   
@@ -70,18 +73,62 @@ export default function LoginScreen({ navigation }) {
     if (Object.keys(newErrors).length > 0) return setErrors(newErrors);
     
     setErrors({});
-    dispatch(loginUser({ email: email.trim().toLowerCase(), password, role: selectedRole }));
+    dispatch(loginUser({ email: email.trim(), password, role: selectedRole }));
+  };
+
+  const handleForgotPassword = async () => {
+    if (!email) {
+      return Alert.alert('Email Required', 'Please enter your registered email address above first to recover your password.');
+    }
+    setIsSendingForgot(true);
+    try {
+      const res = await api.post('/api/auth/forgot-password', { email: email.trim() });
+      setIsSendingForgot(false);
+      Alert.alert('Recovery Email Sent', res.data.message || 'We have sent your current login password to your email. You can now login using this password.');
+    } catch (err) {
+      setIsSendingForgot(false);
+      Alert.alert('Error', err.response?.data?.message || 'Failed to send recovery email. Please try again.');
+    }
   };
 
   const handleVerifyOTP = async () => {
     if (!otp) return setErrors({ otp: 'Please enter the OTP' });
     setErrors({});
     dispatch(verifyLoginUser({ 
-      email: (loginEmail || email).trim().toLowerCase(), 
+      email: (loginEmail || email).trim(), 
       password: loginPassword || password, 
       role: loginRole || selectedRole, 
       otp 
     }));
+  };
+
+  const handleResendOTP = () => {
+    dispatch(loginUser({ 
+      email: (loginEmail || email).trim(), 
+      password: loginPassword || password, 
+      role: loginRole || selectedRole 
+    }));
+  };
+
+  const renderOtpBoxes = () => {
+    const boxes = [];
+    for (let i = 0; i < 6; i++) {
+      const digit = otp[i] || '';
+      const isCurrent = otp.length === i;
+      boxes.push(
+        <View 
+          key={i} 
+          style={[
+            styles.otpBox,
+            isCurrent && styles.otpBoxActive,
+            digit && styles.otpBoxFilled
+          ]}
+        >
+          <Text style={styles.otpDigit}>{digit}</Text>
+        </View>
+       );
+    }
+    return boxes;
   };
 
   const orb1TranslateY = orb1Anim.interpolate({ inputRange: [0, 1], outputRange: [0, -30] });
@@ -103,7 +150,7 @@ export default function LoginScreen({ navigation }) {
             <View>
               <View style={styles.headerContainer}>
                 <View style={styles.iconWrapper}>
-                  <Feather name="layers" size={32} color="#a78bfa" />
+                  <Image source={require('../../../assets/Applogo.png')} style={{ width: 64, height: 64, borderRadius: 20 }} resizeMode="contain" />
                 </View>
                 <Text style={styles.title}>ExamHub</Text>
                 <Text style={styles.subtitle}>Welcome back! Please enter your details.</Text>
@@ -117,13 +164,8 @@ export default function LoginScreen({ navigation }) {
                       key={role.id}
                       onPress={() => {
                         setSelectedRole(role.id);
-                        if (role.id === 'admin') {
-                          setEmail('ashiskumarmohanty738@gmail.com');
-                          setPassword('Akmohanty');
-                        } else {
-                          setEmail('');
-                          setPassword('');
-                        }
+                        setEmail('');
+                        setPassword('');
                       }}
                       style={[
                         styles.roleButton,
@@ -167,6 +209,17 @@ export default function LoginScreen({ navigation }) {
               </View>
               {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
 
+              <TouchableOpacity 
+                onPress={handleForgotPassword} 
+                disabled={isSendingForgot}
+                style={{ alignSelf: 'flex-end', marginTop: 8, marginBottom: 12, flexDirection: 'row', alignItems: 'center' }}
+              >
+                {isSendingForgot && <ActivityIndicator size="small" color="#6366f1" style={{ marginRight: 6 }} />}
+                <Text style={{ color: '#6366f1', fontSize: 13, fontWeight: '600' }}>
+                  {isSendingForgot ? 'Sending Mail...' : 'Forgot Password?'}
+                </Text>
+              </TouchableOpacity>
+
               {error && (
                 <View style={styles.serverError}>
                   <Feather name="alert-circle" size={16} color="#ef4444" />
@@ -196,31 +249,41 @@ export default function LoginScreen({ navigation }) {
             </View>
           ) : (
             <View>
-              <TouchableOpacity onPress={() => { dispatch(clearError()); setOtp(''); }} style={styles.closeBtn}>
-                <Feather name="arrow-left" size={20} color="#a78bfa" />
+              <TouchableOpacity onPress={() => { dispatch(clearError()); setOtp(''); }} style={styles.backBtnCircle}>
+                <Feather name="arrow-left" size={20} color="#10b981" />
               </TouchableOpacity>
 
               <View style={styles.headerContainer}>
-                <View style={[styles.iconWrapper, { backgroundColor: 'rgba(16, 185, 129, 0.15)' }]}>
-                  <Feather name="mail" size={32} color="#10b981" />
+                <View style={[styles.iconWrapper, { backgroundColor: 'rgba(16, 185, 129, 0.15)', borderColor: 'rgba(16, 185, 129, 0.3)', borderWidth: 1 }]}>
+                  <Feather name="shield" size={32} color="#10b981" />
                 </View>
-                <Text style={styles.title}>Check Email</Text>
-                <Text style={styles.subtitle}>We sent a code to {email || loginEmail}</Text>
+                <Text style={styles.title}>Check Your Email</Text>
+                <Text style={styles.subtitle}>We've sent a 6-digit code to</Text>
+                <Text style={[styles.subtitle, { color: '#10b981', fontWeight: '700', marginTop: 4 }]}>{email || loginEmail}</Text>
               </View>
 
-              <View style={styles.inputContainer}>
-                <Feather name="key" size={20} color="#64748b" style={styles.inputIcon} />
-                <TextInput 
-                  style={[styles.input, { letterSpacing: 8, fontSize: 18 }]}
+              <View style={styles.otpContainer}>
+                <TouchableOpacity activeOpacity={1} onPress={() => otpInputRef.current?.focus()} style={styles.otpBoxesRow}>
+                  {renderOtpBoxes()}
+                </TouchableOpacity>
+                <TextInput
+                  ref={otpInputRef}
+                  style={styles.hiddenOtpInput}
                   value={otp}
-                  onChangeText={(val) => setOtp(val.replace(/\D/g, ''))}
-                  placeholder="000000"
-                  placeholderTextColor="#64748b"
+                  onChangeText={(val) => setOtp(val.replace(/\D/g, '').slice(0, 6))}
                   keyboardType="numeric"
                   maxLength={6}
+                  caretHidden={true}
+                  selectTextOnFocus={false}
+                  autoFocus
                 />
               </View>
-              {errors.otp && <Text style={styles.errorText}>{errors.otp}</Text>}
+              {errors.otp && <Text style={[styles.errorText, { textAlign: 'center' }]}>{errors.otp}</Text>}
+
+              <View style={styles.validityBadge}>
+                <Feather name="shield" size={15} color="#10b981" />
+                <Text style={styles.validityText}>Your code is valid for 10 minutes</Text>
+              </View>
 
               {error && (
                 <View style={styles.serverError}>
@@ -230,12 +293,30 @@ export default function LoginScreen({ navigation }) {
               )}
 
               <TouchableOpacity 
-                style={[styles.submitButton, { backgroundColor: '#10b981' }, isLoading && styles.disabledButton]} 
+                style={[styles.submitButton, { backgroundColor: '#10b981', flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8 }, isLoading && styles.disabledButton]} 
                 onPress={handleVerifyOTP}
                 disabled={isLoading}
               >
-                {isLoading ? <ActivityIndicator color="white" /> : <Text style={styles.submitButtonText}>Verify OTP</Text>}
+                {isLoading ? (
+                  <ActivityIndicator color="white" />
+                ) : (
+                  <>
+                    <Feather name="lock" size={18} color="white" />
+                    <Text style={styles.submitButtonText}>Verify OTP</Text>
+                    <Feather name="chevron-right" size={20} color="white" />
+                  </>
+                )}
               </TouchableOpacity>
+
+              <View style={styles.resendContainer}>
+                <Text style={styles.resendText}>Didn't receive the code? </Text>
+                <TouchableOpacity onPress={handleResendOTP}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                    <Text style={styles.resendLink}>Resend Code</Text>
+                    <Feather name="refresh-cw" size={14} color="#10b981" />
+                  </View>
+                </TouchableOpacity>
+              </View>
             </View>
           )}
 
@@ -303,4 +384,91 @@ const styles = StyleSheet.create({
   registerText: { color: '#94a3b8', fontSize: 14 },
   registerTextBold: { color: '#a78bfa', fontWeight: 'bold' },
   closeBtn: { alignSelf: 'flex-start', marginBottom: -20, zIndex: 10, padding: 8 },
+
+  /* OTP Verification UI styles */
+  backBtnCircle: {
+    width: 40, height: 40, borderRadius: 20,
+    backgroundColor: 'rgba(16, 185, 129, 0.15)',
+    justifyContent: 'center', alignItems: 'center',
+    alignSelf: 'flex-start', marginBottom: 12
+  },
+  otpContainer: {
+    width: '100%',
+    alignItems: 'center',
+    marginVertical: 16
+  },
+  otpBoxesRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    gap: 8
+  },
+  otpBox: {
+    width: 46, height: 56,
+    borderRadius: 12,
+    backgroundColor: 'rgba(15, 23, 42, 0.8)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+  otpBoxActive: {
+    borderColor: '#10b981',
+    backgroundColor: 'rgba(16, 185, 129, 0.12)',
+    shadowColor: '#10b981',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 4
+  },
+  otpBoxFilled: {
+    borderColor: '#10b981',
+    backgroundColor: 'rgba(15, 23, 42, 0.9)'
+  },
+  otpDigit: {
+    color: 'white',
+    fontSize: 22,
+    fontWeight: '800'
+  },
+  hiddenOtpInput: {
+    ...StyleSheet.absoluteFillObject,
+    width: '100%',
+    height: '100%',
+    opacity: 0.01,
+    color: 'transparent',
+    backgroundColor: 'transparent'
+  },
+  validityBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    alignSelf: 'center',
+    marginTop: 12,
+    marginBottom: 8
+  },
+  validityText: {
+    color: '#94a3b8',
+    fontSize: 12,
+    fontWeight: '500'
+  },
+  resendContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 24
+  },
+  resendText: {
+    color: '#94a3b8',
+    fontSize: 14
+  },
+  resendLink: {
+    color: '#10b981',
+    fontSize: 14,
+    fontWeight: '700'
+  }
 });

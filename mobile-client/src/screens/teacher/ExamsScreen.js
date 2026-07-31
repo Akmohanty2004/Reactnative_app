@@ -53,6 +53,7 @@ export default function ExamsScreen({ navigation }) {
     card: isDarkMode ? '#1e293b' : 'white',
     cardAlt: isDarkMode ? '#151e2d' : '#f1f5f9',
     border: isDarkMode ? '#334155' : '#e2e8f0',
+    bannerBg: isDarkMode ? '#13102b' : '#f1f5f9',
   };
   const styles = getStyles(colors);
   useFocusEffect(
@@ -489,10 +490,12 @@ const getStyles = (colors) => ({
   banner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#13102b',
+    backgroundColor: colors.bannerBg,
     borderRadius: 20,
     padding: 22,
     marginTop: 6,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   bannerTitle: {
     fontSize: 15,

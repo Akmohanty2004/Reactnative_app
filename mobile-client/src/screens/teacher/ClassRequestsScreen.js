@@ -6,7 +6,7 @@ import { Feather } from '@expo/vector-icons';
 import api from '../../services/api';
 import Toast from 'react-native-toast-message';
 
-export default function ClassRequestsScreen({ navigation }) {
+export default function ClassRequestsScreen() {
   const [requests, setRequests] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const { theme } = useSelector(state => state.ui || { theme: 'dark' });
@@ -86,15 +86,7 @@ export default function ClassRequestsScreen({ navigation }) {
   return (
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
       <View style={styles.header}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
-          <TouchableOpacity 
-            onPress={() => navigation?.canGoBack() ? navigation.goBack() : navigation?.navigate('Home')}
-            style={{ marginRight: 10, padding: 4 }}
-          >
-            <Feather name="arrow-left" size={24} color={colors.text} />
-          </TouchableOpacity>
-          <Text style={[styles.title, { color: colors.text, marginBottom: 0 }]}>Class Verification</Text>
-        </View>
+        <Text style={[styles.title, { color: colors.text }]}>Class Verification</Text>
         <Text style={[styles.subtitle, { color: colors.subText }]}>Approve or reject student class change requests.</Text>
       </View>
       

@@ -58,17 +58,14 @@ export default function ExamsScreen({ navigation }) {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
-      <View style={styles.header}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
-          <TouchableOpacity 
-            onPress={() => navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Dashboard')}
-            style={{ marginRight: 10, padding: 4 }}
-          >
-            <Feather name="arrow-left" size={24} color={colors.headerTitle} />
-          </TouchableOpacity>
+      <View style={[styles.header, { flexDirection: 'row', alignItems: 'center' }]}>
+        <TouchableOpacity onPress={() => navigation.navigate('Home')} style={{ marginRight: 15 }}>
+          <Feather name="arrow-left" size={24} color={colors.text} />
+        </TouchableOpacity>
+        <View>
           <Text style={[styles.title, { color: colors.headerTitle, marginBottom: 0 }]}>All Exams</Text>
+          <Text style={[styles.subtitle, { color: colors.subText }]}>View and manage all exams on the platform</Text>
         </View>
-        <Text style={[styles.subtitle, { color: colors.subText }]}>View and manage all exams on the platform</Text>
       </View>
 
       {/* Class Filter */}

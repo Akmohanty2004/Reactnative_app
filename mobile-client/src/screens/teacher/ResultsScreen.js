@@ -28,7 +28,7 @@ const STATUS_CONFIG = {
 
 const ICON_COLORS = ['#8b5cf6', '#f59e0b', '#10b981', '#3b82f6', '#f43f5e'];
 
-export default function ResultsScreen({ navigation }) {
+export default function ResultsScreen() {
   const dispatch = useDispatch();
   const { theme } = useSelector(s => s.ui || { theme: 'dark' });
   const { exams = [] }                          = useSelector((s) => s.exams);
@@ -111,17 +111,9 @@ export default function ResultsScreen({ navigation }) {
         {/* Header */}
         <View style={styles.headerContainer}>
           <View style={styles.headerTop}>
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <TouchableOpacity 
-                onPress={() => navigation?.canGoBack() ? navigation.goBack() : navigation?.navigate('Home')}
-                style={{ marginRight: 10, padding: 4 }}
-              >
-                <Feather name="arrow-left" size={24} color={colors.text} />
-              </TouchableOpacity>
-              <Text style={styles.headerTitle}>
-                Exam <Text style={{ color: '#a78bfa' }}>Results</Text>
-              </Text>
-            </View>
+            <Text style={styles.headerTitle}>
+              Exam <Text style={{ color: '#a78bfa' }}>Results</Text>
+            </Text>
             <TouchableOpacity style={styles.filterBtn}>
               <Feather name="filter" size={18} color={colors.subText} />
             </TouchableOpacity>
@@ -219,7 +211,7 @@ export default function ResultsScreen({ navigation }) {
                     <View style={styles.examStat}>
                       <Text style={[styles.examStatVal, { color: '#a78bfa' }]}>
                         {item.totalSubmitted > 0
-                          ? ((item.averageScore || 0) / (item.maxMarks || 100) * 100).toFixed(0) + '%'
+                          ? Math.round(((item.averageScore || 0) / (item.totalQuestions || item.maxMarks || 100)) * 100) + '%'
                           : '—'}
                       </Text>
                       <Text style={styles.examStatLbl}>Avg Score</Text>
@@ -438,7 +430,8 @@ export default function ResultsScreen({ navigation }) {
                       </View>
                       <View style={styles.studentInfo}>
                         <Text style={styles.studentName}>{r.studentId?.name || 'Unknown'}</Text>
-                        <Text style={styles.studentEmail}>Switched tabs / left window</Text>
+                        <Text style={styles.studentEmail}>{r.studentId?.email || '—'}</Text>
+                        <Text style={[styles.studentEmail, { color: '#f59e0b', fontSize: 11, marginTop: 2 }]}>Switched tabs / left window</Text>
                       </View>
                       <View style={styles.scoreBox}>
                         <Text style={[styles.scoreText, { color: '#f59e0b' }]}>

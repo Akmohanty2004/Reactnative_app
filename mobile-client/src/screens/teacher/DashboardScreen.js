@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Dimensions, TouchableOpacity, Modal, RefreshControl, FlatList, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Dimensions, TouchableOpacity, Modal, RefreshControl, FlatList, StatusBar, Image } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
@@ -8,6 +8,22 @@ import Svg, { Path } from 'react-native-svg';
 import { getTeacherExams } from '../../redux/slices/examSlice';
 import { getToppers, likeTopper } from '../../redux/slices/resultSlice';
 import Skeleton from '../../components/Skeleton';
+import api from '../../services/api';
+
+const getImageUrl = (path) => {
+  if (!path) return null;
+  if (typeof path !== 'string') return null;
+  if (path.startsWith('data:') || path.startsWith('file://')) return path;
+  const normalized = path.replace(/\\/g, '/');
+  if (normalized.includes('uploads/')) {
+    const baseUrl = api.defaults.baseURL || 'https://exam-app-backend-vqos.vercel.app';
+    const cleanPath = normalized.replace(/^.*(uploads\/)/, 'uploads/');
+    return `${baseUrl}/${cleanPath.replace(/^\//, '')}`;
+  }
+  if (path.startsWith('http')) return path;
+  const baseUrl = api.defaults.baseURL || 'https://exam-app-backend-vqos.vercel.app';
+  return `${baseUrl}/${normalized.replace(/^\//, '')}`;
+};
 
 const { width } = Dimensions.get('window');
 
@@ -32,9 +48,18 @@ export default function DashboardScreen() {
   const { exams, isLoading: examsLoading } = useSelector(state => state.exams);
   const { toppers } = useSelector(state => state.results || { toppers: [] });
   const [showAllToppers, setShowAllToppers] = useState(false);
+  const [selectedTopper, setSelectedTopper] = useState(null);
+  const [statusFilter, setStatusFilter] = useState('This Month');
+  const [ratioFilter, setRatioFilter] = useState('This Month');
   const { unreadCount } = useSelector(state => state.notifications);
   const { hasUnreadMessages, contacts } = useSelector(state => state.chat);
   const { theme } = useSelector(state => state.ui || { theme: 'dark' });
+
+  const cycleFilter = (current, setFilter) => {
+    if (current === 'This Month') setFilter('Last 3 Months');
+    else if (current === 'Last 3 Months') setFilter('All Time');
+    else setFilter('This Month');
+  };
 
   const unreadUsersCount = (contacts || []).filter(c => c.unreadCount && c.unreadCount > 0).length;
 
@@ -111,15 +136,7 @@ export default function DashboardScreen() {
       <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} translucent backgroundColor="transparent" />
       {/* Header */}
       <View style={styles.header}>
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <TouchableOpacity 
-            onPress={() => navigation?.canGoBack() ? navigation.goBack() : navigation?.navigate('Login')}
-            style={{ marginRight: 10, padding: 4 }}
-          >
-            <Feather name="arrow-left" size={24} color={colors.text} />
-          </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>Home</Text>
-        </View>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>Home</Text>
         <View style={styles.headerRight}>
           <TouchableOpacity 
             style={[styles.headerIconBtn, { backgroundColor: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }]} 
@@ -160,13 +177,13 @@ export default function DashboardScreen() {
       >
         {/* Welcome Banner */}
         <View style={styles.bannerContainer}>
-          <View style={[styles.banner, { backgroundColor: '#1e1145', borderColor: '#2e1065' }]}>
+          <View style={[styles.banner, { backgroundColor: isDarkMode ? '#1e1145' : '#4f46e5', borderColor: isDarkMode ? '#2e1065' : '#6366f1' }]}>
             <View style={styles.bannerTextContainer}>
-              <Text style={styles.bannerWelcome}>Welcome back,</Text>
-              <Text style={styles.bannerTitle}>
+              <Text style={[styles.bannerWelcome, { color: '#e0e7ff' }]}>Welcome back,</Text>
+              <Text style={[styles.bannerTitle, { color: '#ffffff' }]}>
                 {user?.name?.split(' ')[0]}! 👋✨
               </Text>
-              <Text style={styles.bannerSubtitle}>Here's your teaching statistics and{'\n'}exam performance at a glance.</Text>
+              <Text style={[styles.bannerSubtitle, { color: '#c4b5fd' }]}>Here's your teaching statistics and{'\n'}exam performance at a glance.</Text>
             </View>
             {/* Decorative icons on the banner */}
             <View style={styles.bannerDecorations}>
@@ -194,8 +211,8 @@ export default function DashboardScreen() {
             <View style={[styles.iconWrapper, { backgroundColor: 'rgba(99,102,241,0.15)' }]}>
               <Feather name="file-text" size={22} color="#6366f1" />
             </View>
-            <Text style={[styles.statLabel, { color: colors.subText }]}>Total Exams</Text>
-            <Text style={[styles.statValue, { color: colors.text }]}>{totalExams}</Text>
+            <Text style={[styles.statLabel, { color: colors.subText }]} numberOfLines={1}>Total Exams</Text>
+            <Text style={[styles.statValue, { color: colors.text }]} numberOfLines={1} adjustsFontSizeToFit>{totalExams}</Text>
             <View style={styles.statSubRow}>
               <Text style={[styles.statSub, { color: '#10b981' }]}>All time</Text>
               <WaveLine color="#10b981" />
@@ -207,8 +224,8 @@ export default function DashboardScreen() {
             <View style={[styles.iconWrapper, { backgroundColor: 'rgba(16,185,129,0.15)' }]}>
               <Feather name="check-circle" size={22} color="#10b981" />
             </View>
-            <Text style={[styles.statLabel, { color: colors.subText }]}>Published</Text>
-            <Text style={[styles.statValue, { color: colors.text }]}>{published}</Text>
+            <Text style={[styles.statLabel, { color: colors.subText }]} numberOfLines={1}>Published</Text>
+            <Text style={[styles.statValue, { color: colors.text }]} numberOfLines={1} adjustsFontSizeToFit>{published}</Text>
             <View style={styles.statSubRow}>
               <Text style={[styles.statSub, { color: '#10b981' }]}>All time</Text>
               <WaveLine color="#10b981" />
@@ -220,8 +237,8 @@ export default function DashboardScreen() {
             <View style={[styles.iconWrapper, { backgroundColor: 'rgba(245,158,11,0.15)' }]}>
               <Feather name="clock" size={22} color="#f59e0b" />
             </View>
-            <Text style={[styles.statLabel, { color: colors.subText }]}>Ongoing</Text>
-            <Text style={[styles.statValue, { color: colors.text }]}>{ongoing}</Text>
+            <Text style={[styles.statLabel, { color: colors.subText }]} numberOfLines={1}>Ongoing</Text>
+            <Text style={[styles.statValue, { color: colors.text }]} numberOfLines={1} adjustsFontSizeToFit>{ongoing}</Text>
             <View style={styles.statSubRow}>
               <Text style={[styles.statSub, { color: '#f59e0b' }]}>Currently</Text>
               <WaveLine color="#f59e0b" />
@@ -234,8 +251,11 @@ export default function DashboardScreen() {
         <View style={[styles.sectionCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={styles.sectionHeader}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>Status Distribution</Text>
-            <TouchableOpacity style={[styles.dropdownBtn, { backgroundColor: isDarkMode ? '#334155' : '#f1f5f9' }]}>
-              <Text style={[styles.dropdownText, { color: colors.subText }]}>This Month</Text>
+            <TouchableOpacity 
+              style={[styles.dropdownBtn, { backgroundColor: isDarkMode ? 'rgba(255,255,255,0.08)' : '#f1f5f9', borderColor: colors.border, borderWidth: 1 }]}
+              onPress={() => cycleFilter(statusFilter, setStatusFilter)}
+            >
+              <Text style={[styles.dropdownText, { color: colors.text }]}>{statusFilter}</Text>
               <Feather name="chevron-down" size={14} color={colors.subText} />
             </TouchableOpacity>
           </View>
@@ -289,8 +309,11 @@ export default function DashboardScreen() {
         <View style={[styles.sectionCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={styles.sectionHeader}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>Pass/Fail Ratio</Text>
-            <TouchableOpacity style={[styles.dropdownBtn, { backgroundColor: isDarkMode ? '#334155' : '#f1f5f9' }]}>
-              <Text style={[styles.dropdownText, { color: colors.subText }]}>This Month</Text>
+            <TouchableOpacity 
+              style={[styles.dropdownBtn, { backgroundColor: isDarkMode ? 'rgba(255,255,255,0.08)' : '#f1f5f9', borderColor: colors.border, borderWidth: 1 }]}
+              onPress={() => cycleFilter(ratioFilter, setRatioFilter)}
+            >
+              <Text style={[styles.dropdownText, { color: colors.text }]}>{ratioFilter}</Text>
               <Feather name="chevron-down" size={14} color={colors.subText} />
             </TouchableOpacity>
           </View>
@@ -385,8 +408,8 @@ export default function DashboardScreen() {
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <Text style={{ fontSize: 20, marginRight: 8 }}>🏆</Text>
               <View>
-                <Text style={[styles.sectionTitle, { color: colors.text }]}>Exam Toppers</Text>
-                <Text style={{ color: colors.subText, fontSize: 12 }}>Top performers in recent exams</Text>
+                <Text style={[styles.sectionTitle, { color: colors.text, marginBottom: 0 }]}>Exam Toppers</Text>
+                <Text style={{ fontSize: 12, color: colors.subText }}>Top performers in recent exams</Text>
               </View>
             </View>
             {toppers && toppers.length > 0 && (
@@ -400,23 +423,33 @@ export default function DashboardScreen() {
           {toppers && toppers.length > 0 ? (
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 12 }}>
               {toppers.slice(0, 2).map((item, idx) => (
-                <View key={item.resultId} style={[styles.leaderCard, { width: 280, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}>
+                <View key={item.resultId} style={[styles.leaderCard, { width: 280, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: colors.card, borderColor: colors.border }]}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                    <View style={[styles.rankBadge, {
-                      backgroundColor: idx === 0 ? '#fbbf24' : idx === 1 ? '#94a3b8' : idx === 2 ? '#b45309' : '#334155',
-                      marginRight: 12
-                    }]}>
-                      <Text style={styles.rankText}>{idx + 1}</Text>
-                    </View>
+                    <TouchableOpacity 
+                      onPress={() => setSelectedTopper(item)} 
+                      style={{ position: 'relative', marginRight: 12 }}
+                      activeOpacity={0.8}
+                    >
+                      {item.student?.profileImage ? (
+                        <Image source={{ uri: getImageUrl(item.student.profileImage) }} style={{ width: 44, height: 44, borderRadius: 22, borderWidth: 2, borderColor: idx === 0 ? '#fbbf24' : idx === 1 ? '#94a3b8' : idx === 2 ? '#b45309' : '#334155' }} />
+                      ) : (
+                        <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: idx === 0 ? '#fbbf24' : idx === 1 ? '#94a3b8' : idx === 2 ? '#b45309' : '#334155', justifyContent: 'center', alignItems: 'center' }}>
+                          <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold' }}>{(item.student?.name || 'U').charAt(0).toUpperCase()}</Text>
+                        </View>
+                      )}
+                      <View style={{ position: 'absolute', bottom: -2, right: -2, backgroundColor: idx === 0 ? '#fbbf24' : idx === 1 ? '#94a3b8' : idx === 2 ? '#b45309' : '#334155', width: 20, height: 20, borderRadius: 10, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#0f172a' }}>
+                        <Text style={{ color: '#fff', fontSize: 10, fontWeight: '900' }}>{idx + 1}</Text>
+                      </View>
+                    </TouchableOpacity>
                     <View style={{ flex: 1, marginRight: 10 }}>
-                      <Text style={[styles.leaderName, { textAlign: 'left', marginBottom: 2 }]} numberOfLines={1}>{item.student?.name || 'Unknown'}</Text>
-                      <Text style={[styles.recentSub, { textAlign: 'left' }]} numberOfLines={1}>{item.examTitle}</Text>
+                      <Text style={[styles.leaderName, { textAlign: 'left', marginBottom: 2, color: colors.text }]} numberOfLines={1}>{item.student?.name || 'Unknown'}</Text>
+                      <Text style={[styles.recentSub, { textAlign: 'left', color: colors.subText }]} numberOfLines={1}>{item.examTitle}</Text>
                     </View>
                   </View>
                   <View style={{ alignItems: 'flex-end' }}>
-                    <Text style={styles.leaderScore}>{item.score?.toFixed(1)}%</Text>
+                    <Text style={[styles.leaderScore, { color: colors.text }]}>{item.score?.toFixed(1)}%</Text>
                     <TouchableOpacity 
-                      style={[styles.likeBtn, item.likedByMe && styles.likeBtnActive, { marginTop: 6, paddingVertical: 4, paddingHorizontal: 10, width: 'auto' }]} 
+                      style={[styles.likeBtn, item.likedByMe && styles.likeBtnActive, { marginTop: 6, paddingVertical: 4, paddingHorizontal: 10, width: 'auto', backgroundColor: colors.card, borderColor: colors.border }]} 
                       onPress={() => handleLike(item.resultId)}
                     >
                       <Feather name="heart" size={12} color={item.likedByMe ? "#ec4899" : "#94a3b8"} />
@@ -480,11 +513,11 @@ export default function DashboardScreen() {
         presentationStyle="pageSheet"
         onRequestClose={() => setShowAllToppers(false)}
       >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>All Exam Toppers</Text>
+        <View style={[styles.modalContainer, { backgroundColor: colors.bg }]}>
+          <View style={[styles.modalHeader, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>All Exam Toppers</Text>
             <TouchableOpacity onPress={() => setShowAllToppers(false)} style={styles.modalCloseBtn}>
-              <Feather name="x" size={24} color="#f8fafc" />
+              <Feather name="x" size={24} color={colors.text} />
             </TouchableOpacity>
           </View>
           
@@ -493,20 +526,36 @@ export default function DashboardScreen() {
             keyExtractor={item => item.resultId}
             contentContainerStyle={{ padding: 16 }}
             renderItem={({ item, index }) => (
-              <View style={[styles.leaderCard, { width: '100%', marginBottom: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16 }]}>
+              <View style={[styles.leaderCard, { width: '100%', marginBottom: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, backgroundColor: colors.card, borderColor: colors.border }]}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                  <View style={[styles.rankBadge, { backgroundColor: index === 0 ? '#fbbf24' : index === 1 ? '#94a3b8' : index === 2 ? '#b45309' : '#334155', marginRight: 12 }]}>
-                    <Text style={styles.rankText}>{index + 1}</Text>
-                  </View>
+                  <TouchableOpacity 
+                    onPress={() => {
+                      setShowAllToppers(false);
+                      setSelectedTopper(item);
+                    }} 
+                    style={{ position: 'relative', marginRight: 12 }}
+                    activeOpacity={0.8}
+                  >
+                    {item.student?.profileImage ? (
+                      <Image source={{ uri: getImageUrl(item.student.profileImage) }} style={{ width: 44, height: 44, borderRadius: 22, borderWidth: 2, borderColor: index === 0 ? '#fbbf24' : index === 1 ? '#94a3b8' : index === 2 ? '#b45309' : '#334155' }} />
+                    ) : (
+                      <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: index === 0 ? '#fbbf24' : index === 1 ? '#94a3b8' : index === 2 ? '#b45309' : '#334155', justifyContent: 'center', alignItems: 'center' }}>
+                        <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold' }}>{(item.student?.name || 'U').charAt(0).toUpperCase()}</Text>
+                      </View>
+                    )}
+                    <View style={{ position: 'absolute', bottom: -2, right: -2, backgroundColor: index === 0 ? '#fbbf24' : index === 1 ? '#94a3b8' : index === 2 ? '#b45309' : '#334155', width: 20, height: 20, borderRadius: 10, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#0f172a' }}>
+                      <Text style={{ color: '#fff', fontSize: 10, fontWeight: '900' }}>{index + 1}</Text>
+                    </View>
+                  </TouchableOpacity>
                   <View style={{ flex: 1 }}>
-                    <Text style={[styles.leaderName, { marginBottom: 2, textAlign: 'left', fontSize: 15 }]} numberOfLines={1}>{item.student?.name || 'Unknown'}</Text>
-                    <Text style={[styles.recentSub, { textAlign: 'left', fontSize: 13 }]}>{item.examTitle}</Text>
+                    <Text style={[styles.leaderName, { marginBottom: 2, textAlign: 'left', fontSize: 15, color: colors.text }]} numberOfLines={1}>{item.student?.name || 'Unknown'}</Text>
+                    <Text style={[styles.recentSub, { textAlign: 'left', fontSize: 13, color: colors.subText }]}>{item.examTitle}</Text>
                   </View>
                 </View>
                 <View style={{ alignItems: 'flex-end' }}>
                   <Text style={[styles.leaderScore, { fontSize: 18 }]}>{item.score?.toFixed(1)}%</Text>
                   <TouchableOpacity 
-                    style={[styles.likeBtn, item.likedByMe && styles.likeBtnActive, { marginTop: 8, paddingVertical: 6, paddingHorizontal: 12, width: 'auto' }]} 
+                    style={[styles.likeBtn, item.likedByMe && styles.likeBtnActive, { marginTop: 8, paddingVertical: 6, paddingHorizontal: 12, width: 'auto', backgroundColor: colors.card, borderColor: colors.border }]} 
                     onPress={() => handleLike(item.resultId)}
                   >
                     <Feather name="heart" size={14} color={item.likedByMe ? "#ec4899" : "#94a3b8"} />
@@ -520,6 +569,66 @@ export default function DashboardScreen() {
           />
         </View>
       </Modal>
+
+      {/* ── Topper Student Profile Modal ── */}
+      {selectedTopper && (
+        <Modal visible={true} transparent animationType="fade" onRequestClose={() => setSelectedTopper(null)}>
+          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+            <View style={{ width: '90%', backgroundColor: colors.card, borderRadius: 20, overflow: 'hidden', borderWidth: 1, borderColor: colors.border, padding: 24, alignItems: 'center', position: 'relative' }}>
+              <TouchableOpacity style={{ position: 'absolute', top: 16, right: 16, zIndex: 10 }} onPress={() => setSelectedTopper(null)}>
+                <Feather name="x" size={24} color={colors.subText} />
+              </TouchableOpacity>
+
+              <View style={{ width: 110, height: 110, borderRadius: 55, marginBottom: 16, borderWidth: 3, borderColor: '#6366f1', justifyContent: 'center', alignItems: 'center', backgroundColor: colors.card, overflow: 'hidden' }}>
+                {selectedTopper.student?.profileImage ? (
+                  <Image source={{ uri: getImageUrl(selectedTopper.student.profileImage) }} style={{ width: 110, height: 110 }} resizeMode="cover" />
+                ) : (
+                  <Text style={{ color: colors.text, fontSize: 44, fontWeight: 'bold' }}>{(selectedTopper.student?.name || 'U').charAt(0).toUpperCase()}</Text>
+                )}
+              </View>
+
+              <Text style={{ fontSize: 22, fontWeight: '800', color: colors.text, textAlign: 'center' }}>
+                {selectedTopper.student?.name || 'Unknown Student'}
+              </Text>
+
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6, backgroundColor: 'rgba(139,92,246,0.15)', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 16 }}>
+                <Feather name="users" size={14} color="#a855f7" style={{ marginRight: 6 }} />
+                <Text style={{ fontSize: 14, fontWeight: '700', color: '#a855f7' }}>
+                  {selectedTopper.student?.classGroup || selectedTopper.student?.department || 'General Class'}
+                </Text>
+              </View>
+
+              {selectedTopper.student?.email && (
+                <Text style={{ fontSize: 13, color: colors.subText, marginTop: 8 }}>
+                  {selectedTopper.student.email}
+                </Text>
+              )}
+
+              <View style={{ width: '100%', marginTop: 22, padding: 16, backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc', borderRadius: 14, borderWidth: 1, borderColor: colors.border }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
+                  <Text style={{ fontSize: 13, color: colors.subText }}>Achievement</Text>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: '#fbbf24' }}>🏆 Exam Topper</Text>
+                </View>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
+                  <Text style={{ fontSize: 13, color: colors.subText }}>Exam Title</Text>
+                  <Text style={{ fontSize: 13, fontWeight: '600', color: colors.text }}>{selectedTopper.examTitle}</Text>
+                </View>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                  <Text style={{ fontSize: 13, color: colors.subText }}>Score</Text>
+                  <Text style={{ fontSize: 14, fontWeight: '800', color: '#10b981' }}>{selectedTopper.score?.toFixed(1)}%</Text>
+                </View>
+              </View>
+
+              <TouchableOpacity 
+                style={{ width: '100%', backgroundColor: '#6366f1', paddingVertical: 14, borderRadius: 12, alignItems: 'center', marginTop: 22 }}
+                onPress={() => setSelectedTopper(null)}
+              >
+                <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700' }}>Close Profile</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+      )}
 
     </View>
   );
@@ -627,20 +736,20 @@ const styles = StyleSheet.create({
   badgeTextSec: { color: '#94a3b8', fontSize: 11, fontWeight: 'bold', textTransform: 'capitalize' },
 
   // Toppers
-  leaderCard: { backgroundColor: '#0f172a', borderRadius: 14, padding: 14, marginRight: 10, borderWidth: 1, borderColor: '#334155' },
+  leaderCard: { borderRadius: 14, padding: 14, marginRight: 10, borderWidth: 1 },
   rankBadge: { width: 28, height: 28, borderRadius: 14, justifyContent: 'center', alignItems: 'center' },
-  rankText: { color: '#fff', fontWeight: '800', fontSize: 13 },
-  leaderName: { color: '#fff', fontSize: 12, fontWeight: '600' },
-  recentSub: { color: '#94a3b8', fontSize: 11 },
+  rankText: { fontWeight: '800', fontSize: 13 },
+  leaderName: { fontSize: 12, fontWeight: '600' },
+  recentSub: { fontSize: 11 },
   leaderScore: { color: '#10b981', fontSize: 14, fontWeight: '800' },
-  likeBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#1e293b', borderRadius: 20, borderWidth: 1, borderColor: '#334155' },
+  likeBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, borderRadius: 20, borderWidth: 1 },
   likeBtnActive: { backgroundColor: 'rgba(236,72,153,0.15)', borderColor: 'rgba(236,72,153,0.4)' },
-  likeText: { fontSize: 13, fontWeight: '700', color: '#94a3b8' },
+  likeText: { fontSize: 13, fontWeight: '700' },
   emptyLeader: { alignItems: 'center', paddingVertical: 20 },
-  emptyText: { color: '#64748b', fontSize: 13, textAlign: 'center' },
+  emptyText: { fontSize: 13, textAlign: 'center' },
   viewAll: { color: '#818cf8', fontSize: 13, fontWeight: '600' },
-  modalContainer: { flex: 1, backgroundColor: '#0f172a' },
-  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, paddingTop: 48, backgroundColor: '#1e293b', borderBottomWidth: 1, borderBottomColor: '#334155' },
-  modalTitle: { fontSize: 18, fontWeight: 'bold', color: '#f8fafc' },
+  modalContainer: { flex: 1 },
+  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, paddingTop: 48, borderBottomWidth: 1 },
+  modalTitle: { fontSize: 18, fontWeight: 'bold' },
   modalCloseBtn: { padding: 4 },
 });

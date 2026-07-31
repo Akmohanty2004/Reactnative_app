@@ -85,17 +85,12 @@ export default function StudentsListScreen({ navigation }) {
       
       <View style={styles.headerContainer}>
         <View style={styles.headerTop}>
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <TouchableOpacity 
-              onPress={() => navigation?.canGoBack() ? navigation.goBack() : navigation?.navigate('Home')}
-              style={{ marginRight: 10, padding: 4 }}
-            >
-              <Feather name="arrow-left" size={24} color={colors.text} />
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>
-              Student <Text style={{ color: '#8b5cf6' }}>Directory</Text>
-            </Text>
-          </View>
+          <TouchableOpacity onPress={() => navigation.navigate('Home')} style={{ marginRight: 15 }}>
+            <Feather name="arrow-left" size={24} color={colors.text} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>
+            Student <Text style={{ color: '#8b5cf6' }}>Directory</Text>
+          </Text>
           <TouchableOpacity 
             style={styles.requestsBtn}
             onPress={() => navigation.navigate('Requests')}

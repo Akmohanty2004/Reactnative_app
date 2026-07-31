@@ -168,7 +168,7 @@ export default function ResultsScreen({ navigation, route }) {
                   </View>
                   <View style={styles.overviewStat}>
                     <Text style={[styles.overviewStatVal, { color: colors.text }]}>
-                      {exam.totalSubmitted > 0 ? ((exam.averageScore || 0) / (exam.maxMarks || 100) * 100).toFixed(1) + '%' : '-'}
+                      {exam.totalSubmitted > 0 ? Math.round(((exam.averageScore || 0) / (exam.totalQuestions || exam.maxMarks || 100)) * 100) + '%' : '-'}
                     </Text>
                     <Text style={[styles.overviewStatLbl, { color: colors.subText }]}>Avg Score</Text>
                   </View>
@@ -296,7 +296,8 @@ export default function ResultsScreen({ navigation, route }) {
                       <View key={r._id} style={[styles.studentRow, i !== results.filter(v => v.tabSwitches > 0).length - 1 && { borderBottomColor: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }]}>
                         <View>
                           <Text style={[styles.studentName, { color: colors.text }]}>{r.studentId?.name || 'Unknown'}</Text>
-                          <Text style={[styles.studentEmail, { color: colors.subText }]}>Switched Tabs / Left Window</Text>
+                          <Text style={[styles.studentEmail, { color: colors.subText }]}>{r.studentId?.email || '—'}</Text>
+                          <Text style={[styles.studentEmail, { color: colors.warning, fontSize: 11, marginTop: 2 }]}>Switched Tabs / Left Window</Text>
                         </View>
                         <Text style={[styles.studentScore, { color: colors.warning }]}>{r.tabSwitches} times</Text>
                       </View>
