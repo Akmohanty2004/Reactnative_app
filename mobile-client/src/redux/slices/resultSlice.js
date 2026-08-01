@@ -195,6 +195,22 @@ const resultSlice = createSlice({
           state.toppers[idx].likedByMe = action.payload.data.likedByMe;
         }
       })
+      .addCase('results/likeTopperOptimistic', (state, action) => {
+        const resultId = action.payload.resultId;
+        const userId = action.payload.userId;
+        const idx = state.toppers.findIndex(t => t.resultId === resultId);
+        if (idx !== -1) {
+          const topper = state.toppers[idx];
+          if (topper.likedByMe) {
+            topper.likedByMe = false;
+            if (topper.likes) topper.likes = topper.likes.filter(id => id !== userId);
+          } else {
+            topper.likedByMe = true;
+            if (topper.likes) topper.likes.push(userId);
+            else topper.likes = [userId];
+          }
+        }
+      })
       .addCase(getStudentsPerformance.pending, (state) => {
         state.isLoading = true
       })

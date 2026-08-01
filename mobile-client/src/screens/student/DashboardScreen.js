@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, Dimensions,
-  TouchableOpacity, Modal, Image, FlatList, StatusBar, RefreshControl, Platform,
+  TouchableOpacity, Modal, Image, FlatList, StatusBar, RefreshControl, Platform, Animated,
 } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
@@ -29,6 +29,33 @@ const getImageUrl = (path) => {
 
 const { width: SCREEN_W } = Dimensions.get('window');
 const CARD_W = (SCREEN_W - 44) / 2;   // two columns with spacing
+
+const AnimatedLikeButton = ({ item, handleLike, styles, colors, extraStyle }) => {
+  const scale = useRef(new Animated.Value(1)).current;
+  
+  const onPress = () => {
+    Animated.sequence([
+      Animated.timing(scale, { toValue: 1.4, duration: 150, useNativeDriver: true }),
+      Animated.timing(scale, { toValue: 1, duration: 150, useNativeDriver: true })
+    ]).start();
+    handleLike(item.resultId);
+  };
+
+  return (
+    <TouchableOpacity 
+      style={[styles.likeBtn, item.likedByMe && styles.likeBtnActive, extraStyle]} 
+      onPress={onPress}
+      activeOpacity={0.7}
+    >
+      <Animated.View style={{ transform: [{ scale }] }}>
+        <Feather name="heart" size={12} color={item.likedByMe ? "#ec4899" : "#94a3b8"} />
+      </Animated.View>
+      <Text style={[styles.likeText, item.likedByMe && { color: '#ec4899' }]}>
+        {item.likes?.length || 0}
+      </Text>
+    </TouchableOpacity>
+  );
+};
 
 export default function DashboardScreen() {
   const dispatch = useDispatch();
@@ -122,6 +149,7 @@ export default function DashboardScreen() {
   }, [dispatch]);
 
   const handleLike = (resultId) => {
+    dispatch({ type: 'results/likeTopperOptimistic', payload: { resultId, userId: user._id || user.id } });
     dispatch(likeTopper(resultId));
   };
 
@@ -643,15 +671,13 @@ export default function DashboardScreen() {
                   </View>
                   <View style={{ alignItems: 'flex-end' }}>
                     <Text style={styles.leaderScore}>{item.score?.toFixed(1)}%</Text>
-                    <TouchableOpacity 
-                      style={[styles.likeBtn, item.likedByMe && styles.likeBtnActive, { marginTop: 6, paddingVertical: 4, paddingHorizontal: 10, width: 'auto' }]} 
-                      onPress={() => handleLike(item.resultId)}
-                    >
-                      <Feather name="heart" size={12} color={item.likedByMe ? "#ec4899" : "#94a3b8"} />
-                      <Text style={[styles.likeText, item.likedByMe && { color: '#ec4899' }]}>
-                        {item.likes?.length || 0}
-                      </Text>
-                    </TouchableOpacity>
+                    <AnimatedLikeButton 
+                      item={item} 
+                      handleLike={handleLike} 
+                      styles={styles} 
+                      colors={colors}
+                      extraStyle={{ marginTop: 6, paddingVertical: 4, paddingHorizontal: 10, width: 'auto' }}
+                    />
                   </View>
                 </View>
               ))}
@@ -745,15 +771,13 @@ export default function DashboardScreen() {
                 </View>
                 <View style={{ alignItems: 'flex-end' }}>
                   <Text style={[styles.leaderScore, { marginBottom: 6 }]}>{item.score?.toFixed(1)}%</Text>
-                  <TouchableOpacity 
-                    style={[styles.likeBtn, item.likedByMe && styles.likeBtnActive, { marginTop: 0, paddingVertical: 4, paddingHorizontal: 10, width: 'auto', backgroundColor: colors.card, borderColor: colors.border }]} 
-                    onPress={() => handleLike(item.resultId)}
-                  >
-                    <Feather name="heart" size={12} color={item.likedByMe ? "#ec4899" : "#94a3b8"} />
-                    <Text style={[styles.likeText, item.likedByMe && { color: '#ec4899' }]}>
-                      {item.likes?.length || 0}
-                    </Text>
-                  </TouchableOpacity>
+                  <AnimatedLikeButton 
+                    item={item} 
+                    handleLike={handleLike} 
+                    styles={styles} 
+                    colors={colors}
+                    extraStyle={{ marginTop: 0, paddingVertical: 4, paddingHorizontal: 10, width: 'auto', backgroundColor: colors.card, borderColor: colors.border }}
+                  />
                 </View>
               </View>
             )}

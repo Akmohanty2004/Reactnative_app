@@ -374,7 +374,7 @@ export default function ChatRoomScreen({ route, navigation }) {
   const [fullScreenImgIndex, setFullScreenImgIndex] = useState(null);
   const [modalToast, setModalToast] = useState(null);
   const [isZoomed, setIsZoomed] = useState(false);
-  const [stagedImage, setStagedImage] = useState(null);
+  const [stagedImages, setStagedImages] = useState([]);
   const [stagedAudio, setStagedAudio] = useState(null);
   const [recording, setRecording] = useState(null);
   const [isRecording, setIsRecording] = useState(false);
@@ -469,28 +469,32 @@ export default function ChatRoomScreen({ route, navigation }) {
           messageType: 'audio',
           audio: audioToSend
         })).unwrap();
-      } else if (stagedImage) {
-        const imageToSend = stagedImage;
+      } else if (stagedImages.length > 0) {
+        const imagesToSend = [...stagedImages];
         const textToSend = inputText.trim();
-        setStagedImage(null);
+        setStagedImages([]);
         setInputText('');
-        dispatch(addOptimisticMessage({
-          _id: tempId,
-          content: textToSend,
-          messageType: 'image',
-          imageUrl: imageToSend.uri,
-          sender: String(user._id || user.id),
-          receiver: otherIdStr,
-          createdAt: new Date().toISOString(),
-          tempId
-        }));
-        await dispatch(sendMessage({
-          tempId,
-          receiverId: otherIdStr,
-          messageType: 'image',
-          content: textToSend,
-          image: imageToSend
-        })).unwrap();
+        
+        for (let i = 0; i < imagesToSend.length; i++) {
+          const imgTempId = `temp-${Date.now()}-${i}`;
+          dispatch(addOptimisticMessage({
+            _id: imgTempId,
+            content: i === 0 ? textToSend : '',
+            messageType: 'image',
+            imageUrl: imagesToSend[i].uri,
+            sender: String(user._id || user.id),
+            receiver: otherIdStr,
+            createdAt: new Date().toISOString(),
+            tempId: imgTempId
+          }));
+          await dispatch(sendMessage({
+            tempId: imgTempId,
+            receiverId: otherIdStr,
+            messageType: 'image',
+            content: i === 0 ? textToSend : '',
+            image: imagesToSend[i]
+          })).unwrap();
+        }
       } else if (inputText.trim()) {
         const textToSend = inputText.trim();
         setInputText('');
@@ -518,16 +522,19 @@ export default function ChatRoomScreen({ route, navigation }) {
   const handlePickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
+      allowsMultipleSelection: true,
       allowsEditing: false,
       quality: 0.5,
     });
     if (!result.canceled && result.assets.length > 0) {
-      const uri = result.assets[0].uri;
-      const filename = uri.split('/').pop();
-      const match = /\.(\w+)$/.exec(filename);
-      const type = match ? `image/${match[1]}` : 'image';
-      
-      setStagedImage({ uri, name: filename, type });
+      const newImages = result.assets.map(asset => {
+        const uri = asset.uri;
+        const filename = uri.split('/').pop();
+        const match = /\.(\w+)$/.exec(filename);
+        const type = match ? `image/${match[1]}` : 'image';
+        return { uri, name: filename, type };
+      });
+      setStagedImages(newImages);
       setStagedAudio(null);
     }
   };
@@ -590,7 +597,7 @@ export default function ChatRoomScreen({ route, navigation }) {
           else if (ext === 'mp3') type = 'audio/mpeg';
         }
         setStagedAudio({ uri, name: filename, type });
-        setStagedImage(null);
+        setStagedImages([]);
       }
     } catch (err) {
       console.error('Failed to stop recording', err);
@@ -901,7 +908,7 @@ export default function ChatRoomScreen({ route, navigation }) {
         )}
 
         {/* Preview Staged File */}
-        {(stagedImage || stagedAudio) && (
+        {(stagedImages.length > 0 || stagedAudio) && (
           <View style={[
             styles.previewContainer, 
             { 
@@ -915,8 +922,12 @@ export default function ChatRoomScreen({ route, navigation }) {
               elevation: 4
             }
           ]}>
-            {stagedImage && (
-              <Image source={{ uri: stagedImage.uri }} style={styles.previewImage} />
+            {stagedImages.length > 0 && (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1, paddingRight: 20 }}>
+                {stagedImages.map((img, idx) => (
+                  <Image key={idx} source={{ uri: img.uri }} style={[styles.previewImage, { marginRight: 8 }]} />
+                ))}
+              </ScrollView>
             )}
             {stagedAudio && (
               <View style={[styles.previewAudio, { backgroundColor: isDarkMode ? '#0f172a' : '#e0f2fe' }]}>
@@ -931,7 +942,7 @@ export default function ChatRoomScreen({ route, navigation }) {
             )}
             <TouchableOpacity 
               style={[styles.previewCloseBtn, { borderColor: colors.bg, backgroundColor: '#ef4444' }]} 
-              onPress={() => { setStagedImage(null); setStagedAudio(null); }}
+              onPress={() => { setStagedImages([]); setStagedAudio(null); }}
             >
               <Feather name="x" size={14} color="#fff" />
             </TouchableOpacity>
