@@ -20,7 +20,7 @@ import { Audio } from 'expo-av';
 import EmojiPicker from 'rn-emoji-keyboard';
 import {
   getChatHistory, sendMessage, receiveMessage,
-  setCurrentUserId, deleteMessage, removeMessageLocally,
+  setCurrentUserId, deleteMessage, removeMessageLocally, addOptimisticMessage
 } from '../../redux/slices/chatSlice';
 import { toggleTheme } from '../../redux/slices/uiSlice';
 import { BarChart } from 'react-native-chart-kit';
@@ -450,10 +450,21 @@ export default function ChatRoomScreen({ route, navigation }) {
 
   const handleSend = async () => {
     try {
+      const tempId = `temp-${Date.now()}`;
       if (stagedAudio) {
         const audioToSend = stagedAudio;
         setStagedAudio(null);
+        dispatch(addOptimisticMessage({
+          _id: tempId,
+          content: 'Audio message',
+          messageType: 'audio',
+          sender: String(user._id || user.id),
+          receiver: otherIdStr,
+          createdAt: new Date().toISOString(),
+          tempId
+        }));
         await dispatch(sendMessage({
+          tempId,
           receiverId: otherIdStr,
           messageType: 'audio',
           audio: audioToSend
@@ -463,7 +474,18 @@ export default function ChatRoomScreen({ route, navigation }) {
         const textToSend = inputText.trim();
         setStagedImage(null);
         setInputText('');
+        dispatch(addOptimisticMessage({
+          _id: tempId,
+          content: textToSend,
+          messageType: 'image',
+          imageUrl: imageToSend.uri,
+          sender: String(user._id || user.id),
+          receiver: otherIdStr,
+          createdAt: new Date().toISOString(),
+          tempId
+        }));
         await dispatch(sendMessage({
+          tempId,
           receiverId: otherIdStr,
           messageType: 'image',
           content: textToSend,
@@ -472,7 +494,17 @@ export default function ChatRoomScreen({ route, navigation }) {
       } else if (inputText.trim()) {
         const textToSend = inputText.trim();
         setInputText('');
+        dispatch(addOptimisticMessage({
+          _id: tempId,
+          content: textToSend,
+          messageType: 'text',
+          sender: String(user._id || user.id),
+          receiver: otherIdStr,
+          createdAt: new Date().toISOString(),
+          tempId
+        }));
         await dispatch(sendMessage({
+          tempId,
           receiverId: otherIdStr,
           content: textToSend,
           messageType: 'text'

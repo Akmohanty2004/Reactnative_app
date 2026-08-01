@@ -29,16 +29,17 @@ export const sendMessage = createAsyncThunk(
   'chat/sendMessage',
   async (messageData, { rejectWithValue }) => {
     try {
+      const { tempId, ...dataToSend } = messageData;
       const formData = new FormData();
-      Object.keys(messageData).forEach(key => {
-        if (messageData[key] !== undefined && messageData[key] !== null) {
-          formData.append(key, messageData[key]);
+      Object.keys(dataToSend).forEach(key => {
+        if (dataToSend[key] !== undefined && dataToSend[key] !== null) {
+          formData.append(key, dataToSend[key]);
         }
       });
       const response = await api.post('/api/chat/send', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
-      return response.data;
+      return { ...response.data, tempId };
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Failed to send message');
     }
@@ -69,6 +70,14 @@ const chatSlice = createSlice({
     error: null,
   },
   reducers: {
+    addOptimisticMessage: (state, action) => {
+      const message = action.payload;
+      const otherUserId = String(message.receiver);
+      if (!state.messagesByUserId[otherUserId]) {
+        state.messagesByUserId[otherUserId] = [];
+      }
+      state.messagesByUserId[otherUserId].push(message);
+    },
     receiveMessage: (state, action) => {
       const message = action.payload;
       const senderId = String(message.sender?._id || message.sender?.id || (typeof message.sender === 'string' || typeof message.sender === 'number' ? message.sender : ''));
@@ -165,6 +174,13 @@ const chatSlice = createSlice({
         if (!state.messagesByUserId[otherUserId]) {
           state.messagesByUserId[otherUserId] = [];
         }
+        if (message.tempId) {
+          const tempIndex = state.messagesByUserId[otherUserId].findIndex(m => m._id === message.tempId);
+          if (tempIndex !== -1) {
+            state.messagesByUserId[otherUserId][tempIndex] = message;
+            return;
+          }
+        }
         const exists = state.messagesByUserId[otherUserId].find(m => String(m._id) === String(message._id));
         if (!exists) {
           state.messagesByUserId[otherUserId].push(message);
@@ -186,5 +202,5 @@ const chatSlice = createSlice({
   }
 });
 
-export const { receiveMessage, setCurrentUserId, clearUnreadMessages, removeMessageLocally, setContactOnlineStatus } = chatSlice.actions;
+export const { addOptimisticMessage, receiveMessage, setCurrentUserId, clearUnreadMessages, removeMessageLocally, setContactOnlineStatus } = chatSlice.actions;
 export default chatSlice.reducer;
