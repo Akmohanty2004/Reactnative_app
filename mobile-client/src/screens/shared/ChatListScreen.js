@@ -1,5 +1,5 @@
 import React, { useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, ActivityIndicator, SafeAreaView, StatusBar, Platform } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, ActivityIndicator, StatusBar, Platform } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { useFocusEffect } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
@@ -8,6 +8,7 @@ import { getContacts, setContactOnlineStatus } from '../../redux/slices/chatSlic
 import { io } from 'socket.io-client';
 
 import api from '../../services/api';
+import BouncyTouchable from '../../components/BouncyTouchable';
 
 const getImageUrl = (path) => {
   if (!path) return null;
@@ -67,9 +68,10 @@ export default function ChatListScreen({ navigation }) {
   }, [dispatch, user?._id]);
 
   const renderItem = ({ item }) => (
-    <TouchableOpacity
+    <BouncyTouchable
       style={[styles.chatItem, { backgroundColor: colors.card, borderColor: colors.border }]}
       onPress={() => navigation.navigate('ChatRoom', { user: item })}
+      activeScale={0.97}
     >
       <View style={styles.avatarContainer}>
         {item.profileImage ? (
@@ -91,16 +93,16 @@ export default function ChatListScreen({ navigation }) {
         </View>
       )}
       <Feather name="chevron-right" size={20} color={colors.subText} style={{ marginLeft: 10 }} />
-    </TouchableOpacity>
+    </BouncyTouchable>
   );
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.bg }]}>
+    <View style={[styles.safeArea, { backgroundColor: colors.bg }]}>
       <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} translucent={false} backgroundColor={colors.headerBg} />
-      <View style={[styles.header, { paddingTop: Math.max(insets.top, 20) + 10, backgroundColor: colors.headerBg, borderBottomColor: colors.border }]}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
+      <View style={[styles.header, { paddingTop: Math.max((insets.top || 20) - 15, 5), backgroundColor: colors.headerBg, borderBottomColor: colors.border }]}>
+        <BouncyTouchable style={styles.backBtn} onPress={() => navigation.goBack()} activeScale={0.8}>
           <Feather name="arrow-left" size={24} color={colors.headerText} />
-        </TouchableOpacity>
+        </BouncyTouchable>
         <Text style={[styles.headerTitle, { color: colors.headerText }]}>Messages</Text>
       </View>
 
@@ -122,7 +124,7 @@ export default function ChatListScreen({ navigation }) {
           }
         />
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 

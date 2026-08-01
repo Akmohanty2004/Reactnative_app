@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator , Platform, StatusBar} from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSelector } from 'react-redux';
 import { Feather } from '@expo/vector-icons';
@@ -109,7 +109,7 @@ export default function ClassRequestsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { padding: 20, paddingTop: 60, paddingBottom: 10 },
+  header: { padding: 20, paddingTop: Platform.OS === 'android' ? 10 : 20, paddingBottom: 10 },
   title: { fontSize: 24, fontWeight: '800' },
   subtitle: { fontSize: 14, marginTop: 5 },
   requestCard: { padding: 15, borderRadius: 16, marginBottom: 15, borderWidth: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },

@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { NavigationContainer } from '@react-navigation/native';
+import React, { useEffect, useState } from 'react';
+import { NavigationContainer, useNavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useSelector, useDispatch } from 'react-redux';
 import { ActivityIndicator, View } from 'react-native';
@@ -15,6 +15,8 @@ import AdminNavigator from './AdminNavigator';
 // Placeholder Screens
 import LoginScreen from '../screens/auth/LoginScreen';
 import RegisterScreen from '../screens/auth/RegisterScreen';
+
+import GlobalChatbot from '../components/GlobalChatbot';
 
 const Stack = createNativeStackNavigator();
 
@@ -32,6 +34,9 @@ export default function AppNavigator() {
   const dispatch = useDispatch();
   const { isAuthenticated, user, isInitializing } = useSelector((state) => state.auth);
   const { theme } = useSelector((state) => state.ui || { theme: 'dark' });
+  
+  const [currentRouteName, setCurrentRouteName] = useState('');
+  const navigationRef = useNavigationContainerRef();
 
   useEffect(() => {
     dispatch(initAuth());
@@ -49,7 +54,15 @@ export default function AppNavigator() {
   }
 
   return (
-    <NavigationContainer>
+    <NavigationContainer
+      ref={navigationRef}
+      onReady={() => {
+        setCurrentRouteName(navigationRef.getCurrentRoute()?.name);
+      }}
+      onStateChange={() => {
+        setCurrentRouteName(navigationRef.getCurrentRoute()?.name);
+      }}
+    >
       <StatusBar style={statusBarStyle} />
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {!isAuthenticated ? (
@@ -62,6 +75,7 @@ export default function AppNavigator() {
           <Stack.Screen name="StudentDashboard" component={StudentNavigator} />
         )}
       </Stack.Navigator>
+      <GlobalChatbot currentRouteName={currentRouteName} />
     </NavigationContainer>
   );
 }

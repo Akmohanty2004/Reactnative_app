@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Modal, FlatList, LayoutAnimation, UIManager, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Modal, FlatList, LayoutAnimation, UIManager, Platform , StatusBar} from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { Feather } from '@expo/vector-icons';
 import { getAdminExams } from '../../redux/slices/adminSlice';
@@ -323,13 +323,13 @@ export default function ResultsScreen({ navigation, route }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { padding: 20, paddingTop: 50, paddingBottom: 15 },
-  headerRowOverview: { flexDirection: 'row', alignItems: 'center', padding: 20, paddingTop: 50, paddingBottom: 15 },
+  header: { padding: 20, paddingTop: Platform.OS === 'android' ? 10 : 20, paddingBottom: 15 },
+  headerRowOverview: { flexDirection: 'row', alignItems: 'center', padding: 20, paddingTop: Platform.OS === 'android' ? 10 : 20, paddingBottom: 15 },
   backBtnOverview: { marginRight: 15, padding: 5 },
   title: { fontSize: 28, fontWeight: '800', marginBottom: 4 },
   subtitle: { fontSize: 14 },
   
-  headerDetails: { padding: 20, paddingTop: 50, borderBottomWidth: 1 },
+  headerDetails: { padding: 20, paddingTop: Platform.OS === 'android' ? 10 : 20, borderBottomWidth: 1 },
   titleDetails: { fontSize: 22, fontWeight: 'bold', flex: 1 },
   headerRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 15 },
   backBtn: { marginRight: 15, padding: 5 },

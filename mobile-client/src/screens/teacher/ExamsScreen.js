@@ -446,7 +446,7 @@ const getStyles = (colors) => ({
   /* Empty */
   emptyBox: {
     alignItems: 'center',
-    paddingTop: 60,
+    paddingTop: Platform.OS === 'android' ? 10 : 20,
     paddingHorizontal: 30,
   },
   emptyIcon: {

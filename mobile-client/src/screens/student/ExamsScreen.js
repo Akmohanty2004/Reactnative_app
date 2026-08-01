@@ -1,8 +1,8 @@
 import React, { useState, useCallback } from 'react';
 import { 
   View, Text, StyleSheet, ScrollView, TextInput, 
-  TouchableOpacity, Modal, ActivityIndicator 
-} from 'react-native';
+  TouchableOpacity, Modal, ActivityIndicator, Animated
+, Platform, StatusBar} from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { useFocusEffect } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
@@ -10,6 +10,7 @@ import Toast from 'react-native-toast-message';
 import api from '../../services/api';
 import { getStudentExams } from '../../redux/slices/examSlice';
 import { getStudentResults } from '../../redux/slices/resultSlice';
+import BouncyTouchable from '../../components/BouncyTouchable';
 
 export default function ExamsScreen({ navigation }) {
   const [searchTerm, setSearchTerm] = useState('');
@@ -26,10 +27,28 @@ export default function ExamsScreen({ navigation }) {
   const { results } = useSelector(state => state.results);
   const { theme } = useSelector(state => state.ui || { theme: 'dark' });
 
+  const [fadeAnim] = useState(new Animated.Value(0));
+  const [slideAnim] = useState(new Animated.Value(30));
+  const [floatAnim] = useState(new Animated.Value(0));
+
   useFocusEffect(
     useCallback(() => {
       dispatch(getStudentExams());
       dispatch(getStudentResults());
+      
+      Animated.parallel([
+        Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
+        Animated.spring(slideAnim, { toValue: 0, friction: 7, tension: 40, useNativeDriver: true })
+      ]).start();
+
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(floatAnim, { toValue: -8, duration: 2500, useNativeDriver: true }),
+          Animated.timing(floatAnim, { toValue: 0, duration: 2500, useNativeDriver: true })
+        ])
+      ).start();
+      
+      return () => { fadeAnim.setValue(0); slideAnim.setValue(30); floatAnim.setValue(0); };
     }, [dispatch])
   );
 
@@ -129,7 +148,11 @@ export default function ExamsScreen({ navigation }) {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
-      <ScrollView contentContainerStyle={styles.contentContainer} showsVerticalScrollIndicator={false}>
+      <Animated.ScrollView 
+        contentContainerStyle={[styles.contentContainer, { paddingBottom: 100 }]}
+        style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Custom Header */}
         <View style={[styles.header, { backgroundColor: 'transparent', borderBottomWidth: 0, paddingHorizontal: 0, paddingBottom: 25, flexDirection: 'row', alignItems: 'center' }]}>
           <TouchableOpacity onPress={() => navigation.navigate('Home')} style={{ marginRight: 15 }}>
@@ -159,7 +182,7 @@ export default function ExamsScreen({ navigation }) {
         {/* Filter Chips */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filtersScroll} contentContainerStyle={{ paddingRight: 20 }}>
           {['all', 'available', 'upcoming', 'completed'].map((option) => (
-            <TouchableOpacity
+            <BouncyTouchable
               key={option}
               style={[
                 styles.filterButton, 
@@ -167,6 +190,7 @@ export default function ExamsScreen({ navigation }) {
                 filter === option && { backgroundColor: '#6366f1', borderColor: '#6366f1' }
               ]}
               onPress={() => setFilter(option)}
+              activeScale={0.9}
             >
               <Text style={[
                 styles.filterText, 
@@ -175,12 +199,12 @@ export default function ExamsScreen({ navigation }) {
               ]}>
                 {option.charAt(0).toUpperCase() + option.slice(1)}
               </Text>
-            </TouchableOpacity>
+            </BouncyTouchable>
           ))}
         </ScrollView>
 
         {/* Promo Banner */}
-        <View style={styles.promoBanner}>
+        <Animated.View style={[styles.promoBanner, { transform: [{ translateY: floatAnim }] }]}>
           <View style={styles.promoContent}>
             <View style={styles.promoBadge}>
               <Feather name="star" size={14} color="white" />
@@ -191,16 +215,16 @@ export default function ExamsScreen({ navigation }) {
           <View style={styles.promoGraphic}>
             <Feather name="edit-3" size={60} color="#a78bfa" style={{ opacity: 0.8 }} />
           </View>
-        </View>
+        </Animated.View>
 
         <View style={styles.sectionHeaderRow}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Available Now</Text>
           {filteredExams.length > 5 && (
-            <TouchableOpacity onPress={() => setShowAllExams(!showAllExams)}>
+            <BouncyTouchable onPress={() => setShowAllExams(!showAllExams)} activeScale={0.9}>
               <Text style={styles.viewAllText}>
                 {showAllExams ? 'Show Less' : 'View All'} <Feather name={showAllExams ? "chevron-up" : "chevron-right"} size={14} />
               </Text>
-            </TouchableOpacity>
+            </BouncyTouchable>
           )}
         </View>
 
@@ -249,13 +273,14 @@ export default function ExamsScreen({ navigation }) {
                     <Text style={[styles.difficultyText, { color: diffColor }]}>{difficulty}</Text>
                   </View>
 
-                  <TouchableOpacity 
+                  <BouncyTouchable 
                     onPress={() => handleStartExam(exam)} 
                     style={[
                       styles.startBtn,
                       status.label !== 'Available' && { backgroundColor: isDarkMode ? '#334155' : '#cbd5e1' }
                     ]}
                     disabled={status.label !== 'Available' && status.label !== 'Upcoming'}
+                    activeScale={0.95}
                   >
                     <Text style={[
                       styles.startBtnText, 
@@ -263,7 +288,7 @@ export default function ExamsScreen({ navigation }) {
                     ]}>
                       {status.label === 'Available' ? 'Start Exam' : status.label}
                     </Text>
-                  </TouchableOpacity>
+                  </BouncyTouchable>
                 </View>
               </View>
             );
@@ -280,7 +305,7 @@ export default function ExamsScreen({ navigation }) {
           <Text style={[styles.endOfListTitle, { color: colors.text }]}>No more exams here!</Text>
           <Text style={[styles.endOfListSubtitle, { color: colors.subText }]}>Check back later for new{'\n'}examinations.</Text>
         </View>
-      </ScrollView>
+      </Animated.ScrollView>
 
       {/* Info Modal */}
       <Modal visible={!!showExamInfo} transparent animationType="fade">
@@ -358,7 +383,7 @@ export default function ExamsScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 60, paddingBottom: 15, borderBottomWidth: 0 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: Platform.OS === 'android' ? 40 : 50, paddingBottom: 15, borderBottomWidth: 0 },
   headerTitle: { fontSize: 24, fontWeight: '800' },
   headerSubtitle: { fontSize: 13, marginTop: 4 },
   iconBtn: { width: 42, height: 42, borderRadius: 12, justifyContent: 'center', alignItems: 'center', borderWidth: 1, backgroundColor: 'transparent' },

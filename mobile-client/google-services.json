@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "330687949597",
+    "project_id": "examhub-notifications",
+    "storage_bucket": "examhub-notifications.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:330687949597:android:d072cf1e91d3275eb44ff4",
+        "android_client_info": {
+          "package_name": "com.akmohanty.mobileclient"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDOupLrlkeS3db1ZcJmUXw6ApBPAT_ncjU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -61,12 +61,13 @@ io.on('connection', (socket) => {
     try {
       const roomStr = String(targetUserId);
       const isSocketConnected = (userSocketCounts.get(roomStr) || 0) > 0 || (io.sockets.adapter.rooms.get(roomStr)?.size || 0) > 0;
-      let dbOnline = false;
-      try {
-        const user = await User.findById(targetUserId).select('isOnline');
-        dbOnline = !!user?.isOnline;
-      } catch (e) {}
-      const isOnline = isSocketConnected || dbOnline;
+      let isOnline = isSocketConnected;
+      if (!isOnline) {
+        const targetUser = await User.findById(targetUserId);
+        if (targetUser) {
+          isOnline = targetUser.isOnline;
+        }
+      }
       socket.emit('user_status_response', { userId: targetUserId, isOnline });
     } catch (err) {
       console.error('Error checking user status:', err);

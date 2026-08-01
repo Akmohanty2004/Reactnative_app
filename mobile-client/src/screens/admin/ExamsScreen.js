@@ -1,6 +1,6 @@
 import React, { useCallback } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator , Platform, StatusBar} from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { Feather } from '@expo/vector-icons';
 import { getAdminExams } from '../../redux/slices/adminSlice';
@@ -152,7 +152,7 @@ export default function ExamsScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { padding: 20, paddingTop: 50, paddingBottom: 15 },
+  header: { padding: 20, paddingTop: Platform.OS === 'android' ? 10 : 20, paddingBottom: 15 },
   title: { fontSize: 28, fontWeight: '800', marginBottom: 4 },
   subtitle: { fontSize: 14 },
   listContainer: { paddingHorizontal: 20 },

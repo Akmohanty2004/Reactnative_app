@@ -847,10 +847,10 @@ export default function ChatRoomScreen({ route, navigation }) {
 
   return (
     <View style={[styles.root, { backgroundColor: colors.bg }]}>
-      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} translucent backgroundColor="transparent" />
+      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} translucent={false} backgroundColor={colors.headerBg} />
 
       {/* ── Header ── */}
-      <View style={[styles.header, { paddingTop: Math.max(insets.top, 30) + 8, backgroundColor: colors.headerBg, borderBottomWidth: 1, borderBottomColor: colors.inputBorder }]}>
+      <View style={[styles.header, { paddingTop: Math.max((insets.top || 20) - 15, 5) + 5, backgroundColor: colors.headerBg, borderBottomWidth: 1, borderBottomColor: colors.inputBorder }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Feather name="arrow-left" size={24} color={colors.headerText} />
         </TouchableOpacity>
@@ -882,8 +882,8 @@ export default function ChatRoomScreen({ route, navigation }) {
       {/* ── Messages ── */}
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 90}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       >
         {customBg ? (
           <ImageBackground source={{ uri: customBg }} style={{ flex: 1 }} resizeMode="cover">

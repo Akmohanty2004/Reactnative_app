@@ -465,7 +465,7 @@ const styles = StyleSheet.create({
   startSubtitle: { color: '#94a3b8', fontSize: 14, textAlign: 'center', marginBottom: 24, lineHeight: 22 },
   primaryBtn: { backgroundColor: '#6366f1', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12, flexDirection: 'row', alignItems: 'center' },
   btnText: { color: 'white', fontSize: 16, fontWeight: 'bold' },
-  header: { backgroundColor: '#1e293b', padding: 15, paddingTop: 40, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottomWidth: 1, borderBottomColor: '#334155' },
+  header: { backgroundColor: '#1e293b', padding: 15, paddingTop: 50, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottomWidth: 1, borderBottomColor: '#334155' },
   examTitle: { color: 'white', fontSize: 18, fontWeight: 'bold' },
   examSubject: { color: '#94a3b8', fontSize: 13 },
   headerRight: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#0f172a', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },

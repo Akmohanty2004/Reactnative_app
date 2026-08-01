@@ -1,19 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Image, Modal, ActivityIndicator, Switch } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Image, Modal, ActivityIndicator, Switch , Platform, StatusBar, Animated, Easing } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigation } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import Toast from 'react-native-toast-message';
 import * as ImagePicker from 'expo-image-picker';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { updateProfile, getCurrentUser, changePassword, logoutUser, uploadProfileImage } from '../../redux/slices/authSlice';
 import { getStudentResults } from '../../redux/slices/resultSlice';
 import { toggleTheme } from '../../redux/slices/uiSlice';
 import api from '../../services/api';
+import BouncyTouchable from '../../components/BouncyTouchable';
 
 export default function ProfileScreen() {
   const dispatch = useDispatch();
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
   const { user, token } = useSelector(state => state.auth);
   const { results } = useSelector(state => state.results);
   const { unreadCount } = useSelector(state => state.notifications);
@@ -38,6 +41,12 @@ export default function ProfileScreen() {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  // Animations
+  const [fadeAnim] = useState(new Animated.Value(0));
+  const [slideAnim] = useState(new Animated.Value(30));
+  const [cardSlideAnim] = useState(new Animated.Value(50));
+  const [pulseAnim] = useState(new Animated.Value(1));
+  const [statsFade] = useState(new Animated.Value(0));
   const getPasswordStrength = (pass) => {
     if (!pass) return { label: '', color: 'transparent', score: 0 };
     let score = 0;
@@ -58,6 +67,26 @@ export default function ProfileScreen() {
   useEffect(() => {
     dispatch(getCurrentUser());
     dispatch(getStudentResults());
+
+    Animated.parallel([
+      Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
+      Animated.spring(slideAnim, { toValue: 0, friction: 8, tension: 40, useNativeDriver: true }),
+      Animated.sequence([
+        Animated.delay(200),
+        Animated.spring(cardSlideAnim, { toValue: 0, friction: 8, tension: 40, useNativeDriver: true })
+      ]),
+      Animated.sequence([
+        Animated.delay(400),
+        Animated.timing(statsFade, { toValue: 1, duration: 500, useNativeDriver: true })
+      ])
+    ]).start();
+
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 1.05, duration: 1500, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1, duration: 1500, easing: Easing.inOut(Easing.ease), useNativeDriver: true })
+      ])
+    ).start();
   }, [dispatch]);
 
   useEffect(() => {
@@ -219,7 +248,7 @@ export default function ProfileScreen() {
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
       <ScrollView contentContainerStyle={styles.content}>
         {/* Custom Header */}
-        <View style={[styles.header, { backgroundColor: 'transparent', borderBottomWidth: 0, paddingHorizontal: 0, paddingBottom: 25, flexDirection: 'row', alignItems: 'center' }]}>
+        <View style={[styles.header, { backgroundColor: 'transparent', borderBottomWidth: 0, paddingHorizontal: 0, paddingBottom: 25, paddingTop: Math.max((insets.top || 20) + 15, 30), flexDirection: 'row', alignItems: 'center' }]}>
           <TouchableOpacity onPress={() => navigation.navigate('Home')} style={{ marginRight: 15 }}>
             <Feather name="arrow-left" size={24} color={colors.text} />
           </TouchableOpacity>
@@ -239,11 +268,12 @@ export default function ProfileScreen() {
         </View>
 
         {/* Profile Card */}
-        <View style={styles.profileCard}>
-          <LinearGradient colors={isDarkMode ? ['#2e1065', '#0f172a'] : ['#8b5cf6', '#6366f1']} style={StyleSheet.absoluteFillObject} borderRadius={24} />
+        <Animated.View style={[styles.profileCard, { opacity: fadeAnim, transform: [{ translateY: cardSlideAnim }] }]}>
+          <LinearGradient colors={isDarkMode ? ['#1e1b4b', '#0f172a'] : ['#8b5cf6', '#4f46e5']} style={StyleSheet.absoluteFillObject} borderRadius={24} />
           
           <View style={styles.profileTopRow}>
             <View style={styles.avatarWrapper}>
+              <Animated.View style={[StyleSheet.absoluteFillObject, { backgroundColor: 'rgba(139, 92, 246, 0.4)', borderRadius: 100, transform: [{ scale: pulseAnim }] }]} />
               <View style={[styles.avatarContainer, { borderColor: '#8b5cf6', borderWidth: 3 }]}>
                 {user?.profileImage ? (
                   <Image source={{ uri: getImageUrl(user.profileImage) }} style={styles.avatarImage} />
@@ -265,82 +295,49 @@ export default function ProfileScreen() {
                 <Text style={styles.roleText}>STUDENT</Text>
               </View>
               
-              <View style={styles.metaRow}>
-                <Feather name="mail" size={14} color="#cbd5e1" style={{ marginRight: 8 }} />
-                <Text style={[styles.metaText, { color: '#cbd5e1' }]} numberOfLines={1}>{user?.email || 'N/A'}</Text>
-              </View>
-              <View style={styles.metaRow}>
-                <Feather name="phone" size={14} color="#cbd5e1" style={{ marginRight: 8 }} />
-                <Text style={[styles.metaText, { color: '#cbd5e1' }]}>{user?.phone || 'N/A'}</Text>
-              </View>
-              <View style={styles.metaRow}>
-                <Feather name="map-pin" size={14} color="#cbd5e1" style={{ marginRight: 8 }} />
-                <Text style={[styles.metaText, { color: '#cbd5e1' }]} numberOfLines={1}>{user?.college || 'N/A'}</Text>
-              </View>
-              <View style={styles.metaRow}>
-                <Feather name="users" size={14} color="#cbd5e1" style={{ marginRight: 8 }} />
-                <Text style={[styles.metaText, { color: '#cbd5e1' }]} numberOfLines={1}>{user?.classGroup || 'Unassigned'}</Text>
-              </View>
-              <View style={styles.metaRow}>
-                <Feather name="book" size={14} color="#cbd5e1" style={{ marginRight: 8 }} />
-                <Text style={[styles.metaText, { color: '#cbd5e1' }]} numberOfLines={1}>{user?.department || 'N/A'}</Text>
-              </View>
-              <View style={styles.metaRow}>
-                <Feather name="user" size={14} color="#cbd5e1" style={{ marginRight: 8 }} />
-                <Text style={[styles.metaText, { color: '#cbd5e1' }]} numberOfLines={1}>
-                  {user?.gender ? (user.gender.charAt(0).toUpperCase() + user.gender.slice(1)) : 'N/A'} • {user?.age || 'N/A'} yrs
-                </Text>
-              </View>
-              <View style={styles.metaRow}>
-                <Feather name="home" size={14} color="#cbd5e1" style={{ marginRight: 8 }} />
-                <Text style={[styles.metaText, { color: '#cbd5e1' }]} numberOfLines={2}>{user?.address || 'N/A'}</Text>
-              </View>
+              <Text style={{ color: '#cbd5e1', fontSize: 13, marginBottom: 15 }}>{user?.email || 'N/A'}</Text>
+              
               {user?.classChangeStatus === 'pending' ? (
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 10 }}>
+                <View style={styles.classStatusBadge}>
                   <Feather name="clock" size={14} color="#f59e0b" style={{ marginRight: 5 }} />
-                  <Text style={{ color: '#f59e0b', fontSize: 12 }}>Change to {user?.pendingClassGroup} pending</Text>
+                  <Text style={{ color: '#f59e0b', fontSize: 12, fontWeight: '600' }}>Change pending</Text>
                 </View>
               ) : (
-                <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', marginTop: 10, padding: 5, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 8, alignSelf: 'flex-start' }} onPress={() => setShowClassModal(true)}>
+                <TouchableOpacity style={styles.classStatusBadge} onPress={() => setShowClassModal(true)}>
                   <Feather name="refresh-cw" size={14} color="#a78bfa" style={{ marginRight: 5 }} />
-                  <Text style={{ color: '#a78bfa', fontSize: 12 }}>Request Class Change</Text>
+                  <Text style={{ color: '#a78bfa', fontSize: 12, fontWeight: '600' }}>Request Class Change</Text>
                 </TouchableOpacity>
               )}
-            </View>
-            
-            <View style={styles.profileGraphic}>
-              <Feather name="user" size={80} color="#8b5cf6" style={{ opacity: 0.15 }} />
             </View>
           </View>
 
           <View style={styles.headerActions}>
-            <TouchableOpacity style={styles.actionBtnEdit} onPress={() => setIsEditing(true)}>
+            <BouncyTouchable style={styles.actionBtnEdit} onPress={() => setIsEditing(true)} activeScale={0.9}>
               <Feather name="edit-2" size={16} color="white" style={styles.actionIcon} />
               <Text style={styles.actionBtnTextEdit}>Edit Profile</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.actionBtnPass} onPress={() => setShowPasswordModal(true)}>
+            </BouncyTouchable>
+            <BouncyTouchable style={styles.actionBtnPass} onPress={() => setShowPasswordModal(true)} activeScale={0.9}>
               <Feather name="lock" size={16} color="white" style={styles.actionIcon} />
               <Text style={styles.actionBtnTextPass}>Change Password</Text>
-            </TouchableOpacity>
+            </BouncyTouchable>
           </View>
-        </View>
+        </Animated.View>
 
-        <View style={styles.sectionHeader}>
+        <Animated.View style={[styles.sectionHeader, { opacity: statsFade }]}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Performance Overview</Text>
-          <TouchableOpacity>
+          <BouncyTouchable activeScale={0.9}>
             <Text style={styles.viewAllText}>View All <Feather name="chevron-right" size={14} /></Text>
-          </TouchableOpacity>
-        </View>
+          </BouncyTouchable>
+        </Animated.View>
 
         {/* Horizontal Performance Grid */}
-        <View style={styles.perfGrid}>
+        <Animated.View style={[styles.perfGrid, { opacity: statsFade, transform: [{ translateY: slideAnim }] }]}>
           <View style={[styles.perfCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <View style={[styles.perfIconBox, { backgroundColor: 'rgba(56,189,248,0.15)' }]}>
               <Feather name="file-text" size={24} color="#38bdf8" />
             </View>
             <Text style={[styles.perfValue, { color: colors.text }]}>{stats.total}</Text>
             <Text style={[styles.perfLabel, { color: colors.subText }]}>Exams Taken</Text>
-            <View style={[styles.perfBar, { backgroundColor: '#38bdf8' }]} />
           </View>
 
           <View style={[styles.perfCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -349,7 +346,6 @@ export default function ProfileScreen() {
             </View>
             <Text style={[styles.perfValue, { color: colors.text }]}>{stats.passed}</Text>
             <Text style={[styles.perfLabel, { color: colors.subText }]}>Passed</Text>
-            <View style={[styles.perfBar, { backgroundColor: '#10b981' }]} />
           </View>
 
           <View style={[styles.perfCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -358,7 +354,6 @@ export default function ProfileScreen() {
             </View>
             <Text style={[styles.perfValue, { color: colors.text }]}>{stats.average}%</Text>
             <Text style={[styles.perfLabel, { color: colors.subText }]}>Avg Score</Text>
-            <View style={[styles.perfBar, { backgroundColor: '#8b5cf6' }]} />
           </View>
 
           <View style={[styles.perfCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -367,58 +362,82 @@ export default function ProfileScreen() {
             </View>
             <Text style={[styles.perfValue, { color: colors.text }]}>{stats.rank}</Text>
             <Text style={[styles.perfLabel, { color: colors.subText }]}>Rank</Text>
-            <View style={[styles.perfBar, { backgroundColor: '#f59e0b' }]} />
           </View>
-        </View>
+        </Animated.View>
 
         {/* Additional Information */}
-        <View style={{ marginTop: 25 }}>
+        <Animated.View style={{ marginTop: 25, opacity: statsFade }}>
           <Text style={[styles.sectionTitle, { color: colors.text, marginBottom: 15 }]}>Additional Information</Text>
-          <View style={[styles.infoCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={[styles.infoCard, { backgroundColor: isDarkMode ? 'rgba(30,41,59,0.7)' : 'rgba(255,255,255,0.8)', borderColor: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)', shadowColor: '#000', shadowOffset: {width:0, height:10}, shadowOpacity: 0.1, shadowRadius: 20 }]}>
             <View style={[styles.infoRow, { borderBottomColor: colors.border }]}>
               <View style={styles.infoRowLeft}>
                 <View style={[styles.infoIconBox, { backgroundColor: 'rgba(139,92,246,0.15)' }]}>
-                  <Feather name="briefcase" size={16} color="#8b5cf6" />
+                  <Feather name="users" size={16} color="#8b5cf6" />
+                </View>
+                <Text style={[styles.infoLabel, { color: colors.subText }]}>Class Group</Text>
+              </View>
+              <Text style={[styles.infoValue, { color: colors.text }]}>{user?.classGroup || 'Unassigned'}</Text>
+            </View>
+            
+            <View style={[styles.infoRow, { borderBottomColor: colors.border }]}>
+              <View style={styles.infoRowLeft}>
+                <View style={[styles.infoIconBox, { backgroundColor: 'rgba(16,185,129,0.15)' }]}>
+                  <Feather name="phone" size={16} color="#10b981" />
+                </View>
+                <Text style={[styles.infoLabel, { color: colors.subText }]}>Phone</Text>
+              </View>
+              <Text style={[styles.infoValue, { color: colors.text }]}>{user?.phone || 'Not specified'}</Text>
+            </View>
+
+            <View style={[styles.infoRow, { borderBottomColor: colors.border }]}>
+              <View style={styles.infoRowLeft}>
+                <View style={[styles.infoIconBox, { backgroundColor: 'rgba(245,158,11,0.15)' }]}>
+                  <Feather name="briefcase" size={16} color="#f59e0b" />
                 </View>
                 <Text style={[styles.infoLabel, { color: colors.subText }]}>Department</Text>
               </View>
               <Text style={[styles.infoValue, { color: colors.text }]}>{user?.department || 'Not specified'}</Text>
             </View>
+
             <View style={[styles.infoRow, { borderBottomColor: colors.border }]}>
               <View style={styles.infoRowLeft}>
-                <View style={[styles.infoIconBox, { backgroundColor: 'rgba(16,185,129,0.15)' }]}>
-                  <Feather name="calendar" size={16} color="#10b981" />
+                <View style={[styles.infoIconBox, { backgroundColor: 'rgba(236,72,153,0.15)' }]}>
+                  <Feather name="map" size={16} color="#ec4899" />
                 </View>
-                <Text style={[styles.infoLabel, { color: colors.subText }]}>Age</Text>
+                <Text style={[styles.infoLabel, { color: colors.subText }]}>College</Text>
               </View>
-              <Text style={[styles.infoValue, { color: colors.text }]}>{user?.age || 'Not specified'}</Text>
+              <Text style={[styles.infoValue, { color: colors.text }]}>{user?.college || 'Not specified'}</Text>
             </View>
+
             <View style={[styles.infoRow, { borderBottomColor: colors.border }]}>
-              <View style={styles.infoRowLeft}>
-                <View style={[styles.infoIconBox, { backgroundColor: 'rgba(245,158,11,0.15)' }]}>
-                  <Feather name="user" size={16} color="#f59e0b" />
-                </View>
-                <Text style={[styles.infoLabel, { color: colors.subText }]}>Gender</Text>
-              </View>
-              <Text style={[styles.infoValue, { color: colors.text }]}>{user?.gender || 'Not specified'}</Text>
-            </View>
-            <View style={[styles.infoRow, { borderBottomColor: 'transparent' }]}>
               <View style={styles.infoRowLeft}>
                 <View style={[styles.infoIconBox, { backgroundColor: 'rgba(56,189,248,0.15)' }]}>
-                  <Feather name="map-pin" size={16} color="#38bdf8" />
+                  <Feather name="user" size={16} color="#38bdf8" />
+                </View>
+                <Text style={[styles.infoLabel, { color: colors.subText }]}>Gender & Age</Text>
+              </View>
+              <Text style={[styles.infoValue, { color: colors.text }]}>
+                {user?.gender ? (user.gender.charAt(0).toUpperCase() + user.gender.slice(1)) : 'N/A'} • {user?.age || 'N/A'} yrs
+              </Text>
+            </View>
+            
+            <View style={[styles.infoRow, { borderBottomColor: 'transparent' }]}>
+              <View style={styles.infoRowLeft}>
+                <View style={[styles.infoIconBox, { backgroundColor: 'rgba(148,163,184,0.15)' }]}>
+                  <Feather name="map-pin" size={16} color="#94a3b8" />
                 </View>
                 <Text style={[styles.infoLabel, { color: colors.subText }]}>Address</Text>
               </View>
-              <Text style={[styles.infoValue, { color: colors.text }]}>{user?.address || 'Not specified'}</Text>
+              <Text style={[styles.infoValue, { color: colors.text, maxWidth: '50%', textAlign: 'right' }]}>{user?.address || 'Not specified'}</Text>
             </View>
           </View>
-        </View>
+        </Animated.View>
 
         {/* Quick Actions */}
-        <View style={{ marginTop: 25 }}>
+        <Animated.View style={{ marginTop: 25, opacity: statsFade, transform: [{ translateY: slideAnim }] }}>
           <Text style={[styles.sectionTitle, { color: colors.text, marginBottom: 15 }]}>Quick Actions</Text>
           <View style={styles.quickActionsGrid}>
-            <TouchableOpacity 
+            <BouncyTouchable 
               style={[styles.quickActionCard, { backgroundColor: colors.card, borderColor: colors.border }]}
               onPress={() => navigation.navigate('Exams')}
             >
@@ -426,9 +445,9 @@ export default function ProfileScreen() {
                 <Feather name="file-text" size={24} color="#8b5cf6" />
               </View>
               <Text style={[styles.quickActionLabel, { color: colors.text }]}>My Exams</Text>
-            </TouchableOpacity>
+            </BouncyTouchable>
             
-            <TouchableOpacity 
+            <BouncyTouchable 
               style={[styles.quickActionCard, { backgroundColor: colors.card, borderColor: colors.border }]}
               onPress={() => navigation.navigate('Results')}
             >
@@ -436,9 +455,9 @@ export default function ProfileScreen() {
                 <Feather name="bar-chart-2" size={24} color="#10b981" />
               </View>
               <Text style={[styles.quickActionLabel, { color: colors.text }]}>My Results</Text>
-            </TouchableOpacity>
+            </BouncyTouchable>
             
-            <TouchableOpacity 
+            <BouncyTouchable 
               style={[styles.quickActionCard, { backgroundColor: colors.card, borderColor: colors.border }]}
               onPress={() => Toast.show({ type: 'info', text1: 'Coming Soon', text2: 'Bookmarks feature is under development.' })}
             >
@@ -446,9 +465,9 @@ export default function ProfileScreen() {
                 <Feather name="bookmark" size={24} color="#f59e0b" />
               </View>
               <Text style={[styles.quickActionLabel, { color: colors.text }]}>Bookmarks</Text>
-            </TouchableOpacity>
+            </BouncyTouchable>
             
-            <TouchableOpacity 
+            <BouncyTouchable 
               style={[styles.quickActionCard, { backgroundColor: colors.card, borderColor: colors.border }]}
               onPress={() => setIsSettingsVisible(true)}
             >
@@ -456,9 +475,9 @@ export default function ProfileScreen() {
                 <Feather name="settings" size={24} color="#6366f1" />
               </View>
               <Text style={[styles.quickActionLabel, { color: colors.text }]}>Settings</Text>
-            </TouchableOpacity>
+            </BouncyTouchable>
           </View>
-        </View>
+        </Animated.View>
 
         {/* Logout Button */}
         <TouchableOpacity 
@@ -793,8 +812,7 @@ export default function ProfileScreen() {
           </View>
 
           <ScrollView style={styles.fsModalScroll} showsVerticalScrollIndicator={false}>
-            {/* Teacher Verification Banner */}
-            <View style={[styles.classInfoBanner, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Animated.View style={[styles.classInfoBanner, { backgroundColor: colors.card, borderColor: colors.border, opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
               <View style={styles.classBannerIconBox}>
                 <Feather name="shield" size={24} color="#8b5cf6" />
               </View>
@@ -804,7 +822,7 @@ export default function ProfileScreen() {
                   Your request to join a new class group will require approval from your teacher before taking effect.
                 </Text>
               </View>
-            </View>
+            </Animated.View>
 
             <Text style={[styles.classSectionTitle, { color: colors.text }]}>Available Class Groups</Text>
 
@@ -982,7 +1000,7 @@ export default function ProfileScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 60, paddingBottom: 15, borderBottomWidth: 1 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: Platform.OS === 'android' ? 40 : 50, paddingBottom: 15, borderBottomWidth: 1 },
   headerTitle: { fontSize: 24, fontWeight: '800' },
   headerSubtitle: { fontSize: 13, marginTop: 4 },
   headerIcons: { flexDirection: 'row' },
@@ -991,22 +1009,21 @@ const styles = StyleSheet.create({
 
   content: { padding: 15, paddingBottom: 40 },
 
-  profileCard: { borderRadius: 24, padding: 20, marginBottom: 25, position: 'relative', overflow: 'hidden' },
-  profileTopRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 20, zIndex: 2 },
-  avatarWrapper: { position: 'relative', marginRight: 15 },
-  avatarContainer: { width: 90, height: 90, borderRadius: 45, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
+  profileCard: { borderRadius: 24, padding: 25, marginBottom: 25, position: 'relative', overflow: 'hidden' },
+  profileTopRow: { flexDirection: 'column', alignItems: 'center', marginBottom: 25, zIndex: 2 },
+  avatarWrapper: { position: 'relative', marginBottom: 15 },
+  avatarContainer: { width: 100, height: 100, borderRadius: 50, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
   avatarImage: { width: '100%', height: '100%' },
   avatarPlaceholder: { width: '100%', height: '100%', backgroundColor: '#6366f1', justifyContent: 'center', alignItems: 'center' },
-  avatarText: { color: 'white', fontSize: 32, fontWeight: 'bold' },
-  editAvatarBtn: { position: 'absolute', bottom: 0, right: 0, backgroundColor: '#8b5cf6', width: 28, height: 28, borderRadius: 14, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#1e1b4b' },
+  avatarText: { color: 'white', fontSize: 36, fontWeight: 'bold' },
+  editAvatarBtn: { position: 'absolute', bottom: 0, right: 0, backgroundColor: '#8b5cf6', width: 32, height: 32, borderRadius: 16, justifyContent: 'center', alignItems: 'center', borderWidth: 3, borderColor: '#1e1b4b' },
   
-  profileInfo: { flex: 1 },
-  userName: { fontSize: 20, fontWeight: 'bold', marginBottom: 6 },
-  roleBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(139,92,246,0.2)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, alignSelf: 'flex-start', marginBottom: 10 },
-  roleText: { color: '#c4b5fd', fontSize: 10, fontWeight: '800', letterSpacing: 0.5 },
-  metaRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
-  metaText: { fontSize: 12 },
-  profileGraphic: { position: 'absolute', right: -10, top: 20 },
+  profileInfo: { alignItems: 'center', width: '100%' },
+  userName: { fontSize: 24, fontWeight: 'bold', marginBottom: 8, textAlign: 'center' },
+  roleBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(139,92,246,0.2)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12, alignSelf: 'center', marginBottom: 10 },
+  roleText: { color: '#c4b5fd', fontSize: 11, fontWeight: '800', letterSpacing: 0.5 },
+  
+  classStatusBadge: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 12, alignSelf: 'center', marginTop: 5 },
 
   headerActions: { flexDirection: 'row', justifyContent: 'space-between', zIndex: 2 },
   actionBtnEdit: { flex: 1, backgroundColor: '#7c3aed', paddingVertical: 14, borderRadius: 12, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginRight: 8 },
@@ -1019,11 +1036,10 @@ const styles = StyleSheet.create({
   viewAllText: { color: '#8b5cf6', fontSize: 13, fontWeight: '600' },
 
   perfGrid: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 },
-  perfCard: { flex: 1, borderWidth: 1, borderRadius: 16, padding: 12, alignItems: 'center', marginHorizontal: 4, position: 'relative', overflow: 'hidden' },
-  perfIconBox: { width: 44, height: 44, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginBottom: 10 },
-  perfValue: { fontSize: 22, fontWeight: 'bold', marginBottom: 4 },
-  perfLabel: { fontSize: 11, fontWeight: '500', marginBottom: 8 },
-  perfBar: { position: 'absolute', bottom: 0, left: '20%', right: '20%', height: 3, borderRadius: 2 },
+  perfCard: { flex: 1, borderRadius: 16, padding: 12, alignItems: 'center', marginHorizontal: 4, shadowColor: '#000', shadowOffset: {width:0, height:4}, shadowOpacity: 0.05, shadowRadius: 10 },
+  perfIconBox: { width: 44, height: 44, borderRadius: 14, justifyContent: 'center', alignItems: 'center', marginBottom: 12 },
+  perfValue: { fontSize: 20, fontWeight: 'bold', marginBottom: 4 },
+  perfLabel: { fontSize: 11, fontWeight: '600' },
 
   infoCard: { borderWidth: 1, borderRadius: 20, paddingHorizontal: 20 },
   infoRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 16, borderBottomWidth: 1 },
@@ -1033,15 +1049,15 @@ const styles = StyleSheet.create({
   infoValue: { fontSize: 14, fontWeight: '700' },
 
   quickActionsGrid: { flexDirection: 'row', justifyContent: 'space-between', flexWrap: 'nowrap' },
-  quickActionCard: { flex: 1, borderWidth: 1, borderRadius: 16, paddingVertical: 16, alignItems: 'center', marginHorizontal: 4 },
-  quickActionIconWrapper: { width: 48, height: 48, borderRadius: 14, justifyContent: 'center', alignItems: 'center', marginBottom: 10 },
-  quickActionLabel: { fontSize: 12, fontWeight: '600' },
+  quickActionCard: { flex: 1, borderRadius: 16, paddingVertical: 14, alignItems: 'center', marginHorizontal: 4, shadowColor: '#000', shadowOffset: {width:0, height:4}, shadowOpacity: 0.05, shadowRadius: 10 },
+  quickActionIconWrapper: { width: 42, height: 42, borderRadius: 14, justifyContent: 'center', alignItems: 'center', marginBottom: 8 },
+  quickActionLabel: { fontSize: 11, fontWeight: '600' },
   
   logoutBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 16, borderRadius: 16, marginTop: 30, borderWidth: 1, marginBottom: 10 },
   logoutBtnText: { color: '#ef4444', fontSize: 16, fontWeight: 'bold', marginLeft: 10 },
 
   fsModalOverlay: { flex: 1, backgroundColor: '#0B0E14' },
-  fsModalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 60, paddingBottom: 20 },
+  fsModalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: Platform.OS === 'android' ? 40 : 50, paddingBottom: 20 },
   fsHeaderBtn: { padding: 5 },
   fsModalTitle: { color: 'white', fontSize: 18, fontWeight: 'bold' },
   fsModalScroll: { paddingHorizontal: 25, paddingBottom: 50 },

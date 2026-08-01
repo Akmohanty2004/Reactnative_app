@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Image, Modal, Alert, KeyboardAvoidingView, Platform, Switch } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Image, Modal, Alert, KeyboardAvoidingView, Platform, Switch , StatusBar} from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
 import * as ImagePicker from 'expo-image-picker';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { updateProfile, getCurrentUser, changePassword, logoutUser, uploadProfileImage } from '../../redux/slices/authSlice';
 import { toggleTheme } from '../../redux/slices/uiSlice';
 import { sendPersonalNotification } from '../../redux/slices/notificationSlice';
@@ -13,6 +14,7 @@ import { getTeacherExams } from '../../redux/slices/examSlice';
 export default function ProfileScreen() {
   const dispatch = useDispatch();
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
   const { user } = useSelector(state => state.auth);
   const { unreadCount } = useSelector(state => state.notifications);
   const { theme } = useSelector(state => state.ui || { theme: 'dark' });
@@ -223,8 +225,10 @@ export default function ProfileScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
-      {/* Custom Header */}
-        <View style={[styles.header, { backgroundColor: 'transparent', borderBottomWidth: 0, paddingHorizontal: 0, paddingBottom: 25, flexDirection: 'row', alignItems: 'center' }]}>
+      <ScrollView contentContainerStyle={styles.content}>
+
+        {/* Custom Header */}
+        <View style={[styles.header, { backgroundColor: 'transparent', borderBottomWidth: 0, paddingHorizontal: 0, paddingBottom: 25, paddingTop: Math.max((insets.top || 20) - 15, 5), flexDirection: 'row', alignItems: 'center' }]}>
           <TouchableOpacity onPress={() => navigation.navigate('Home')} style={{ marginRight: 18, padding: 4 }}>
             <Feather name="arrow-left" size={24} color={colors.text} />
           </TouchableOpacity>
@@ -242,8 +246,6 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         </View>
       </View>
-
-      <ScrollView contentContainerStyle={styles.content}>
 
         {/* Profile Card */}
         <View style={[styles.profileCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -889,7 +891,7 @@ export default function ProfileScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#0f172a' },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 60, paddingBottom: 15 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: Platform.OS === 'android' ? 10 : 20, paddingBottom: 15 },
   headerLeft: { flex: 1 },
   headerTitle: { fontSize: 24, fontWeight: '800', color: 'white', marginBottom: 4 },
   headerSubtitle: { fontSize: 13, color: '#94a3b8' },
@@ -944,7 +946,7 @@ const styles = StyleSheet.create({
   logoutText: { color: '#ef4444', fontSize: 14, fontWeight: 'bold', marginRight: 8 },
 
   fsModalOverlay: { flex: 1, backgroundColor: '#0B0E14' },
-  fsModalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 60, paddingBottom: 20 },
+  fsModalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: Platform.OS === 'android' ? 10 : 20, paddingBottom: 20 },
   fsHeaderBtn: { padding: 5 },
   fsModalTitle: { color: 'white', fontSize: 18, fontWeight: 'bold' },
   fsModalScroll: { paddingHorizontal: 25, paddingBottom: 50 },

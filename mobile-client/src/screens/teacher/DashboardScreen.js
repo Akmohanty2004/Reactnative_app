@@ -1,13 +1,15 @@
 import React, { useCallback, useState, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, Dimensions, TouchableOpacity, Modal, RefreshControl, FlatList, StatusBar, Image, Animated } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Dimensions, TouchableOpacity, Modal, RefreshControl, FlatList, StatusBar, Image, Animated , Platform} from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
 import { PieChart } from 'react-native-chart-kit';
 import Svg, { Path } from 'react-native-svg';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getTeacherExams } from '../../redux/slices/examSlice';
 import { getToppers, likeTopper } from '../../redux/slices/resultSlice';
 import Skeleton from '../../components/Skeleton';
+import BouncyTouchable from '../../components/BouncyTouchable';
 import api from '../../services/api';
 
 const getImageUrl = (path) => {
@@ -52,24 +54,24 @@ const AnimatedLikeButton = ({ item, handleLike, styles, colors, extraStyle }) =>
   };
 
   return (
-    <TouchableOpacity 
-      style={[styles.likeBtn, item.likedByMe && styles.likeBtnActive, extraStyle]} 
+    <BouncyTouchable 
+      style={[styles.likeBtn, item.likedByMe && styles.likeBtnActive, { marginTop: 6, paddingVertical: 4, paddingHorizontal: 10, width: 'auto', borderColor: item.likedByMe ? 'rgba(236,72,153,0.4)' : colors.border, backgroundColor: item.likedByMe ? 'rgba(236,72,153,0.15)' : (colors.bg === '#f8fafc' ? '#f1f5f9' : '#0f172a') }]} 
       onPress={onPress}
-      activeOpacity={0.7}
     >
       <Animated.View style={{ transform: [{ scale }] }}>
         <Feather name="heart" size={12} color={item.likedByMe ? "#ec4899" : "#94a3b8"} />
       </Animated.View>
-      <Text style={[styles.likeText, item.likedByMe && { color: '#ec4899' }]}>
+      <Text style={[styles.likeText, { color: item.likedByMe ? '#ec4899' : colors.subText }]}>
         {item.likes?.length || 0}
       </Text>
-    </TouchableOpacity>
+    </BouncyTouchable>
   );
 };
 
 export default function DashboardScreen() {
   const dispatch = useDispatch();
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
   const [isSidebarVisible, setSidebarVisible] = useState(false);
   const { user } = useSelector(state => state.auth);
   const { exams, isLoading: examsLoading } = useSelector(state => state.exams);
@@ -81,6 +83,61 @@ export default function DashboardScreen() {
   const { unreadCount } = useSelector(state => state.notifications);
   const { hasUnreadMessages, contacts } = useSelector(state => state.chat);
   const { theme } = useSelector(state => state.ui || { theme: 'dark' });
+
+  // Animation values
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(20)).current;
+  const floatAnim = useRef(new Animated.Value(0)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const breatheAnim = useRef(new Animated.Value(1)).current;
+  const modalZoomAnim = useRef(new Animated.Value(0)).current;
+  const spinAnim = useRef(new Animated.Value(0)).current;
+
+  React.useEffect(() => {
+    if (selectedTopper) {
+      modalZoomAnim.setValue(0.5);
+      Animated.spring(modalZoomAnim, { toValue: 1, friction: 6, tension: 50, useNativeDriver: true }).start();
+    }
+  }, [selectedTopper]);
+
+  // On mount, trigger entrance animation
+  useFocusEffect(
+    useCallback(() => {
+      Animated.parallel([
+        Animated.timing(fadeAnim, { toValue: 1, duration: 500, useNativeDriver: true }),
+        Animated.spring(slideAnim, { toValue: 0, friction: 7, tension: 40, useNativeDriver: true })
+      ]).start();
+      
+      Animated.loop(
+        Animated.parallel([
+          Animated.sequence([
+            Animated.timing(floatAnim, { toValue: -8, duration: 2000, useNativeDriver: true }),
+            Animated.timing(floatAnim, { toValue: 0, duration: 2000, useNativeDriver: true })
+          ]),
+          Animated.sequence([
+            Animated.timing(pulseAnim, { toValue: 0.4, duration: 800, useNativeDriver: true }),
+            Animated.timing(pulseAnim, { toValue: 1, duration: 800, useNativeDriver: true })
+          ]),
+          Animated.sequence([
+            Animated.timing(breatheAnim, { toValue: 1.05, duration: 1500, useNativeDriver: true }),
+            Animated.timing(breatheAnim, { toValue: 1, duration: 1500, useNativeDriver: true })
+          ]),
+          Animated.timing(spinAnim, {
+            toValue: 1,
+            duration: 15000, // Very slow spin
+            useNativeDriver: true
+          })
+        ])
+      ).start();
+      
+      return () => { fadeAnim.setValue(0); slideAnim.setValue(20); floatAnim.setValue(0); pulseAnim.setValue(1); breatheAnim.setValue(1); spinAnim.setValue(0); };
+    }, [])
+  );
+
+  const spin = spinAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg']
+  });
 
   const cycleFilter = (current, setFilter) => {
     if (current === 'This Month') setFilter('Last 3 Months');
@@ -161,48 +218,65 @@ export default function DashboardScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
-      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} translucent={false} backgroundColor={colors.bg} />
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Home</Text>
-        <View style={styles.headerRight}>
-          <TouchableOpacity 
-            style={[styles.headerIconBtn, { backgroundColor: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }]} 
-            onPress={() => {
-              dispatch({ type: 'chat/clearUnreadMessages' });
-              navigation.navigate('ChatList');
-            }}
-          >
-            <Feather name="message-square" size={20} color={colors.text} />
-            {unreadUsersCount > 0 ? (
-              <View style={styles.badgeTextDot}>
-                <Text style={styles.badgeText}>{unreadUsersCount > 99 ? '99+' : unreadUsersCount}</Text>
-              </View>
-            ) : hasUnreadMessages ? (
-              <View style={styles.badgeDot} />
-            ) : null}
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={[styles.headerIconBtn, { backgroundColor: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }]} 
-            onPress={() => navigation.navigate('Notifications')}
-          >
-            <Feather name="bell" size={20} color={colors.text} />
-            {unreadCount > 0 ? (
-              <View style={styles.badgeTextDot}>
-                <Text style={styles.badgeText}>{unreadCount > 99 ? '99+' : unreadCount}</Text>
-              </View>
-            ) : null}
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      <ScrollView 
+      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} translucent={true} backgroundColor="transparent" />
+      <Animated.ScrollView 
         contentContainerStyle={styles.content} 
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#6366f1" />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#8b5cf6" />
         }
+        style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}
       >
+        {/* Header */}
+        <View style={[styles.header, { paddingTop: Math.max((insets.top || 20) - 15, 5) }]}>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <TouchableOpacity 
+              onPress={() => navigation.navigate('Profile')}
+            >
+              <Animated.View style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: '#8b5cf6', justifyContent: 'center', alignItems: 'center', marginRight: 12, shadowColor: '#8b5cf6', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 6, elevation: 5, borderWidth: 2, borderColor: '#fff', transform: [{ scale: breatheAnim }] }}>
+                {user?.profileImage ? (
+                  <Image source={{ uri: getImageUrl(user.profileImage) }} style={{ width: 38, height: 38, borderRadius: 19 }} />
+                ) : (
+                  <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold' }}>{user?.name?.charAt(0).toUpperCase() || 'T'}</Text>
+                )}
+              </Animated.View>
+            </TouchableOpacity>
+            <View>
+              <Text style={[styles.headerTitle, { color: colors.text }]}>Home</Text>
+              <Text style={{ color: colors.subText, fontSize: 12, marginTop: 2 }}>Dashboard Overview</Text>
+            </View>
+          </View>
+          <View style={styles.headerRight}>
+            <TouchableOpacity 
+              style={[styles.headerIconBtn, { backgroundColor: isDarkMode ? 'rgba(30,41,59,0.8)' : '#ffffff', borderColor: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }]} 
+              onPress={() => {
+                dispatch({ type: 'chat/clearUnreadMessages' });
+                navigation.navigate('ChatList');
+              }}
+            >
+              <Feather name="message-square" size={20} color={colors.text} />
+              {unreadUsersCount > 0 ? (
+                <Animated.View style={[styles.badgeTextDot, { opacity: pulseAnim }]}>
+                  <Text style={styles.badgeText}>{unreadUsersCount > 99 ? '99+' : unreadUsersCount}</Text>
+                </Animated.View>
+              ) : hasUnreadMessages ? (
+                <Animated.View style={[styles.badgeDot, { opacity: pulseAnim }]} />
+              ) : null}
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.headerIconBtn, { backgroundColor: isDarkMode ? 'rgba(30,41,59,0.8)' : '#ffffff', borderColor: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }]} 
+              onPress={() => navigation.navigate('Notifications')}
+            >
+              <Feather name="bell" size={20} color={colors.text} />
+              {unreadCount > 0 ? (
+                <Animated.View style={[styles.badgeTextDot, { opacity: pulseAnim }]}>
+                  <Text style={styles.badgeText}>{unreadCount > 99 ? '99+' : unreadCount}</Text>
+                </Animated.View>
+              ) : null}
+            </TouchableOpacity>
+          </View>
+        </View>
+
         {/* Welcome Banner */}
         <View style={styles.bannerContainer}>
           <View style={[styles.banner, { backgroundColor: isDarkMode ? '#1e1145' : '#4f46e5', borderColor: isDarkMode ? '#2e1065' : '#6366f1' }]}>
@@ -215,27 +289,28 @@ export default function DashboardScreen() {
             </View>
             {/* Decorative icons on the banner */}
             <View style={styles.bannerDecorations}>
-              <View style={[styles.bannerIconCircle, { backgroundColor: 'rgba(139,92,246,0.3)', top: 10, right: 30 }]}>
+              <Animated.View style={[styles.bannerIconCircle, { backgroundColor: 'rgba(139,92,246,0.3)', top: 10, right: 30, transform: [{ translateY: floatAnim }] }]}>
                 <Feather name="bar-chart-2" size={18} color="#c4b5fd" />
-              </View>
-              <View style={[styles.bannerIconCircle, { backgroundColor: 'rgba(99,102,241,0.4)', top: 60, right: 5 }]}>
+              </Animated.View>
+              <Animated.View style={[styles.bannerIconCircle, { backgroundColor: 'rgba(99,102,241,0.4)', top: 60, right: 5, transform: [{ translateY: floatAnim }] }]}>
                 <Feather name="pie-chart" size={22} color="#a5b4fc" />
-              </View>
+              </Animated.View>
             </View>
           </View>
         </View>
 
-        {/* Stat Cards Row */}
+        {/* Stat Cards Row - Scrollable */}
         {examsLoading ? (
-          <View style={[styles.statsRow, { marginBottom: 20 }]}>
-             <Skeleton width={100} height={120} borderRadius={16} />
-             <Skeleton width={100} height={120} borderRadius={16} />
-             <Skeleton width={100} height={120} borderRadius={16} />
-          </View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 2, gap: 12, marginBottom: 20 }}>
+             <Skeleton width={130} height={130} borderRadius={20} />
+             <Skeleton width={130} height={130} borderRadius={20} />
+             <Skeleton width={130} height={130} borderRadius={20} />
+          </ScrollView>
         ) : (
-          <View style={styles.statsRow}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 2, gap: 12, marginBottom: 20 }}>
           {/* Total Exams */}
-          <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <BouncyTouchable activeScale={0.9} style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border, width: 140 }]} onPress={() => navigation.navigate('ManageExams')}>  
+            <View style={[styles.statCardTopStripe, { backgroundColor: '#6366f1' }]} />
             <View style={[styles.iconWrapper, { backgroundColor: 'rgba(99,102,241,0.15)' }]}>
               <Feather name="file-text" size={22} color="#6366f1" />
             </View>
@@ -245,11 +320,12 @@ export default function DashboardScreen() {
               <Text style={[styles.statSub, { color: '#10b981' }]}>All time</Text>
               <WaveLine color="#10b981" />
             </View>
-          </View>
+          </BouncyTouchable>
 
           {/* Published */}
-          <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <View style={[styles.iconWrapper, { backgroundColor: 'rgba(16,185,129,0.15)' }]}>
+          <BouncyTouchable activeScale={0.9} style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border, width: 130 }]} onPress={() => navigation.navigate('ManageExams')}>  
+            <View style={[styles.statCardTopStripe, { backgroundColor: '#10b981' }]} />
+            <View style={[styles.iconWrapper, { backgroundColor: 'rgba(16, 185, 129, 0.15)' }]}>
               <Feather name="check-circle" size={22} color="#10b981" />
             </View>
             <Text style={[styles.statLabel, { color: colors.subText }]} numberOfLines={1}>Published</Text>
@@ -258,11 +334,12 @@ export default function DashboardScreen() {
               <Text style={[styles.statSub, { color: '#10b981' }]}>All time</Text>
               <WaveLine color="#10b981" />
             </View>
-          </View>
+          </BouncyTouchable>
 
           {/* Ongoing */}
-          <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <View style={[styles.iconWrapper, { backgroundColor: 'rgba(245,158,11,0.15)' }]}>
+          <BouncyTouchable activeScale={0.9} style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border, width: 130 }]} onPress={() => navigation.navigate('ManageExams')}>  
+            <View style={[styles.statCardTopStripe, { backgroundColor: '#f59e0b' }]} />
+            <View style={[styles.iconWrapper, { backgroundColor: 'rgba(245, 158, 11, 0.15)' }]}>
               <Feather name="clock" size={22} color="#f59e0b" />
             </View>
             <Text style={[styles.statLabel, { color: colors.subText }]} numberOfLines={1}>Ongoing</Text>
@@ -271,40 +348,57 @@ export default function DashboardScreen() {
               <Text style={[styles.statSub, { color: '#f59e0b' }]}>Currently</Text>
               <WaveLine color="#f59e0b" />
             </View>
-          </View>
-        </View>
+          </BouncyTouchable>
+
+          {/* Completed */}
+          <BouncyTouchable activeScale={0.9} style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border, width: 130 }]} onPress={() => navigation.navigate('ManageExams')}>  
+            <View style={[styles.statCardTopStripe, { backgroundColor: '#3b82f6' }]} />
+            <View style={[styles.iconWrapper, { backgroundColor: 'rgba(59, 130, 246, 0.15)' }]}>
+              <Feather name="check-square" size={22} color="#3b82f6" />
+            </View>
+            <Text style={[styles.statLabel, { color: colors.subText }]} numberOfLines={1}>Completed</Text>
+            <Text style={[styles.statValue, { color: colors.text }]} numberOfLines={1} adjustsFontSizeToFit>{completed}</Text>
+            <View style={styles.statSubRow}>
+              <Text style={[styles.statSub, { color: '#3b82f6' }]}>Finished</Text>
+              <WaveLine color="#3b82f6" />
+            </View>
+          </BouncyTouchable>
+        </ScrollView>
         )}
 
         {/* Status Distribution Card */}
         <View style={[styles.sectionCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={styles.sectionHeader}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>Status Distribution</Text>
-            <TouchableOpacity 
+            <BouncyTouchable 
               style={[styles.dropdownBtn, { backgroundColor: isDarkMode ? 'rgba(255,255,255,0.08)' : '#f1f5f9', borderColor: colors.border, borderWidth: 1 }]}
               onPress={() => cycleFilter(statusFilter, setStatusFilter)}
+              activeScale={0.9}
             >
               <Text style={[styles.dropdownText, { color: colors.text }]}>{statusFilter}</Text>
               <Feather name="chevron-down" size={14} color={colors.subText} />
-            </TouchableOpacity>
+            </BouncyTouchable>
           </View>
 
           <View style={styles.chartRow}>
             <View style={styles.pieChartWrapper}>
-              <PieChart
-                data={pieData1}
-                width={180}
-                height={180}
-                chartConfig={chartConfig}
-                accessor={"count"}
-                backgroundColor={"transparent"}
-                paddingLeft={"42"}
-                hasLegend={false}
-                absolute
-              />
-              <View style={[styles.pieCenterLabel, { width: 100, height: 100, borderRadius: 50, backgroundColor: colors.card }]}>
+              <Animated.View style={{ transform: [{ rotate: spin }] }}>
+                <PieChart
+                  data={pieData1}
+                  width={180}
+                  height={180}
+                  chartConfig={chartConfig}
+                  accessor={"count"}
+                  backgroundColor={"transparent"}
+                  paddingLeft={"42"}
+                  hasLegend={false}
+                  absolute
+                />
+              </Animated.View>
+              <Animated.View style={[styles.pieCenterLabel, { width: 100, height: 100, borderRadius: 50, backgroundColor: colors.card, transform: [{ scale: breatheAnim }] }]}>
                 <Text style={[styles.pieCenterTitle, { color: colors.subText }]}>Total</Text>
                 <Text style={[styles.pieCenterValue, { color: colors.text }]}>{totalPie1}</Text>
-              </View>
+              </Animated.View>
             </View>
 
             <View style={styles.legendContainerSide}>
@@ -348,25 +442,27 @@ export default function DashboardScreen() {
 
           <View style={styles.chartRow}>
             <View style={styles.pieChartWrapperSmall}>
-              <PieChart
-                data={pieData2}
-                width={140}
-                height={140}
-                chartConfig={chartConfig}
-                accessor={"count"}
-                backgroundColor={"transparent"}
-                paddingLeft={"32"}
-                hasLegend={false}
-                absolute
-              />
-              <View style={[styles.pieCenterLabel, { width: 80, height: 80, borderRadius: 40, backgroundColor: colors.card }]}>
+              <Animated.View style={{ transform: [{ rotate: spin }] }}>
+                <PieChart
+                  data={pieData2}
+                  width={140}
+                  height={140}
+                  chartConfig={chartConfig}
+                  accessor={"count"}
+                  backgroundColor={"transparent"}
+                  paddingLeft={"32"}
+                  hasLegend={false}
+                  absolute
+                />
+              </Animated.View>
+              <Animated.View style={[styles.pieCenterLabel, { width: 80, height: 80, borderRadius: 40, backgroundColor: colors.card, transform: [{ scale: breatheAnim }] }]}>
                 <Text style={[styles.pieCenterPassRate, { color: colors.text }]}>{passRate}%</Text>
                 <Text style={[styles.pieCenterPassLabel, { color: colors.subText }]}>Pass Rate</Text>
-              </View>
+              </Animated.View>
               {/* Star badge at bottom of chart */}
-              <View style={styles.starBadge}>
+              <Animated.View style={[styles.starBadge, { transform: [{ scale: breatheAnim }] }]}>
                 <Feather name="star" size={14} color="white" />
-              </View>
+              </Animated.View>
             </View>
 
             <View style={styles.passFailLegend}>
@@ -441,9 +537,10 @@ export default function DashboardScreen() {
               </View>
             </View>
             {toppers && toppers.length > 0 && (
-              <TouchableOpacity onPress={() => setShowAllToppers(true)}>
-                <Text style={styles.viewAll}>View All</Text>
-              </TouchableOpacity>
+              <BouncyTouchable onPress={() => setShowAllToppers(true)} style={{ flexDirection: 'row', alignItems: 'center' }} activeScale={0.9}>
+                <Text style={[styles.viewAllText, { color: '#6366f1' }]}>See All</Text>
+                <Feather name="chevron-right" size={16} color="#6366f1" />
+              </BouncyTouchable>
             )}
           </View>
 
@@ -451,12 +548,12 @@ export default function DashboardScreen() {
           {toppers && toppers.length > 0 ? (
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 12 }}>
               {toppers.slice(0, 2).map((item, idx) => (
-                <View key={item.resultId} style={[styles.leaderCard, { width: 280, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: colors.card, borderColor: colors.border }]}>
+                <View key={item.resultId || idx} style={[styles.leaderCard, { width: 250, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: colors.card, borderColor: colors.border }]}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                    <TouchableOpacity 
+                    <BouncyTouchable 
                       onPress={() => setSelectedTopper(item)} 
                       style={{ position: 'relative', marginRight: 12 }}
-                      activeOpacity={0.8}
+                      activeScale={0.85}
                     >
                       {item.student?.profileImage ? (
                         <Image source={{ uri: getImageUrl(item.student.profileImage) }} style={{ width: 44, height: 44, borderRadius: 22, borderWidth: 2, borderColor: idx === 0 ? '#fbbf24' : idx === 1 ? '#94a3b8' : idx === 2 ? '#b45309' : '#334155' }} />
@@ -468,7 +565,7 @@ export default function DashboardScreen() {
                       <View style={{ position: 'absolute', bottom: -2, right: -2, backgroundColor: idx === 0 ? '#fbbf24' : idx === 1 ? '#94a3b8' : idx === 2 ? '#b45309' : '#334155', width: 20, height: 20, borderRadius: 10, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#0f172a' }}>
                         <Text style={{ color: '#fff', fontSize: 10, fontWeight: '900' }}>{idx + 1}</Text>
                       </View>
-                    </TouchableOpacity>
+                    </BouncyTouchable>
                     <View style={{ flex: 1, marginRight: 10 }}>
                       <Text style={[styles.leaderName, { textAlign: 'left', marginBottom: 2, color: colors.text }]} numberOfLines={1}>{item.student?.name || 'Unknown'}</Text>
                       <Text style={[styles.recentSub, { textAlign: 'left', color: colors.subText }]} numberOfLines={1}>{item.examTitle}</Text>
@@ -495,7 +592,7 @@ export default function DashboardScreen() {
           )}
         </View>
 
-      </ScrollView>
+      </Animated.ScrollView>
 
       {/* Sidebar Modal */}
       <Modal visible={isSidebarVisible} transparent animationType="fade">
@@ -536,11 +633,11 @@ export default function DashboardScreen() {
       <Modal
         visible={showAllToppers}
         animationType="slide"
-        presentationStyle="pageSheet"
+        statusBarTranslucent={true}
         onRequestClose={() => setShowAllToppers(false)}
       >
         <View style={[styles.modalContainer, { backgroundColor: colors.bg }]}>
-          <View style={[styles.modalHeader, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
+          <View style={[styles.modalHeader, { backgroundColor: colors.card, borderBottomColor: colors.border, paddingTop: Math.max((insets.top || 20) - 15, 5) + 15, paddingBottom: 15 }]}>
             <Text style={[styles.modalTitle, { color: colors.text }]}>All Exam Toppers</Text>
             <TouchableOpacity onPress={() => setShowAllToppers(false)} style={styles.modalCloseBtn}>
               <Feather name="x" size={24} color={colors.text} />
@@ -554,13 +651,13 @@ export default function DashboardScreen() {
             renderItem={({ item, index }) => (
               <View style={[styles.leaderCard, { width: '100%', marginBottom: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, backgroundColor: colors.card, borderColor: colors.border }]}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                  <TouchableOpacity 
+                  <BouncyTouchable 
                     onPress={() => {
                       setShowAllToppers(false);
                       setSelectedTopper(item);
                     }} 
                     style={{ position: 'relative', marginRight: 12 }}
-                    activeOpacity={0.8}
+                    activeScale={0.85}
                   >
                     {item.student?.profileImage ? (
                       <Image source={{ uri: getImageUrl(item.student.profileImage) }} style={{ width: 44, height: 44, borderRadius: 22, borderWidth: 2, borderColor: index === 0 ? '#fbbf24' : index === 1 ? '#94a3b8' : index === 2 ? '#b45309' : '#334155' }} />
@@ -572,7 +669,7 @@ export default function DashboardScreen() {
                     <View style={{ position: 'absolute', bottom: -2, right: -2, backgroundColor: index === 0 ? '#fbbf24' : index === 1 ? '#94a3b8' : index === 2 ? '#b45309' : '#334155', width: 20, height: 20, borderRadius: 10, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#0f172a' }}>
                       <Text style={{ color: '#fff', fontSize: 10, fontWeight: '900' }}>{index + 1}</Text>
                     </View>
-                  </TouchableOpacity>
+                  </BouncyTouchable>
                   <View style={{ flex: 1 }}>
                     <Text style={[styles.leaderName, { marginBottom: 2, textAlign: 'left', fontSize: 15, color: colors.text }]} numberOfLines={1}>{item.student?.name || 'Unknown'}</Text>
                     <Text style={[styles.recentSub, { textAlign: 'left', fontSize: 13, color: colors.subText }]}>{item.examTitle}</Text>
@@ -598,7 +695,7 @@ export default function DashboardScreen() {
       {selectedTopper && (
         <Modal visible={true} transparent animationType="fade" onRequestClose={() => setSelectedTopper(null)}>
           <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-            <View style={{ width: '90%', backgroundColor: colors.card, borderRadius: 20, overflow: 'hidden', borderWidth: 1, borderColor: colors.border, padding: 24, alignItems: 'center', position: 'relative' }}>
+            <Animated.View style={{ transform: [{ scale: modalZoomAnim }], width: '90%', backgroundColor: colors.card, borderRadius: 20, overflow: 'hidden', borderWidth: 1, borderColor: colors.border, padding: 24, alignItems: 'center', position: 'relative' }}>
               <TouchableOpacity style={{ position: 'absolute', top: 16, right: 16, zIndex: 10 }} onPress={() => setSelectedTopper(null)}>
                 <Feather name="x" size={24} color={colors.subText} />
               </TouchableOpacity>
@@ -649,7 +746,7 @@ export default function DashboardScreen() {
               >
                 <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700' }}>Close Profile</Text>
               </TouchableOpacity>
-            </View>
+            </Animated.View>
           </View>
         </Modal>
       )}
@@ -660,19 +757,19 @@ export default function DashboardScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 60, paddingBottom: 15 },
-  headerTitle: { fontSize: 26, fontWeight: '800', letterSpacing: -0.5 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 15 },
+  headerTitle: { fontSize: 28, fontWeight: '900', letterSpacing: -1 },
   headerRight: { flexDirection: 'row', alignItems: 'center' },
-  headerIconBtn: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center', marginLeft: 10, position: 'relative' },
-  badgeDot: { position: 'absolute', top: 8, right: 8, width: 8, height: 8, borderRadius: 4, backgroundColor: '#8b5cf6', borderWidth: 1, borderColor: '#0f172a' },
-  badgeTextDot: { position: 'absolute', top: 4, right: 4, backgroundColor: '#ef4444', borderRadius: 10, paddingHorizontal: 4, paddingVertical: 1, minWidth: 18, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#0f172a' },
-  badgeText: { color: '#fff', fontSize: 10, fontWeight: 'bold' },
+  headerIconBtn: { width: 44, height: 44, borderRadius: 22, borderWidth: 1, justifyContent: 'center', alignItems: 'center', marginLeft: 12, position: 'relative', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 8, elevation: 3 },
+  badgeDot: { position: 'absolute', top: 10, right: 10, width: 8, height: 8, borderRadius: 4, backgroundColor: '#ef4444', borderWidth: 1, borderColor: '#fff' },
+  badgeTextDot: { position: 'absolute', top: 4, right: 2, backgroundColor: '#ef4444', borderRadius: 10, paddingHorizontal: 5, paddingVertical: 2, minWidth: 20, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: '#fff' },
+  badgeText: { color: '#fff', fontSize: 10, fontWeight: '800' },
   content: { padding: 15, paddingBottom: 30 },
   
   // Sidebar
   sidebarOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', flexDirection: 'row' },
   sidebarCloseArea: { flex: 1 },
-  sidebarContent: { width: 250, height: '100%', padding: 20, paddingTop: 60, elevation: 5, shadowColor: '#000', shadowOffset: { width: 5, height: 0 }, shadowOpacity: 0.3, shadowRadius: 10 },
+  sidebarContent: { width: 250, height: '100%', padding: 20, paddingTop: Platform.OS === 'android' ? 10 : 20, elevation: 5, shadowColor: '#000', shadowOffset: { width: 5, height: 0 }, shadowOpacity: 0.3, shadowRadius: 10 },
   sidebarHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 30 },
   sidebarTitle: { fontSize: 22, fontWeight: 'bold' },
   sidebarItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 15, borderBottomWidth: 1, borderBottomColor: 'rgba(150,150,150,0.1)' },
@@ -695,8 +792,9 @@ const styles = StyleSheet.create({
 
   // Stat Cards
   statsRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20, gap: 10 },
-  statCard: { flex: 1, padding: 14, borderRadius: 16, borderWidth: 1, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 3 },
-  iconWrapper: { width: 42, height: 42, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginBottom: 10 },
+  statCard: { padding: 14, borderRadius: 20, borderWidth: 1, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 10, elevation: 4, overflow: 'hidden' },
+  statCardTopStripe: { position: 'absolute', top: 0, left: 0, right: 0, height: 4, borderTopLeftRadius: 20, borderTopRightRadius: 20 },
+  iconWrapper: { width: 42, height: 42, borderRadius: 14, justifyContent: 'center', alignItems: 'center', marginBottom: 10 },
   statLabel: { fontSize: 12, marginBottom: 2, fontWeight: '500' },
   statValue: { fontSize: 22, fontWeight: '800' },
   statSubRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 },

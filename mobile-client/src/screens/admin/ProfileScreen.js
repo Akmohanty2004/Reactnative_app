@@ -1,15 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Image, Modal, Alert, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Image, Modal, Alert, KeyboardAvoidingView, Platform, ActivityIndicator , StatusBar} from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { Feather } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
 import * as ImagePicker from 'expo-image-picker';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
 import { updateProfile, getCurrentUser, changePassword, logoutUser, uploadProfileImage } from '../../redux/slices/authSlice';
 import { toggleTheme } from '../../redux/slices/uiSlice';
 import { getAdminDashboardStats } from '../../redux/slices/adminSlice';
 
-export default function ProfileScreen({ navigation }) {
+export default function ProfileScreen() {
   const dispatch = useDispatch();
+  const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
   const { user } = useSelector(state => state.auth);
   const { theme } = useSelector(state => state.ui || { theme: 'dark' });
   const { stats } = useSelector(state => state.admin);
@@ -165,9 +169,9 @@ export default function ProfileScreen({ navigation }) {
   return (
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
       <ScrollView contentContainerStyle={styles.content}>
-        {/* Header */}
-        <View style={[styles.header, { flexDirection: 'row', alignItems: 'center' }]}>
-          <TouchableOpacity onPress={() => navigation.navigate('Home')} style={{ marginRight: 15 }}>
+        {/* Custom Header */}
+        <View style={[styles.header, { backgroundColor: 'transparent', borderBottomWidth: 0, paddingHorizontal: 0, paddingBottom: 25, paddingTop: Math.max((insets.top || 20) - 15, 5), flexDirection: 'row', alignItems: 'center' }]}>
+          <TouchableOpacity onPress={() => navigation.navigate('Home')} style={{ marginRight: 18, padding: 4 }}>
             <Feather name="arrow-left" size={24} color={colors.text} />
           </TouchableOpacity>
           <View style={styles.headerTitles}>
@@ -659,7 +663,7 @@ export default function ProfileScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  content: { padding: 20, paddingBottom: 40, paddingTop: 60 },
+  content: { padding: 20, paddingBottom: 40, paddingTop: Platform.OS === 'android' ? 10 : 20 },
   
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 25 },
   headerTitle: { fontSize: 24, fontWeight: 'bold' },

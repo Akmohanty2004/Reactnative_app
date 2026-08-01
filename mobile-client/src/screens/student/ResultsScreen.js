@@ -1,11 +1,12 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, Dimensions, TouchableOpacity, Modal, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Dimensions, TouchableOpacity, Modal, RefreshControl, Animated , Platform, StatusBar} from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useDispatch, useSelector } from 'react-redux';
 import { Feather } from '@expo/vector-icons';
 import Svg, { Path, Defs, LinearGradient, Stop } from 'react-native-svg';
 import { LineChart } from 'react-native-chart-kit';
 import { getStudentResults } from '../../redux/slices/resultSlice';
+import BouncyTouchable from '../../components/BouncyTouchable';
 
 const { width } = Dimensions.get('window');
 
@@ -34,9 +35,19 @@ export default function ResultsScreen({ navigation }) {
     warning: '#f59e0b',
   };
 
+  const [fadeAnim] = useState(new Animated.Value(0));
+  const [slideAnim] = useState(new Animated.Value(30));
+
   useFocusEffect(
     useCallback(() => {
       dispatch(getStudentResults());
+      
+      Animated.parallel([
+        Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
+        Animated.spring(slideAnim, { toValue: 0, friction: 7, tension: 40, useNativeDriver: true })
+      ]).start();
+      
+      return () => { fadeAnim.setValue(0); slideAnim.setValue(30); };
     }, [dispatch])
   );
 
@@ -103,24 +114,25 @@ export default function ResultsScreen({ navigation }) {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
-      <ScrollView 
+      <Animated.ScrollView 
         contentContainerStyle={styles.content}
+        style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}
         refreshControl={
           <RefreshControl refreshing={isLoading || false} onRefresh={onRefresh} tintColor={colors.primary} />
         }
       >
         {/* Custom Header */}
         <View style={[styles.header, { backgroundColor: 'transparent', borderBottomWidth: 0, paddingHorizontal: 0, paddingBottom: 25, flexDirection: 'row', alignItems: 'center' }]}>
-          <TouchableOpacity onPress={() => navigation.navigate('Home')} style={{ marginRight: 15 }}>
+          <BouncyTouchable onPress={() => navigation.navigate('Home')} style={{ marginRight: 15 }} activeScale={0.8}>
             <Feather name="arrow-left" size={24} color={colors.text} />
-          </TouchableOpacity>
+          </BouncyTouchable>
           <View style={{ flex: 1 }}>
             <Text style={[styles.headerTitle, { color: colors.text }]}>My <Text style={{color: '#8b5cf6'}}>Results</Text></Text>
             <Text style={[styles.headerSubtitle, { color: colors.subText }]} numberOfLines={2}>Track your performance and progress</Text>
           </View>
-          <TouchableOpacity style={[styles.iconBtn, { borderColor: isDarkMode ? 'rgba(255,255,255,0.1)' : colors.border }]}>
+          <BouncyTouchable style={[styles.iconBtn, { borderColor: isDarkMode ? 'rgba(255,255,255,0.1)' : colors.border }]} activeScale={0.8}>
             <Feather name="calendar" size={20} color={colors.text} />
-          </TouchableOpacity>
+          </BouncyTouchable>
         </View>
         <View style={styles.statsGrid}>
           {/* Total Exams Card */}
@@ -214,20 +226,20 @@ export default function ResultsScreen({ navigation }) {
         <View style={styles.sectionHeaderRow}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Recent Exams</Text>
           {sortedResults.length > 5 && (
-            <TouchableOpacity onPress={() => setShowAllResults(!showAllResults)}>
+            <BouncyTouchable onPress={() => setShowAllResults(!showAllResults)} activeScale={0.9}>
               <Text style={styles.viewAllText}>
                 {showAllResults ? 'Show Less' : 'View All'} <Feather name={showAllResults ? "chevron-up" : "chevron-right"} size={14} />
               </Text>
-            </TouchableOpacity>
+            </BouncyTouchable>
           )}
         </View>
         
         {results?.map((result) => (
-          <TouchableOpacity 
+          <BouncyTouchable 
             key={result._id} 
             style={[styles.resultCard, { backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc', borderColor: colors.border }]}
             onPress={() => setSelectedResult(result)}
-            activeOpacity={0.7}
+            activeScale={0.97}
           >
             <View style={styles.resultHeader}>
               <View style={{ flex: 1 }}>
@@ -271,7 +283,7 @@ export default function ResultsScreen({ navigation }) {
                 )}
               </View>
             </View>
-          </TouchableOpacity>
+          </BouncyTouchable>
         ))}
 
         {(!results || results.length === 0) && (
@@ -287,7 +299,7 @@ export default function ResultsScreen({ navigation }) {
           </View>
         )}
       </View>
-    </ScrollView>
+    </Animated.ScrollView>
 
     {/* Summary Modal */}
     {selectedResult && (
@@ -416,7 +428,7 @@ export default function ResultsScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 60, paddingBottom: 15, borderBottomWidth: 0 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: Platform.OS === 'android' ? 40 : 50, paddingBottom: 15, borderBottomWidth: 0 },
   headerTitle: { fontSize: 24, fontWeight: '800' },
   headerSubtitle: { fontSize: 13, marginTop: 4 },
   iconBtn: { width: 42, height: 42, borderRadius: 12, justifyContent: 'center', alignItems: 'center', borderWidth: 1, backgroundColor: 'transparent' },

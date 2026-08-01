@@ -1,8 +1,9 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, SafeAreaView, StatusBar, Platform } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, StatusBar, Platform, Animated } from 'react-native';
 import { useSelector, useDispatch } from 'react-redux';
 import { Feather } from '@expo/vector-icons';
 import { getNotifications, markAsRead, markAllAsRead } from '../../redux/slices/notificationSlice';
+import BouncyTouchable from '../../components/BouncyTouchable';
 
 export default function NotificationsScreen({ navigation }) {
   const dispatch = useDispatch();
@@ -19,8 +20,24 @@ export default function NotificationsScreen({ navigation }) {
     primary: '#8b5cf6',
   };
 
+  const [fadeAnim] = React.useState(new Animated.Value(0));
+  const [slideAnim] = React.useState(new Animated.Value(150));
+  const [pulseAnim] = React.useState(new Animated.Value(1));
+
   useEffect(() => {
     dispatch(getNotifications());
+    
+    Animated.parallel([
+      Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
+      Animated.spring(slideAnim, { toValue: 0, friction: 6, tension: 40, useNativeDriver: true })
+    ]).start();
+
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 1.15, duration: 1000, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1, duration: 1000, useNativeDriver: true })
+      ])
+    ).start();
   }, [dispatch]);
 
   const handleMarkAllRead = () => {
@@ -34,40 +51,45 @@ export default function NotificationsScreen({ navigation }) {
   };
 
   const renderItem = ({ item }) => (
-    <TouchableOpacity 
+    <BouncyTouchable 
       style={[
         styles.notificationCard, 
         { backgroundColor: colors.card, borderColor: colors.border },
         !item.isRead && { borderLeftWidth: 4, borderLeftColor: colors.primary }
       ]}
       onPress={() => handleNotificationPress(item)}
+      activeScale={0.97}
     >
-      <View style={[styles.iconContainer, { backgroundColor: isDarkMode ? 'rgba(139,92,246,0.1)' : '#f3e8ff' }]}>
+      <Animated.View style={[
+        styles.iconContainer, 
+        { backgroundColor: isDarkMode ? 'rgba(139,92,246,0.1)' : '#f3e8ff' },
+        !item.isRead && { transform: [{ scale: pulseAnim }] }
+      ]}>
         <Feather 
           name={item.type === 'exam_created' ? 'file-text' : item.type === 'exam_submitted' ? 'check-circle' : 'bell'} 
           size={20} 
           color={colors.primary} 
         />
-      </View>
+      </Animated.View>
       <View style={styles.notificationContent}>
         <Text style={[styles.notificationTitle, { color: colors.text, fontWeight: item.isRead ? '500' : '700' }]}>{item.title}</Text>
         <Text style={[styles.notificationMessage, { color: colors.subText }]}>{item.message}</Text>
         <Text style={[styles.notificationTime, { color: colors.subText }]}>{new Date(item.createdAt).toLocaleString()}</Text>
       </View>
-    </TouchableOpacity>
+    </BouncyTouchable>
   );
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]}>
+    <View style={[styles.container, { backgroundColor: colors.bg }]}>
       <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={[styles.backBtn, { backgroundColor: isDarkMode ? '#1e293b' : 'white', borderColor: colors.border }]}>
+        <BouncyTouchable onPress={() => navigation.goBack()} style={[styles.backBtn, { backgroundColor: isDarkMode ? '#1e293b' : 'white', borderColor: colors.border }]} activeScale={0.8}>
           <Feather name="arrow-left" size={20} color={colors.text} />
-        </TouchableOpacity>
+        </BouncyTouchable>
         <Text style={[styles.headerTitle, { color: colors.text }]}>Notifications</Text>
-        <TouchableOpacity onPress={handleMarkAllRead} style={styles.markAllBtn}>
+        <BouncyTouchable onPress={handleMarkAllRead} style={styles.markAllBtn} activeScale={0.9}>
           <Text style={[styles.markAllText, { color: colors.primary }]}>Mark all read</Text>
-        </TouchableOpacity>
+        </BouncyTouchable>
       </View>
 
       {isLoading && notifications.length === 0 ? (
@@ -75,24 +97,26 @@ export default function NotificationsScreen({ navigation }) {
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
       ) : (
-        <FlatList
-          data={notifications}
-          keyExtractor={item => item._id}
-          renderItem={renderItem}
-          contentContainerStyle={styles.listContainer}
-          showsVerticalScrollIndicator={false}
-          ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <View style={[styles.emptyIconBg, { backgroundColor: isDarkMode ? '#1e293b' : '#f1f5f9' }]}>
-                <Feather name="bell-off" size={40} color={colors.subText} />
+        <Animated.View style={{ flex: 1, opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
+          <FlatList
+            data={notifications}
+            keyExtractor={item => item._id}
+            renderItem={renderItem}
+            contentContainerStyle={styles.listContainer}
+            showsVerticalScrollIndicator={false}
+            ListEmptyComponent={
+              <View style={styles.emptyContainer}>
+                <Animated.View style={[styles.emptyIconBg, { backgroundColor: isDarkMode ? '#1e293b' : '#f1f5f9', transform: [{ scale: pulseAnim }] }]}>
+                  <Feather name="bell-off" size={40} color={colors.subText} />
+                </Animated.View>
+                <Text style={[styles.emptyTitle, { color: colors.text }]}>No notifications yet</Text>
+                <Text style={[styles.emptySub, { color: colors.subText }]}>When you get notifications, they'll show up here</Text>
               </View>
-              <Text style={[styles.emptyTitle, { color: colors.text }]}>No notifications yet</Text>
-              <Text style={[styles.emptySub, { color: colors.subText }]}>When you get notifications, they'll show up here</Text>
-            </View>
-          }
-        />
+            }
+          />
+        </Animated.View>
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 

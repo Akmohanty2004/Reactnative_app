@@ -10,6 +10,7 @@ import { StatusBar } from 'expo-status-bar';
 import { loginUser, verifyLoginUser, clearError } from '../../redux/slices/authSlice';
 import { LinearGradient } from 'expo-linear-gradient';
 import api from '../../services/api';
+import BouncyTouchable from '../../components/BouncyTouchable';
 
 const { width, height } = Dimensions.get('window');
 
@@ -24,6 +25,8 @@ export default function LoginScreen({ navigation }) {
   const [isSendingForgot, setIsSendingForgot] = useState(false);
   const [fadeAnim] = useState(new Animated.Value(0));
   const [slideAnim] = useState(new Animated.Value(50));
+  const [logoScale] = useState(new Animated.Value(0.3));
+  const [pulseAnim] = useState(new Animated.Value(1));
   
   // Floating Orbs animation
   const [orb1Anim] = useState(new Animated.Value(0));
@@ -42,7 +45,16 @@ export default function LoginScreen({ navigation }) {
     Animated.parallel([
       Animated.timing(fadeAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
       Animated.timing(slideAnim, { toValue: 0, duration: 800, easing: Easing.out(Easing.back(1.5)), useNativeDriver: true }),
+      Animated.spring(logoScale, { toValue: 1, friction: 5, tension: 40, useNativeDriver: true })
     ]).start();
+
+    // Pulse animation for logo after entrance
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 1.05, duration: 2000, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
+        Animated.timing(pulseAnim, { toValue: 1, duration: 2000, useNativeDriver: true, easing: Easing.inOut(Easing.sin) })
+      ])
+    ).start();
 
     // Floating orb animations
     Animated.loop(
@@ -149,9 +161,9 @@ export default function LoginScreen({ navigation }) {
           {!loginOtpSent ? (
             <View>
               <View style={styles.headerContainer}>
-                <View style={styles.iconWrapper}>
+                <Animated.View style={[styles.iconWrapper, { transform: [{ scale: logoScale }, { scale: pulseAnim }] }]}>
                   <Image source={require('../../../assets/Applogo.png')} style={{ width: 64, height: 64, borderRadius: 20 }} resizeMode="contain" />
-                </View>
+                </Animated.View>
                 <Text style={styles.title}>ExamHub</Text>
                 <Text style={styles.subtitle}>Welcome back! Please enter your details.</Text>
               </View>
@@ -171,9 +183,10 @@ export default function LoginScreen({ navigation }) {
                         styles.roleButton,
                         isActive && { backgroundColor: role.color + '20', borderColor: role.color }
                       ]}
+                      activeOpacity={0.7}
                     >
-                      <Feather name={role.icon} size={20} color={isActive ? role.color : '#64748b'} />
-                      <Text style={[styles.roleText, isActive && { color: role.color }]}>{role.label}</Text>
+                      <Feather name={role.icon} size={20} color={isActive ? role.color : '#94a3b8'} />
+                      <Text style={[styles.roleText, isActive && { color: role.color, fontWeight: 'bold' }]}>{role.label}</Text>
                     </TouchableOpacity>
                   );
                 })}
@@ -227,24 +240,25 @@ export default function LoginScreen({ navigation }) {
                 </View>
               )}
 
-              <TouchableOpacity 
+              <BouncyTouchable 
                 style={[styles.submitButton, isLoading && styles.disabledButton]} 
                 onPress={handleSubmit}
                 disabled={isLoading}
+                activeScale={0.95}
               >
                 {isLoading ? (
                   <ActivityIndicator color="white" />
                 ) : (
                   <Text style={styles.submitButtonText}>Continue</Text>
                 )}
-              </TouchableOpacity>
+              </BouncyTouchable>
 
               {selectedRole !== 'admin' && (
-                <TouchableOpacity onPress={() => navigation.navigate('Register')} style={styles.registerLink}>
+                <BouncyTouchable onPress={() => navigation.navigate('Register')} style={styles.registerLink} activeScale={0.98}>
                   <Text style={styles.registerText}>
                     Don't have an account? <Text style={styles.registerTextBold}>Sign up</Text>
                   </Text>
-                </TouchableOpacity>
+                </BouncyTouchable>
               )}
             </View>
           ) : (
@@ -353,10 +367,10 @@ const styles = StyleSheet.create({
   rolesContainer: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 24 },
   roleButton: {
     flex: 1, alignItems: 'center', paddingVertical: 12, marginHorizontal: 4,
-    borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.03)',
-    borderWidth: 1, borderColor: 'transparent',
+    borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.08)',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)',
   },
-  roleText: { color: '#64748b', fontSize: 13, fontWeight: '600', marginTop: 8 },
+  roleText: { color: '#e2e8f0', fontSize: 13, fontWeight: '600', marginTop: 8 },
   inputContainer: {
     flexDirection: 'row', alignItems: 'center',
     backgroundColor: 'rgba(15, 23, 42, 0.6)',

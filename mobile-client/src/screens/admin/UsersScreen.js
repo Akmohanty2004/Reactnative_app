@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert, Image, RefreshControl, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert, Image, RefreshControl, ActivityIndicator , Platform, StatusBar} from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { Feather } from '@expo/vector-icons';
 import { getUsers, deleteUser } from '../../redux/slices/adminSlice';
@@ -222,7 +222,7 @@ export default function UsersScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { padding: 20, paddingTop: 50, paddingBottom: 15 },
+  header: { padding: 20, paddingTop: Platform.OS === 'android' ? 10 : 20, paddingBottom: 15 },
   title: { fontSize: 28, fontWeight: '800', marginBottom: 4 },
   subtitle: { fontSize: 14 },
   

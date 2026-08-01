@@ -10,6 +10,7 @@ import {
   Platform,
   ActivityIndicator,
   Switch,
+  StatusBar
 } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { Feather } from '@expo/vector-icons';
@@ -676,7 +677,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingTop: 60,
+    paddingTop: Platform.OS === 'android' ? 40 : 50,
     paddingBottom: 16,
     borderBottomWidth: 1,
   },

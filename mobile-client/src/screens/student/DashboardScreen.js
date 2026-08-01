@@ -7,9 +7,11 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
 import { LineChart, BarChart, PieChart } from 'react-native-chart-kit';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getStudentExams } from '../../redux/slices/examSlice';
 import { getStudentResults, getLeaderboard, getToppers, likeTopper } from '../../redux/slices/resultSlice';
 import Skeleton from '../../components/Skeleton';
+import BouncyTouchable from '../../components/BouncyTouchable';
 import api from '../../services/api';
 
 const getImageUrl = (path) => {
@@ -60,9 +62,26 @@ const AnimatedLikeButton = ({ item, handleLike, styles, colors, extraStyle }) =>
 export default function DashboardScreen() {
   const dispatch = useDispatch();
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
   const [isSidebarVisible, setSidebarVisible] = useState(false);
   const [perfFilter, setPerfFilter] = useState('This Month');
   const [subFilter, setSubFilter] = useState('This Month');
+
+  // Animation values
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(20)).current;
+  const floatAnim = useRef(new Animated.Value(0)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const breatheAnim = useRef(new Animated.Value(1)).current;
+  const modalZoomAnim = useRef(new Animated.Value(0)).current;
+  const spinAnim = useRef(new Animated.Value(0)).current;
+
+  React.useEffect(() => {
+    if (selectedTopper) {
+      modalZoomAnim.setValue(0.5);
+      Animated.spring(modalZoomAnim, { toValue: 1, friction: 6, tension: 50, useNativeDriver: true }).start();
+    }
+  }, [selectedTopper]);
 
   const cycleFilter = (current, setFilter) => {
     if (current === 'This Month') setFilter('Last 3 Months');
@@ -106,19 +125,62 @@ export default function DashboardScreen() {
     totalPassed: 0, totalFailed: 0, bestScore: 0, expired: 0,
   });
 
-  useFocusEffect(useCallback(() => {
-    const fetchData = () => {
-      dispatch(getStudentExams());
-      dispatch(getStudentResults());
-      dispatch(getLeaderboard());
-      dispatch(getToppers());
-    };
-    
-    fetchData();
-    const interval = setInterval(fetchData, 30000); // 30 seconds poll
-    
-    return () => clearInterval(interval);
-  }, [dispatch]));
+  useFocusEffect(
+    useCallback(() => {
+      const fetchData = () => {
+        dispatch(getStudentExams());
+        dispatch(getStudentResults());
+        dispatch(getLeaderboard());
+        dispatch(getToppers());
+      };
+
+      fetchData();
+      
+      Animated.parallel([
+        Animated.timing(fadeAnim, { toValue: 1, duration: 500, useNativeDriver: true }),
+        Animated.spring(slideAnim, { toValue: 0, friction: 7, tension: 40, useNativeDriver: true })
+      ]).start();
+
+      Animated.loop(
+        Animated.parallel([
+          Animated.sequence([
+            Animated.timing(floatAnim, { toValue: -6, duration: 2000, useNativeDriver: true }),
+            Animated.timing(floatAnim, { toValue: 0, duration: 2000, useNativeDriver: true })
+          ]),
+          Animated.sequence([
+            Animated.timing(pulseAnim, { toValue: 0.4, duration: 800, useNativeDriver: true }),
+            Animated.timing(pulseAnim, { toValue: 1, duration: 800, useNativeDriver: true })
+          ]),
+          Animated.sequence([
+            Animated.timing(breatheAnim, { toValue: 1.03, duration: 1500, useNativeDriver: true }),
+            Animated.timing(breatheAnim, { toValue: 1, duration: 1500, useNativeDriver: true })
+          ]),
+          Animated.timing(spinAnim, {
+            toValue: 1,
+            duration: 15000,
+            useNativeDriver: true
+          })
+        ])
+      ).start();
+
+      const interval = setInterval(fetchData, 30000); // 30 seconds poll
+      
+      return () => { 
+        clearInterval(interval); 
+        fadeAnim.setValue(0); 
+        slideAnim.setValue(20); 
+        floatAnim.setValue(0);
+        pulseAnim.setValue(1);
+        breatheAnim.setValue(1);
+        spinAnim.setValue(0);
+      };
+    }, [dispatch])
+  );
+
+  const spin = spinAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg']
+  });
 
   useFocusEffect(useCallback(() => {
     if (!exams || !results) return;
@@ -304,42 +366,63 @@ export default function DashboardScreen() {
 
   return (
     <View style={[styles.root, { backgroundColor: colors.bg }]}>
-      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} translucent={false} backgroundColor={colors.bg} />
-      <ScrollView
-        contentContainerStyle={styles.scroll}
+      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} translucent={true} backgroundColor="transparent" />
+      <Animated.ScrollView
+        contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 20 }]}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#818cf8" />
         }
+        style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}
       >
         {/* ── Header ── */}
-        <View style={styles.header}>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>
-            My <Text style={{ color: '#818cf8' }}>Home</Text>
-          </Text>
+        <View style={[styles.header, { paddingTop: Math.max((insets.top || 20) + 15, 30) }]}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+            <TouchableOpacity 
+              onPress={() => navigation.navigate('Profile')}
+            >
+              <Animated.View style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: '#3b82f6', justifyContent: 'center', alignItems: 'center', marginRight: 12, shadowColor: '#3b82f6', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 6, elevation: 5, borderWidth: 2, borderColor: '#fff', transform: [{ scale: breatheAnim }] }}>
+                {user?.profileImage ? (
+                  <Image source={{ uri: getImageUrl(user.profileImage) }} style={{ width: 38, height: 38, borderRadius: 19 }} />
+                ) : (
+                  <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold' }}>{user?.name?.charAt(0).toUpperCase() || 'S'}</Text>
+                )}
+              </Animated.View>
+            </TouchableOpacity>
+            <View>
+              <Text style={[styles.headerTitle, { color: colors.text }]}>Home</Text>
+              <Text style={{ color: colors.subText, fontSize: 12, marginTop: 2 }}>Dashboard Overview</Text>
+            </View>
+          </View>
           <View style={styles.headerRight}>
-            <TouchableOpacity
-              style={[styles.headerIconBtn, { backgroundColor: isDarkMode ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.05)' }]}
-              onPress={() => { dispatch({ type: 'chat/clearUnreadMessages' }); navigation.navigate('ChatList'); }}
+            <TouchableOpacity 
+              style={[styles.headerIconBtn, { backgroundColor: isDarkMode ? 'rgba(30,41,59,0.8)' : '#ffffff', borderColor: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }]} 
+              onPress={() => {
+                dispatch({ type: 'chat/clearUnreadMessages' });
+                navigation.navigate('ChatList');
+              }}
             >
               <Feather name="message-square" size={20} color={colors.text} />
               {unreadUsersCount > 0 ? (
-                <View style={styles.badgeTextDot}>
+                <Animated.View style={[styles.badgeTextDot, { opacity: pulseAnim }]}>
                   <Text style={styles.badgeText}>{unreadUsersCount > 99 ? '99+' : unreadUsersCount}</Text>
-                </View>
+                </Animated.View>
               ) : hasUnreadMessages ? (
-                <View style={styles.dotBadge} />
+                <Animated.View style={[styles.badgeDot, { opacity: pulseAnim }]} />
               ) : null}
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.headerIconBtn, { backgroundColor: isDarkMode ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.05)' }]} onPress={() => navigation.navigate('Notifications')}>
+            <TouchableOpacity 
+              style={[styles.headerIconBtn, { backgroundColor: isDarkMode ? 'rgba(30,41,59,0.8)' : '#ffffff', borderColor: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }]} 
+              onPress={() => navigation.navigate('Notifications')}
+            >
               <Feather name="bell" size={20} color={colors.text} />
               {unreadCount > 0 ? (
-                <View style={styles.badgeTextDot}>
+                <Animated.View style={[styles.badgeTextDot, { opacity: pulseAnim }]}>
                   <Text style={styles.badgeText}>{unreadCount > 99 ? '99+' : unreadCount}</Text>
-                </View>
+                </Animated.View>
               ) : null}
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.headerIconBtn, { backgroundColor: isDarkMode ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.05)' }]} onPress={() => setSidebarVisible(true)}>
+            <TouchableOpacity style={[styles.headerIconBtn, { backgroundColor: isDarkMode ? 'rgba(30,41,59,0.8)' : '#ffffff', borderColor: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }]} onPress={() => setSidebarVisible(true)}>
               <Feather name="menu" size={20} color={colors.text} />
             </TouchableOpacity>
           </View>
@@ -352,73 +435,75 @@ export default function DashboardScreen() {
             <Text style={[styles.bannerName, { color: '#ffffff' }]}>{user?.name?.split(' ')[0]}! 👋</Text>
             <Text style={[styles.bannerSub, { color: '#c4b5fd' }]}>Here's your exam performance summary.</Text>
           </View>
-          <View style={styles.bannerGraphic}>
+          <Animated.View style={[styles.bannerGraphic, { transform: [{ translateY: floatAnim }] }]}>
             <View style={styles.monitorOuter}>
               <Feather name="monitor" size={70} color="#ffffff" style={{ opacity: 0.85 }} />
               <View style={styles.monitorInner}>
                 <Feather name="trending-up" size={22} color="#ffffff" />
               </View>
             </View>
-          </View>
+          </Animated.View>
         </View>
 
         {/* ── Ongoing Exam Banner ── */}
         {exams?.find(e => getExamStatus(e) === 'Available') && (
           <TouchableOpacity 
-            style={[styles.banner, { backgroundColor: '#f59e0b', borderColor: '#d97706', paddingVertical: 14, paddingHorizontal: 18 }]}
+            activeOpacity={0.8}
             onPress={() => navigation.navigate('Exams')}
           >
-            <Feather name="alert-circle" size={24} color="#fff" style={{ marginRight: 12 }} />
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700' }}>Ongoing Exam Available!</Text>
-              <Text style={{ color: '#fff', fontSize: 13, opacity: 0.9 }}>Tap to join now</Text>
-            </View>
-            <Feather name="chevron-right" size={20} color="#fff" />
+            <Animated.View style={[styles.banner, { backgroundColor: '#f59e0b', borderColor: '#d97706', paddingVertical: 14, paddingHorizontal: 18, transform: [{ scale: breatheAnim }] }]}>
+              <Feather name="alert-circle" size={24} color="#fff" style={{ marginRight: 12 }} />
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700' }}>Ongoing Exam Available!</Text>
+                <Text style={{ color: '#fff', fontSize: 13, opacity: 0.9 }}>Tap to join now</Text>
+              </View>
+              <Feather name="chevron-right" size={20} color="#fff" />
+            </Animated.View>
           </TouchableOpacity>
         )}
 
-        {/* ── 6-stat grid (3 columns) ── */}
+        {/* ── Stat Cards - Scrollable ── */}
         {((examsLoading && (!exams || exams.length === 0)) || refreshing) ? (
-          <View style={styles.statsGrid}>
-            <Skeleton width={CARD_W} height={90} borderRadius={16} />
-            <Skeleton width={CARD_W} height={90} borderRadius={16} />
-            <Skeleton width={CARD_W} height={90} borderRadius={16} />
-            <Skeleton width={CARD_W} height={90} borderRadius={16} />
-            <Skeleton width={CARD_W} height={90} borderRadius={16} />
-            <Skeleton width={CARD_W} height={90} borderRadius={16} />
-          </View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 2, gap: 12, marginBottom: 16 }}>
+            <Skeleton width={130} height={110} borderRadius={20} />
+            <Skeleton width={130} height={110} borderRadius={20} />
+            <Skeleton width={130} height={110} borderRadius={20} />
+            <Skeleton width={130} height={110} borderRadius={20} />
+          </ScrollView>
         ) : (
-          <View style={styles.statsGrid}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 2, gap: 12, marginBottom: 16 }}>
             {[
-              { label: 'Total Attempted', value: stats.examsTaken || 0, icon: 'file-text', iconBg: '#1e3a5f', iconColor: '#60a5fa' },
-              { label: 'Passed', value: stats.passed || 0, icon: 'check-circle', iconBg: '#14532d', iconColor: '#4ade80' },
-              { label: 'Failed', value: stats.totalFailed || 0, icon: 'x-circle', iconBg: '#450a0a', iconColor: '#f87171' },
-              { label: 'Pending Result', value: stats.pendingCount || 0, icon: 'clock', iconBg: '#422006', iconColor: '#fb923c' },
-              { label: 'Avg Score', value: `${(stats.avgScore || 0).toFixed(1)}%`, icon: 'trending-up', iconBg: '#3b0764', iconColor: '#c084fc' },
-              { label: 'Best Score', value: `${(stats.bestScore || 0).toFixed(1)}%`, icon: 'star', iconBg: '#312e81', iconColor: '#fbbf24' },
-              { label: 'Missing', value: stats.missedExams || 0, icon: 'alert-triangle', iconBg: '#451a03', iconColor: '#fbbf24' },
+              { label: 'Total Attempted', value: stats.examsTaken || 0, icon: 'file-text', iconBg: '#1e3a5f', iconColor: '#60a5fa', stripeColor: '#3b82f6' },
+              { label: 'Passed', value: stats.passed || 0, icon: 'check-circle', iconBg: '#14532d', iconColor: '#4ade80', stripeColor: '#10b981' },
+              { label: 'Failed', value: stats.totalFailed || 0, icon: 'x-circle', iconBg: '#450a0a', iconColor: '#f87171', stripeColor: '#ef4444' },
+              { label: 'Pending Result', value: stats.pendingCount || 0, icon: 'clock', iconBg: '#422006', iconColor: '#fb923c', stripeColor: '#f59e0b' },
+              { label: 'Avg Score', value: `${(stats.avgScore || 0).toFixed(1)}%`, icon: 'trending-up', iconBg: '#3b0764', iconColor: '#c084fc', stripeColor: '#8b5cf6' },
+              { label: 'Best Score', value: `${(stats.bestScore || 0).toFixed(1)}%`, icon: 'star', iconBg: '#312e81', iconColor: '#fbbf24', stripeColor: '#eab308' },
+              { label: 'Missing', value: stats.missedExams || 0, icon: 'alert-triangle', iconBg: '#451a03', iconColor: '#fbbf24', stripeColor: '#f59e0b' },
             ].map((s, i) => (
-              <TouchableOpacity key={i} style={styles.statCard} activeOpacity={0.7} onPress={() => handleStatCardClick(s.label)}>
-                <View style={[styles.statIconBox, { backgroundColor: s.iconBg }]}>
+              <BouncyTouchable key={i} style={[styles.statCard, { width: 130 }]} activeScale={0.9} onPress={() => handleStatCardClick(s.label)}>
+                <View style={[styles.statCardTopStripe, { backgroundColor: s.stripeColor }]} />
+                <Animated.View style={[styles.statIconBox, { backgroundColor: s.iconBg, transform: [{ scale: breatheAnim }] }]}>
                   <Feather name={s.icon} size={18} color={s.iconColor} />
-                </View>
+                </Animated.View>
                 <Text style={styles.statLabel} numberOfLines={1}>{s.label}</Text>
                 <Text style={styles.statValue} numberOfLines={1} adjustsFontSizeToFit>{s.value}</Text>
-              </TouchableOpacity>
+              </BouncyTouchable>
             ))}
-          </View>
+          </ScrollView>
         )}
 
         {/* ── Performance Trend (full width) ── */}
         <View style={styles.fullCard}>
           <View style={styles.cardHeader}>
             <Text style={styles.cardTitleLg}>Performance Trend (Recent Exams)</Text>
-            <TouchableOpacity 
+            <BouncyTouchable 
+              activeScale={0.9}
               onPress={() => setStatModalConfig({ visible: true, title: 'All Attempted Exams', filterType: 'attempted' })}
               style={{ backgroundColor: 'rgba(139,92,246,0.15)', paddingHorizontal: 12, paddingVertical: 5, borderRadius: 14 }}
             >
               <Text style={{ color: '#a855f7', fontSize: 12, fontWeight: '700' }}>View All</Text>
-            </TouchableOpacity>
+            </BouncyTouchable>
           </View>
           {published.length > 0 ? (
             <>
@@ -501,21 +586,23 @@ export default function DashboardScreen() {
           <View style={styles.passFailRow}>
             {/* Donut Chart */}
             <View style={styles.passFailDonut}>
-              <PieChart
-                data={pieData}
-                width={140}
-                height={140}
-                chartConfig={chartCfg}
-                accessor="population"
-                backgroundColor="transparent"
-                paddingLeft="32"
-                hasLegend={false}
-                absolute
-              />
-              <View style={[styles.passFailDonutCenter, { width: 80, height: 80, borderRadius: 40, backgroundColor: colors.card }]}>
+              <Animated.View style={{ transform: [{ rotate: spin }] }}>
+                <PieChart
+                  data={pieData}
+                  width={140}
+                  height={140}
+                  chartConfig={chartCfg}
+                  accessor="population"
+                  backgroundColor="transparent"
+                  paddingLeft="32"
+                  hasLegend={false}
+                  absolute
+                />
+              </Animated.View>
+              <Animated.View style={[styles.passFailDonutCenter, { width: 80, height: 80, borderRadius: 40, backgroundColor: colors.card, transform: [{ scale: breatheAnim }] }]}>
                 <Text style={styles.passFailDonutValue}>{stats.publishedCount || 0}</Text>
                 <Text style={styles.passFailDonutLabel}>Total Exam</Text>
-              </View>
+              </Animated.View>
             </View>
 
             {/* Legend */}
@@ -552,9 +639,9 @@ export default function DashboardScreen() {
           <View style={styles.cardHeader}>
             <Text style={styles.cardTitleLg}>Recent Exams</Text>
             {sortedExams.length > 4 && (
-              <TouchableOpacity onPress={() => setShowRecentExamsModal(true)}>
+              <BouncyTouchable activeScale={0.9} onPress={() => setShowRecentExamsModal(true)}>
                 <Text style={styles.viewAll}>View All</Text>
-              </TouchableOpacity>
+              </BouncyTouchable>
             )}
           </View>
           {recentExams.length > 0 ? recentExams.map((exam, i) => {
@@ -600,9 +687,9 @@ export default function DashboardScreen() {
                 <Text style={styles.cardSubtitle}>Exams scheduled in the future</Text>
               </View>
             </View>
-            <TouchableOpacity onPress={() => navigation.navigate('Exams')}>
+            <BouncyTouchable activeScale={0.9} onPress={() => navigation.navigate('Exams')}>
               <Text style={styles.viewAll}>View All</Text>
-            </TouchableOpacity>
+            </BouncyTouchable>
           </View>
 
           {upcomingExams.length > 0 ? upcomingExams.map((exam) => {
@@ -643,9 +730,9 @@ export default function DashboardScreen() {
               </View>
             </View>
             {toppers && toppers.length > 0 && (
-              <TouchableOpacity onPress={() => setShowAllToppers(true)}>
+              <BouncyTouchable activeScale={0.9} onPress={() => setShowAllToppers(true)}>
                 <Text style={styles.viewAll}>View All</Text>
-              </TouchableOpacity>
+              </BouncyTouchable>
             )}
           </View>
 
@@ -655,10 +742,10 @@ export default function DashboardScreen() {
               {toppers.slice(0, 2).map((item, idx) => (
                 <View key={item.resultId} style={[styles.leaderCard, { width: 280, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: colors.card, borderColor: colors.border }]}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                    <TouchableOpacity 
+                    <BouncyTouchable 
                       onPress={() => setSelectedTopper(item)} 
                       style={{ position: 'relative', marginRight: 12 }}
-                      activeOpacity={0.8}
+                      activeScale={0.85}
                     >
                       {item.student?.profileImage ? (
                         <Image source={{ uri: getImageUrl(item.student.profileImage) }} style={{ width: 44, height: 44, borderRadius: 22, borderWidth: 2, borderColor: idx === 0 ? '#fbbf24' : idx === 1 ? '#94a3b8' : idx === 2 ? '#b45309' : '#334155' }} />
@@ -670,7 +757,7 @@ export default function DashboardScreen() {
                       <View style={{ position: 'absolute', bottom: -2, right: -2, backgroundColor: idx === 0 ? '#fbbf24' : idx === 1 ? '#94a3b8' : idx === 2 ? '#b45309' : '#334155', width: 20, height: 20, borderRadius: 10, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#0f172a' }}>
                         <Text style={{ color: '#fff', fontSize: 10, fontWeight: '900' }}>{idx + 1}</Text>
                       </View>
-                    </TouchableOpacity>
+                    </BouncyTouchable>
                     <View style={{ flex: 1, marginRight: 10 }}>
                       <Text style={[styles.leaderName, { textAlign: 'left', marginBottom: 2, color: colors.text }]} numberOfLines={1}>{item.student?.name || 'Unknown'}</Text>
                       <Text style={[styles.recentSub, { textAlign: 'left', color: colors.subText }]} numberOfLines={1}>{item.examTitle}</Text>
@@ -698,7 +785,7 @@ export default function DashboardScreen() {
         </View>
 
         <View style={{ height: 20 }} />
-      </ScrollView>
+      </Animated.ScrollView>
 
       {/* ── Sidebar Modal ── */}
       <Modal visible={isSidebarVisible} transparent animationType="fade">
@@ -734,11 +821,11 @@ export default function DashboardScreen() {
       <Modal
         visible={showAllToppers}
         animationType="slide"
-        presentationStyle="pageSheet"
+        statusBarTranslucent={true}
         onRequestClose={() => setShowAllToppers(false)}
       >
         <View style={[styles.modalContainer, { backgroundColor: colors.bg }]}>
-          <View style={[styles.modalHeader, { backgroundColor: colors.card, borderBottomColor: colors.border || '#334155' }]}>
+          <View style={[styles.modalHeader, { backgroundColor: colors.card, borderBottomColor: colors.border || '#334155', paddingTop: Math.max((insets.top || 20) + 15, 30) + 15, paddingBottom: 15 }]}>
             <Text style={[styles.modalTitle, { color: colors.text }]}>All Exam Toppers</Text>
             <TouchableOpacity onPress={() => setShowAllToppers(false)} style={styles.modalCloseBtn}>
               <Feather name="x" size={24} color={colors.text} />
@@ -752,13 +839,13 @@ export default function DashboardScreen() {
             renderItem={({ item, index }) => (
               <View style={[styles.leaderCard, { width: '100%', marginBottom: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, backgroundColor: colors.card, borderColor: colors.border }]}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                  <TouchableOpacity 
+                  <BouncyTouchable 
                     onPress={() => {
                       setShowAllToppers(false);
                       setSelectedTopper(item);
                     }} 
                     style={{ position: 'relative', marginRight: 12 }}
-                    activeOpacity={0.8}
+                    activeScale={0.85}
                   >
                     {item.student?.profileImage ? (
                       <Image source={{ uri: getImageUrl(item.student.profileImage) }} style={{ width: 44, height: 44, borderRadius: 22, borderWidth: 2, borderColor: index === 0 ? '#fbbf24' : index === 1 ? '#94a3b8' : index === 2 ? '#b45309' : '#334155' }} />
@@ -770,7 +857,7 @@ export default function DashboardScreen() {
                     <View style={{ position: 'absolute', bottom: -2, right: -2, backgroundColor: index === 0 ? '#fbbf24' : index === 1 ? '#94a3b8' : index === 2 ? '#b45309' : '#334155', width: 20, height: 20, borderRadius: 10, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#0f172a' }}>
                       <Text style={{ color: '#fff', fontSize: 10, fontWeight: '900' }}>{index + 1}</Text>
                     </View>
-                  </TouchableOpacity>
+                  </BouncyTouchable>
                   <View style={{ flex: 1 }}>
                     <Text style={[styles.leaderName, { marginBottom: 2, textAlign: 'left', color: colors.text }]} numberOfLines={1}>{item.student?.name || 'Unknown'}</Text>
                     <Text style={[styles.recentSub, { textAlign: 'left', color: colors.subText }]}>{item.examTitle}</Text>
@@ -847,7 +934,7 @@ export default function DashboardScreen() {
       {selectedTopper && (
         <Modal visible={true} transparent animationType="fade" onRequestClose={() => setSelectedTopper(null)}>
           <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-            <View style={{ width: '90%', backgroundColor: colors.card, borderRadius: 20, overflow: 'hidden', borderWidth: 1, borderColor: colors.border, padding: 24, alignItems: 'center', position: 'relative' }}>
+            <Animated.View style={{ transform: [{ scale: modalZoomAnim }], width: '90%', backgroundColor: colors.card, borderRadius: 20, overflow: 'hidden', borderWidth: 1, borderColor: colors.border, padding: 24, alignItems: 'center', position: 'relative' }}>
               <TouchableOpacity style={{ position: 'absolute', top: 16, right: 16, zIndex: 10 }} onPress={() => setSelectedTopper(null)}>
                 <Feather name="x" size={24} color={colors.subText} />
               </TouchableOpacity>
@@ -898,7 +985,7 @@ export default function DashboardScreen() {
               >
                 <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700' }}>Close Profile</Text>
               </TouchableOpacity>
-            </View>
+            </Animated.View>
           </View>
         </Modal>
       )}
@@ -1051,17 +1138,17 @@ export default function DashboardScreen() {
 
 const getStyles = (colors) => ({
   root: { flex: 1, backgroundColor: colors.bg },
-  scroll: { paddingTop: 50, paddingHorizontal: 16, paddingBottom: 32 },
+  scroll: { paddingTop: 0, paddingHorizontal: 16, paddingBottom: 32 },
 
   /* header */
   header: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
   menuBtn: { marginRight: 12 },
-  headerTitle: { fontSize: 22, fontWeight: '800', color: colors.text, flex: 1 },
+  headerTitle: { fontSize: 26, fontWeight: '900', color: colors.text, flex: 1, letterSpacing: -0.5 },
   headerRight: { flexDirection: 'row', alignItems: 'center' },
-  headerIconBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(148,163,184,0.15)', justifyContent: 'center', alignItems: 'center', marginLeft: 10, position: 'relative' },
-  dotBadge: { position: 'absolute', top: 2, right: 2, width: 10, height: 10, borderRadius: 5, backgroundColor: '#fb7185', borderWidth: 2, borderColor: colors.bg },
-  badgeTextDot: { position: 'absolute', top: -2, right: -4, backgroundColor: '#ef4444', borderRadius: 10, paddingHorizontal: 4, paddingVertical: 1, minWidth: 18, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.bg },
-  badgeText: { color: colors.text, fontSize: 10, fontWeight: 'bold' },
+  headerIconBtn: { width: 44, height: 44, borderRadius: 22, borderWidth: 1, justifyContent: 'center', alignItems: 'center', marginLeft: 10, position: 'relative', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 8, elevation: 3 },
+  dotBadge: { position: 'absolute', top: 10, right: 10, width: 8, height: 8, borderRadius: 4, backgroundColor: '#fb7185', borderWidth: 1, borderColor: colors.bg },
+  badgeTextDot: { position: 'absolute', top: 4, right: 4, backgroundColor: '#ef4444', borderRadius: 10, paddingHorizontal: 5, paddingVertical: 2, minWidth: 20, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: colors.bg },
+  badgeText: { color: colors.text, fontSize: 10, fontWeight: '800' },
 
   /* banner */
   banner: {
@@ -1080,13 +1167,15 @@ const getStyles = (colors) => ({
     backgroundColor: 'rgba(99,102,241,0.3)', borderRadius: 8, padding: 4,
   },
 
-  /* stat grid (3 columns) */
+  /* stat grid (scrollable) */
   statsGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginBottom: 16 },
   statCard: {
-    width: CARD_W, backgroundColor: colors.card, borderRadius: 16,
-    padding: 12, marginBottom: 10, borderWidth: 1, borderColor: colors.border,
+    backgroundColor: colors.card, borderRadius: 20,
+    padding: 14, marginBottom: 10, borderWidth: 1, borderColor: colors.border,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 10, elevation: 4, overflow: 'hidden',
   },
-  statIconBox: { width: 32, height: 32, borderRadius: 10, justifyContent: 'center', alignItems: 'center', marginBottom: 8 },
+  statCardTopStripe: { position: 'absolute', top: 0, left: 0, right: 0, height: 4, borderTopLeftRadius: 20, borderTopRightRadius: 20 },
+  statIconBox: { width: 34, height: 34, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginBottom: 8 },
   statLabel: { color: colors.subText, fontSize: 11, fontWeight: '500', marginBottom: 4 },
   statValue: { color: colors.text, fontSize: 22, fontWeight: '800' },
 
