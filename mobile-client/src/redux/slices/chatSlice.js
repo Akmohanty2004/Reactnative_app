@@ -17,7 +17,7 @@ export const getChatHistory = createAsyncThunk(
   'chat/getHistory',
   async (userId, { rejectWithValue }) => {
     try {
-      const response = await api.get(`/api/chat/history/${userId}`);
+      const response = await api.get(`/api/chat/history/${userId}?t=${Date.now()}`);
       return { userId, messages: response.data };
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Failed to load history');
