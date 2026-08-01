@@ -158,7 +158,11 @@ const chatSlice = createSlice({
         
         // Preserve optimistic messages that haven't been fetched yet to prevent flickering
         const pendingOptimistic = existingMessages.filter(m => 
-          m.tempId && !fetchedMessages.some(fetched => String(fetched._id) === String(m.tempId) || String(fetched.tempId) === String(m.tempId))
+          m.tempId && !fetchedMessages.some(fetched => 
+            String(fetched._id) === String(m._id) || 
+            String(fetched._id) === String(m.tempId) || 
+            String(fetched.tempId) === String(m.tempId)
+          )
         );
         
         state.messagesByUserId[key] = [...fetchedMessages, ...pendingOptimistic];
