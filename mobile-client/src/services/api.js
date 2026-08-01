@@ -22,8 +22,8 @@ const getBaseUrl = () => {
 };
 
 const api = axios.create({
-  // baseURL: 'https://exam-app-backend-vqos.vercel.app',
-  baseURL: getBaseUrl(),
+  baseURL: 'https://exam-app-backend-vqos.vercel.app',
+  // baseURL: getBaseUrl(),
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json'

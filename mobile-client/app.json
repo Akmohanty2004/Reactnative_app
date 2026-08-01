@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Exam-Hub",
-    "slug": "exam-hub",
+    "slug": "mobile-client",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/Applogo.png",
@@ -44,11 +44,6 @@
       "expo-notifications",
       "expo-av",
       "expo-file-system"
-    ],
-    "extra": {
-      "eas": {
-        "projectId": "9cb6df56-a6ab-4015-aa97-56cc7670107d"
-      }
-    }
+    ]
   }
 }

@@ -100,6 +100,9 @@ export const getCurrentUser = createAsyncThunk(
       const response = await api.get(`${API_URL}/auth/me`)
       return response.data
     } catch (error) {
+      if (error.response?.status === 401) {
+        return rejectWithValue('unauthorized')
+      }
       return rejectWithValue(error.response?.data?.message || error.message || 'Failed to get user')
     }
   }
@@ -359,9 +362,11 @@ const authSlice = createSlice({
       })
       .addCase(getCurrentUser.rejected, (state, action) => {
         state.isLoading = false
-        state.isAuthenticated = false
-        state.user = null
-        state.token = null
+        if (action.payload === 'unauthorized' || action.payload === 'No token found') {
+          state.isAuthenticated = false
+          state.user = null
+          state.token = null
+        }
         state.error = action.payload
       })
       
