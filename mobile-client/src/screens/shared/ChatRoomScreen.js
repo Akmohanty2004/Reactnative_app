@@ -440,13 +440,15 @@ export default function ChatRoomScreen({ route, navigation }) {
       if (newSocket.connected && targetId && targetId !== 'undefined') {
         newSocket.emit('check_online_status', targetId);
       }
+      // Fallback polling for Vercel/stateless environments where Socket.io might fail
+      dispatch(getChatHistory(otherIdStr));
     }, 2000);
 
     return () => {
       clearInterval(statusInterval);
       newSocket.disconnect();
     };
-  }, [dispatch, otherUser._id, otherUser.id, user._id, user.id]);
+  }, [dispatch, otherUser._id, otherUser.id, user._id, user.id, otherIdStr]);
 
   const handleSend = async () => {
     try {

@@ -125,8 +125,14 @@ export default function DashboardScreen() {
     const publishedResults = results?.filter(r => r.isPublished) || [];
     const examsTaken = results?.filter(r => r.status === 'submitted' || r.isCompleted)?.length || 0;
     const passed = publishedResults.filter(r => r.isPassed).length;
+    const missedExams = (exams || []).filter(e => {
+      const isExpired = getExamStatus(e) === 'Expired';
+      const hasTaken = results?.some(r => r.examId?._id === e._id || r.examId === e._id);
+      return isExpired && !hasTaken;
+    }).length;
     const scores = publishedResults.map(r => r.percentage || 0);
-    const avgScore = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
+    const totalExpected = scores.length + missedExams;
+    const avgScore = totalExpected > 0 ? scores.reduce((a, b) => a + b, 0) / totalExpected : 0;
     const bestScore = scores.length > 0 ? Math.max(...scores) : 0;
     const ongoing = (exams || []).filter(e => e.isAvailable || e.status === 'ongoing').length;
     const upcoming = (exams || []).filter(e => !(e.isAvailable || e.status === 'ongoing') && (e.isUpcoming || e.status === 'published')).length;
@@ -134,7 +140,7 @@ export default function DashboardScreen() {
     const publishedCount = publishedResults.length;
     const totalFailed = publishedCount - passed;
     const pendingCount = Math.max(0, examsTaken - publishedCount);
-    setStats({ examsTaken, passed, avgScore, upcoming, ongoing, totalPassed: passed, totalFailed, publishedCount, bestScore, expired, pendingCount });
+    setStats({ examsTaken, passed, avgScore, upcoming, ongoing, totalPassed: passed, totalFailed, publishedCount, bestScore, expired, pendingCount, missedExams });
   }, [exams, results]));
 
   const onRefresh = useCallback(async () => {
@@ -390,6 +396,7 @@ export default function DashboardScreen() {
               { label: 'Pending Result', value: stats.pendingCount || 0, icon: 'clock', iconBg: '#422006', iconColor: '#fb923c' },
               { label: 'Avg Score', value: `${(stats.avgScore || 0).toFixed(1)}%`, icon: 'trending-up', iconBg: '#3b0764', iconColor: '#c084fc' },
               { label: 'Best Score', value: `${(stats.bestScore || 0).toFixed(1)}%`, icon: 'star', iconBg: '#312e81', iconColor: '#fbbf24' },
+              { label: 'Missing', value: stats.missedExams || 0, icon: 'alert-triangle', iconBg: '#451a03', iconColor: '#fbbf24' },
             ].map((s, i) => (
               <TouchableOpacity key={i} style={styles.statCard} activeOpacity={0.7} onPress={() => handleStatCardClick(s.label)}>
                 <View style={[styles.statIconBox, { backgroundColor: s.iconBg }]}>
