@@ -887,6 +887,7 @@ export default function ChatRoomScreen({ route, navigation }) {
           <ImageBackground source={{ uri: customBg }} style={{ flex: 1 }} resizeMode="cover">
             <FlatList
               ref={flatListRef}
+              style={{ flex: 1 }}
               data={listData}
               inverted
               keyExtractor={(item) => item.id || item._id}
@@ -898,6 +899,7 @@ export default function ChatRoomScreen({ route, navigation }) {
         ) : (
           <FlatList
             ref={flatListRef}
+            style={{ flex: 1 }}
             data={listData}
             inverted
             keyExtractor={(item) => item.id || item._id}
@@ -912,6 +914,11 @@ export default function ChatRoomScreen({ route, navigation }) {
           <View style={[
             styles.previewContainer, 
             { 
+              position: 'absolute',
+              bottom: 75,
+              left: 10,
+              right: 10,
+              zIndex: 10,
               backgroundColor: isDarkMode ? '#1e293b' : '#f0f9ff', 
               borderColor: isDarkMode ? '#334155' : '#bae6fd',
               borderWidth: 1.5,
@@ -950,7 +957,7 @@ export default function ChatRoomScreen({ route, navigation }) {
         )}
 
         {/* ── Input Bar ── */}
-        <View style={[styles.inputBar, { backgroundColor: colors.inputBarBg, borderTopColor: colors.inputBarBorder }]}>
+        <View style={[styles.inputBar, { backgroundColor: colors.inputBarBg, borderTopColor: colors.inputBarBorder, zIndex: 5 }]}>
           {/* image button */}
           <TouchableOpacity style={styles.plusBtn} onPress={handlePickImage}>
             <Feather name="image" size={22} color="#fff" />
@@ -981,7 +988,7 @@ export default function ChatRoomScreen({ route, navigation }) {
           </View>
 
           {/* Conditional Mic or Send button */}
-          {(inputText.trim() || stagedImage || stagedAudio) && !isRecording ? (
+          {(inputText.trim() || stagedImages.length > 0 || stagedAudio) && !isRecording ? (
             <TouchableOpacity
               style={styles.sendBtn}
               onPress={handleSend}
