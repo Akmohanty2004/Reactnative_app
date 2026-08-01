@@ -170,7 +170,7 @@ export default function ProfileScreen() {
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
       <ScrollView contentContainerStyle={styles.content}>
         {/* Custom Header */}
-        <View style={[styles.header, { backgroundColor: 'transparent', borderBottomWidth: 0, paddingHorizontal: 0, paddingBottom: 25, paddingTop: Math.max((insets.top || 20) - 15, 5), flexDirection: 'row', alignItems: 'center' }]}>
+        <View style={[styles.header, { backgroundColor: 'transparent', borderBottomWidth: 0, paddingHorizontal: 0, paddingBottom: 25, paddingTop: Platform.OS === 'android' ? 40 : 50, flexDirection: 'row', alignItems: 'center' }]}>
           <TouchableOpacity onPress={() => navigation.navigate('Home')} style={{ marginRight: 18, padding: 4 }}>
             <Feather name="arrow-left" size={24} color={colors.text} />
           </TouchableOpacity>
@@ -663,7 +663,7 @@ export default function ProfileScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  content: { padding: 20, paddingBottom: 40, paddingTop: Platform.OS === 'android' ? 10 : 20 },
+  content: { padding: 20, paddingBottom: 40, paddingTop: Platform.OS === 'android' ? 40 : 50 },
   
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 25 },
   headerTitle: { fontSize: 24, fontWeight: 'bold' },

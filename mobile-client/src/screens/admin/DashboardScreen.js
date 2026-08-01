@@ -228,7 +228,7 @@ export default function DashboardScreen({ navigation }) {
         style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}
       >
         {/* Top Header */}
-        <View style={[styles.topHeader, { paddingTop: Math.max((insets.top || 20) - 15, 5) }]}>
+        <View style={[styles.topHeader, { paddingTop: Platform.OS === 'android' ? 40 : 50 }]}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <TouchableOpacity 
               onPress={() => navigation.navigate('Profile')}
@@ -494,7 +494,7 @@ export default function DashboardScreen({ navigation }) {
         onRequestClose={() => setShowAllToppers(false)}
       >
         <View style={[styles.modalContainer, { backgroundColor: colors.bg }]}>
-          <View style={[styles.modalHeader, { backgroundColor: colors.card, borderBottomColor: colors.cardBorder, paddingTop: Math.max((insets.top || 20) - 15, 5) + 15, paddingBottom: 15 }]}>
+          <View style={[styles.modalHeader, { backgroundColor: colors.card, borderBottomColor: colors.cardBorder, paddingTop: Platform.OS === 'android' ? 40 : 50 + 15, paddingBottom: 15 }]}>
             <Text style={[styles.modalTitle, { color: colors.text }]}>All Exam Toppers</Text>
             <BouncyTouchable onPress={() => setShowAllToppers(false)} style={styles.modalCloseBtn}>
               <Feather name="x" size={24} color={colors.text} />
@@ -714,7 +714,7 @@ const styles = StyleSheet.create({
   /* Top header */
   topHeader: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 20, paddingTop: Platform.OS === 'android' ? 10 : 20, paddingBottom: 15,
+    paddingHorizontal: 20, paddingTop: Platform.OS === 'android' ? 40 : 50, paddingBottom: 15,
   },
   menuBtn: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
   topHeaderTitle: { fontSize: 26, fontWeight: '800', letterSpacing: -0.5 },

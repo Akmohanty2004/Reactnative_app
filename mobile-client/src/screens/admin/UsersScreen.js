@@ -222,7 +222,7 @@ export default function UsersScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { padding: 20, paddingTop: Platform.OS === 'android' ? 10 : 20, paddingBottom: 15 },
+  header: { padding: 20, paddingTop: Platform.OS === 'android' ? 40 : 50, paddingBottom: 15 },
   title: { fontSize: 28, fontWeight: '800', marginBottom: 4 },
   subtitle: { fontSize: 14 },
   

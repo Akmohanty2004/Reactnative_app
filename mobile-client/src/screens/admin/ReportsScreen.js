@@ -523,7 +523,7 @@ export default function ReportsScreen({ navigation }) {
 
 const getStyles = (colors) => ({
   container: { flex: 1 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', paddingHorizontal: 20, paddingTop: Platform.OS === 'android' ? 10 : 20, paddingBottom: 15, zIndex: 10 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', paddingHorizontal: 20, paddingTop: Platform.OS === 'android' ? 40 : 50, paddingBottom: 15, zIndex: 10 },
   headerLeft: { flexDirection: 'row', alignItems: 'center', flexShrink: 1 },
   menuIcon: { marginRight: 10 },
   headerTitle: { fontSize: 22, fontWeight: 'bold', marginBottom: 2 },

@@ -137,7 +137,7 @@ export default function ManageClassesScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { padding: 20, paddingTop: Platform.OS === 'android' ? 10 : 20, paddingBottom: 10 },
+  header: { padding: 20, paddingTop: Platform.OS === 'android' ? 40 : 50, paddingBottom: 10 },
   title: { fontSize: 24, fontWeight: '800' },
   subtitle: { fontSize: 14, marginTop: 5 },
   addSection: { flexDirection: 'row', padding: 15, marginHorizontal: 15, borderRadius: 16, borderWidth: 1, marginBottom: 15, alignItems: 'center' },

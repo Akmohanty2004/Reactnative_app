@@ -87,7 +87,7 @@ export default function ActivityLogsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { flexDirection: 'row', alignItems: 'center', padding: 20, paddingTop: Platform.OS === 'android' ? 10 : 20, paddingBottom: 15 },
+  header: { flexDirection: 'row', alignItems: 'center', padding: 20, paddingTop: Platform.OS === 'android' ? 40 : 50, paddingBottom: 15 },
   backBtn: { marginRight: 15 },
   title: { fontSize: 24, fontWeight: '800' },
   subtitle: { fontSize: 13, marginTop: 2 },
