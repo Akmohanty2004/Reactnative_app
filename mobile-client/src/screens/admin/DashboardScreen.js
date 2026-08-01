@@ -159,7 +159,7 @@ export default function DashboardScreen({ navigation }) {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
-      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} translucent backgroundColor="transparent" />
+      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} translucent={false} backgroundColor={colors.bg} />
 
       {/* Top Header */}
       <View style={styles.topHeader}>

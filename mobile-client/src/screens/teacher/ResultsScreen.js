@@ -106,7 +106,7 @@ export default function ResultsScreen() {
   if (!selectedExamId) {
     return (
       <SafeAreaView style={styles.safe}>
-        <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor="transparent" translucent />
+        <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={isDarkMode ? "#0d1117" : "#f8fafc"} translucent={false} />
 
         {/* Header */}
         <View style={styles.headerContainer}>
@@ -264,7 +264,7 @@ export default function ResultsScreen() {
   ──────────────────────────────────────────────────────────────── */
   return (
     <SafeAreaView style={styles.safe}>
-      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor="transparent" translucent />
+      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={isDarkMode ? "#0d1117" : "#f8fafc"} translucent={false} />
 
       {/* Header */}
       <View style={styles.headerContainer}>

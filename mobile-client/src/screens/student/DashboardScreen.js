@@ -304,7 +304,7 @@ export default function DashboardScreen() {
 
   return (
     <View style={[styles.root, { backgroundColor: colors.bg }]}>
-      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} translucent backgroundColor="transparent" />
+      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} translucent={false} backgroundColor={colors.bg} />
       <ScrollView
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}

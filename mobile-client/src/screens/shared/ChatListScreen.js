@@ -96,7 +96,7 @@ export default function ChatListScreen({ navigation }) {
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.bg }]}>
-      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} translucent backgroundColor="transparent" />
+      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} translucent={false} backgroundColor={colors.headerBg} />
       <View style={[styles.header, { paddingTop: Math.max(insets.top, 20) + 10, backgroundColor: colors.headerBg, borderBottomColor: colors.border }]}>
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
           <Feather name="arrow-left" size={24} color={colors.headerText} />
