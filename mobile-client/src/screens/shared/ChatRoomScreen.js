@@ -442,7 +442,7 @@ export default function ChatRoomScreen({ route, navigation }) {
       }
       // Fallback polling for Vercel/stateless environments where Socket.io might fail
       dispatch(getChatHistory(otherIdStr));
-    }, 2000);
+    }, 1000);
 
     return () => {
       clearInterval(statusInterval);

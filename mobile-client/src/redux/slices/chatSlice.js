@@ -152,7 +152,16 @@ const chatSlice = createSlice({
       .addCase(getChatHistory.fulfilled, (state, action) => {
         state.isLoadingHistory = false;
         const key = String(action.payload.userId);
-        state.messagesByUserId[key] = action.payload.messages;
+        
+        const existingMessages = state.messagesByUserId[key] || [];
+        const fetchedMessages = action.payload.messages;
+        
+        // Preserve optimistic messages that haven't been fetched yet to prevent flickering
+        const pendingOptimistic = existingMessages.filter(m => 
+          m.tempId && !fetchedMessages.some(fetched => String(fetched._id) === String(m.tempId) || String(fetched.tempId) === String(m.tempId))
+        );
+        
+        state.messagesByUserId[key] = [...fetchedMessages, ...pendingOptimistic];
         
         // Clear unread count for this contact
         const contactIndex = state.contacts.findIndex(c => String(c._id) === key);
