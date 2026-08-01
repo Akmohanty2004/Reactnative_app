@@ -880,8 +880,8 @@ export default function ChatRoomScreen({ route, navigation }) {
       {/* ── Messages ── */}
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 90}
       >
         {customBg ? (
           <ImageBackground source={{ uri: customBg }} style={{ flex: 1 }} resizeMode="cover">
@@ -909,85 +909,78 @@ export default function ChatRoomScreen({ route, navigation }) {
           />
         )}
 
-        {/* Preview Staged File */}
-        {(stagedImages.length > 0 || stagedAudio) && (
-          <View style={[
-            styles.previewContainer, 
-            { 
-              position: 'absolute',
-              bottom: 75,
-              left: 10,
-              right: 10,
-              zIndex: 10,
-              backgroundColor: isDarkMode ? '#1e293b' : '#f0f9ff', 
-              borderColor: isDarkMode ? '#334155' : '#bae6fd',
-              borderWidth: 1.5,
-              shadowColor: '#38bdf8',
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: isDarkMode ? 0 : 0.15,
-              shadowRadius: 8,
-              elevation: 4
-            }
-          ]}>
-            {stagedImages.length > 0 && (
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1, paddingRight: 20 }}>
-                {stagedImages.map((img, idx) => (
-                  <Image key={idx} source={{ uri: img.uri }} style={[styles.previewImage, { marginRight: 8 }]} />
-                ))}
-              </ScrollView>
-            )}
-            {stagedAudio && (
-              <View style={[styles.previewAudio, { backgroundColor: isDarkMode ? '#0f172a' : '#e0f2fe' }]}>
-                <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: '#38bdf8', justifyContent: 'center', alignItems: 'center' }}>
-                  <Feather name="mic" size={20} color="#fff" />
+        <View style={{ backgroundColor: colors.inputBarBg, borderTopWidth: 1, borderTopColor: colors.inputBarBorder }}>
+          {/* Preview Staged File */}
+          {(stagedImages.length > 0 || stagedAudio) && (
+            <View style={[
+              styles.previewContainer, 
+              { 
+                backgroundColor: isDarkMode ? '#1e293b' : '#f0f9ff', 
+                borderColor: isDarkMode ? '#334155' : '#bae6fd',
+                borderWidth: 1,
+                marginTop: 10,
+                marginHorizontal: 10,
+              }
+            ]}>
+              {stagedImages.length > 0 && (
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1, paddingRight: 20 }}>
+                  {stagedImages.map((img, idx) => (
+                    <Image key={idx} source={{ uri: img.uri }} style={[styles.previewImage, { marginRight: 8 }]} />
+                  ))}
+                </ScrollView>
+              )}
+              {stagedAudio && (
+                <View style={[styles.previewAudio, { backgroundColor: isDarkMode ? '#0f172a' : '#e0f2fe' }]}>
+                  <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: '#38bdf8', justifyContent: 'center', alignItems: 'center' }}>
+                    <Feather name="mic" size={20} color="#fff" />
+                  </View>
+                  <View style={{ marginLeft: 12 }}>
+                    <Text style={{ color: isDarkMode ? '#f8fafc' : '#0369a1', fontWeight: 'bold', fontSize: 15 }}>Voice Message</Text>
+                    <Text style={{ color: isDarkMode ? '#94a3b8' : '#38bdf8', fontSize: 12, marginTop: 2, fontWeight: '500' }}>Ready to send...</Text>
+                  </View>
                 </View>
-                <View style={{ marginLeft: 12 }}>
-                  <Text style={{ color: isDarkMode ? '#f8fafc' : '#0369a1', fontWeight: 'bold', fontSize: 15 }}>Voice Message</Text>
-                  <Text style={{ color: isDarkMode ? '#94a3b8' : '#38bdf8', fontSize: 12, marginTop: 2, fontWeight: '500' }}>Ready to send...</Text>
-                </View>
-              </View>
-            )}
-            <TouchableOpacity 
-              style={[styles.previewCloseBtn, { borderColor: colors.bg, backgroundColor: '#ef4444' }]} 
-              onPress={() => { setStagedImages([]); setStagedAudio(null); }}
-            >
-              <Feather name="x" size={14} color="#fff" />
+              )}
+              <TouchableOpacity 
+                style={[styles.previewCloseBtn, { borderColor: colors.inputBarBg, backgroundColor: '#ef4444' }]} 
+                onPress={() => { setStagedImages([]); setStagedAudio(null); }}
+              >
+                <Feather name="x" size={14} color="#fff" />
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* ── Input Bar ── */}
+          <View style={[styles.inputBar, { backgroundColor: 'transparent', borderTopWidth: 0 }]}>
+            {/* image button */}
+            <TouchableOpacity style={styles.plusBtn} onPress={handlePickImage}>
+              <Feather name="image" size={22} color="#fff" />
             </TouchableOpacity>
-          </View>
-        )}
 
-        {/* ── Input Bar ── */}
-        <View style={[styles.inputBar, { backgroundColor: colors.inputBarBg, borderTopColor: colors.inputBarBorder, zIndex: 5 }]}>
-          {/* image button */}
-          <TouchableOpacity style={styles.plusBtn} onPress={handlePickImage}>
-            <Feather name="image" size={22} color="#fff" />
-          </TouchableOpacity>
+            {/* Text input with emoji icon */}
+            <View style={[styles.inputWrap, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder }, isRecording && styles.inputWrapRecording]}>
+              {isRecording ? (
+                <View style={styles.recordingRow}>
+                  <View style={styles.recordingDot} />
+                  <Text style={styles.recordingText}>Recording voice message...</Text>
+                </View>
+              ) : (
+                <>
+                  <TouchableOpacity onPress={() => setEmojiOpen(true)}>
+                    <Feather name="smile" size={20} color="#64748b" style={{ marginLeft: 10 }} />
+                  </TouchableOpacity>
+                  <TextInput
+                    style={[styles.input, { color: colors.inputText }]}
+                    value={inputText}
+                    onChangeText={setInputText}
+                    placeholder="Type a message..."
+                    placeholderTextColor={isDarkMode ? '#64748b' : '#9ca3af'}
+                    multiline
+                  />
+                </>
+              )}
+            </View>
 
-          {/* Text input with emoji icon */}
-          <View style={[styles.inputWrap, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder }, isRecording && styles.inputWrapRecording]}>
-            {isRecording ? (
-              <View style={styles.recordingRow}>
-                <View style={styles.recordingDot} />
-                <Text style={styles.recordingText}>Recording voice message...</Text>
-              </View>
-            ) : (
-              <>
-                <TouchableOpacity onPress={() => setEmojiOpen(true)}>
-                  <Feather name="smile" size={20} color="#64748b" style={{ marginLeft: 10 }} />
-                </TouchableOpacity>
-                <TextInput
-                  style={[styles.input, { color: colors.inputText }]}
-                  value={inputText}
-                  onChangeText={setInputText}
-                  placeholder="Type a message..."
-                  placeholderTextColor={isDarkMode ? '#64748b' : '#9ca3af'}
-                  multiline
-                />
-              </>
-            )}
-          </View>
-
-          {/* Conditional Mic or Send button */}
+            {/* Conditional Mic or Send button */}
           {(inputText.trim() || stagedImages.length > 0 || stagedAudio) && !isRecording ? (
             <TouchableOpacity
               style={styles.sendBtn}
@@ -1250,14 +1243,13 @@ const styles = StyleSheet.create({
   previewContainer: {
     backgroundColor: '#1e293b',
     padding: 10,
-    marginHorizontal: 12,
-    marginTop: 10,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: '#334155',
     flexDirection: 'row',
     alignItems: 'center',
-    position: 'relative'
+    position: 'relative',
+    marginBottom: 0
   },
   previewImage: { width: 60, height: 60, borderRadius: 8 },
   previewAudio: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#0f172a', padding: 10, borderRadius: 8, flex: 1 },
