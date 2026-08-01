@@ -901,20 +901,36 @@ export default function ChatRoomScreen({ route, navigation }) {
         )}
 
         {/* Preview Staged File */}
-        {/* Preview Staged File */}
         {(stagedImage || stagedAudio) && (
-          <View style={[styles.previewContainer, { backgroundColor: colors.bubbleThem, borderColor: colors.inputBorder }]}>
+          <View style={[
+            styles.previewContainer, 
+            { 
+              backgroundColor: isDarkMode ? '#1e293b' : '#f0f9ff', 
+              borderColor: isDarkMode ? '#334155' : '#bae6fd',
+              borderWidth: 1.5,
+              shadowColor: '#38bdf8',
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: isDarkMode ? 0 : 0.15,
+              shadowRadius: 8,
+              elevation: 4
+            }
+          ]}>
             {stagedImage && (
               <Image source={{ uri: stagedImage.uri }} style={styles.previewImage} />
             )}
             {stagedAudio && (
-              <View style={styles.previewAudio}>
-                <Feather name="mic" size={24} color="#8b5cf6" />
-                <Text style={{ color: colors.headerText, marginLeft: 10 }}>Voice Message Staged</Text>
+              <View style={[styles.previewAudio, { backgroundColor: isDarkMode ? '#0f172a' : '#e0f2fe' }]}>
+                <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: '#38bdf8', justifyContent: 'center', alignItems: 'center' }}>
+                  <Feather name="mic" size={20} color="#fff" />
+                </View>
+                <View style={{ marginLeft: 12 }}>
+                  <Text style={{ color: isDarkMode ? '#f8fafc' : '#0369a1', fontWeight: 'bold', fontSize: 15 }}>Voice Message</Text>
+                  <Text style={{ color: isDarkMode ? '#94a3b8' : '#38bdf8', fontSize: 12, marginTop: 2, fontWeight: '500' }}>Ready to send...</Text>
+                </View>
               </View>
             )}
             <TouchableOpacity 
-              style={styles.previewCloseBtn} 
+              style={[styles.previewCloseBtn, { borderColor: colors.bg, backgroundColor: '#ef4444' }]} 
               onPress={() => { setStagedImage(null); setStagedAudio(null); }}
             >
               <Feather name="x" size={14} color="#fff" />
