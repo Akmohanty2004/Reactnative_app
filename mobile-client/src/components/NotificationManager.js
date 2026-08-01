@@ -105,18 +105,23 @@ export default function NotificationManager() {
           notif.data || {}
         );
 
-        // 2. Show in-app banner toast
-        Toast.show({
-          type: 'info',
-          text1: notif.title || 'ExamHub Notification',
-          text2: notif.message || 'You have a new notification.',
-          visibilityTime: 4000,
-          position: 'top',
-          topOffset: 50
-        });
+        // If it's a chat message, don't show the in-app notification toast
+        const isChatMessage = notif.data && notif.data.messageId;
+        
+        if (!isChatMessage) {
+          // 2. Show in-app banner toast
+          Toast.show({
+            type: 'info',
+            text1: notif.title || 'ExamHub Notification',
+            text2: notif.message || 'You have a new notification.',
+            visibilityTime: 4000,
+            position: 'top',
+            topOffset: 50
+          });
 
-        // 3. Refresh notifications list in redux
-        dispatch(getNotifications());
+          // 3. Refresh notifications list in redux
+          dispatch(getNotifications());
+        }
       }
     });
 
