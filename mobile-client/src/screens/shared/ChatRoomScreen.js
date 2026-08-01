@@ -1001,6 +1001,7 @@ export default function ChatRoomScreen({ route, navigation }) {
             </TouchableOpacity>
           )}
         </View>
+        </View>
       </KeyboardAvoidingView>
 
       {/* Emoji Keyboard */}
