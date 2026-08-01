@@ -645,87 +645,88 @@ export default function ProfileScreen() {
               <Feather name="x" size={24} color={colors.text} />
             </TouchableOpacity>
           </View>
+          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+            <ScrollView style={styles.fsModalScroll} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
+              <View style={styles.fsShieldSection}>
+                <View style={styles.fsShieldOuter}>
+                  <View style={styles.fsShieldInner}>
+                    <Feather name="send" size={40} color="#a855f7" />
+                  </View>
+                </View>
+                <Text style={[styles.fsShieldTitle, { color: colors.text }]}>Send Personal Notification</Text>
+                <Text style={[styles.fsShieldSub, { color: colors.subText }]}>Send an alert directly to a student's device</Text>
+              </View>
 
-          <ScrollView style={styles.fsModalScroll} showsVerticalScrollIndicator={false}>
-            <View style={styles.fsShieldSection}>
-              <View style={styles.fsShieldOuter}>
-                <View style={styles.fsShieldInner}>
-                  <Feather name="send" size={40} color="#a855f7" />
+              <View style={styles.fsFormGroup}>
+                <Text style={[styles.fsLabel, { color: colors.subText }]}>Target Audience (Email or Class)</Text>
+                <View style={[styles.fsInputContainer, { backgroundColor: colors.inputBg, borderColor: colors.border }]}>
+                  <Feather name="users" size={18} color="#a78bfa" style={styles.fsInputIcon} />
+                  <TextInput style={[styles.fsInput, { color: colors.text }]} value={notificationData.email} onChangeText={(val) => setNotificationData({...notificationData, email: val})} placeholder="student@email.com, 'all', or 'class:10th'" placeholderTextColor={colors.subText} autoCapitalize="none" />
+                </View>
+                <View style={{ marginTop: 10 }}>
+                  <Text style={{ color: colors.subText, fontSize: 12, marginBottom: 6, fontWeight: '600' }}>Quick Select:</Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ paddingVertical: 4 }}>
+                    <TouchableOpacity
+                      style={{
+                        paddingHorizontal: 12,
+                        paddingVertical: 6,
+                        borderRadius: 16,
+                        backgroundColor: notificationData.email === 'all' ? '#8b5cf6' : 'rgba(139, 92, 246, 0.1)',
+                        marginRight: 8,
+                        borderWidth: 1,
+                        borderColor: '#8b5cf6'
+                      }}
+                      onPress={() => setNotificationData({...notificationData, email: 'all'})}
+                    >
+                      <Text style={{ color: notificationData.email === 'all' ? 'white' : '#8b5cf6', fontSize: 12, fontWeight: '600' }}>+ Broadcast to All</Text>
+                    </TouchableOpacity>
+
+                    {classGroupsList.map(cg => {
+                      const targetVal = `class:${cg}`;
+                      const isSelected = notificationData.email === targetVal;
+                      return (
+                        <TouchableOpacity
+                          key={cg}
+                          style={{
+                            paddingHorizontal: 12,
+                            paddingVertical: 6,
+                            borderRadius: 16,
+                            backgroundColor: isSelected ? '#ec4899' : 'rgba(236, 72, 153, 0.1)',
+                            marginRight: 8,
+                            borderWidth: 1,
+                            borderColor: '#ec4899'
+                          }}
+                          onPress={() => setNotificationData({...notificationData, email: targetVal})}
+                        >
+                          <Text style={{ color: isSelected ? 'white' : '#ec4899', fontSize: 12, fontWeight: '600' }}>+ Class: {cg}</Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </ScrollView>
                 </View>
               </View>
-              <Text style={[styles.fsShieldTitle, { color: colors.text }]}>Send Personal Notification</Text>
-              <Text style={[styles.fsShieldSub, { color: colors.subText }]}>Send an alert directly to a student's device</Text>
-            </View>
 
-            <View style={styles.fsFormGroup}>
-              <Text style={[styles.fsLabel, { color: colors.subText }]}>Target Audience (Email or Class)</Text>
-              <View style={[styles.fsInputContainer, { backgroundColor: colors.inputBg, borderColor: colors.border }]}>
-                <Feather name="users" size={18} color="#a78bfa" style={styles.fsInputIcon} />
-                <TextInput style={[styles.fsInput, { color: colors.text }]} value={notificationData.email} onChangeText={(val) => setNotificationData({...notificationData, email: val})} placeholder="student@email.com, 'all', or 'class:10th'" placeholderTextColor={colors.subText} autoCapitalize="none" />
+              <View style={styles.fsFormGroup}>
+                <Text style={[styles.fsLabel, { color: colors.subText }]}>Notification Title</Text>
+                <View style={[styles.fsInputContainer, { backgroundColor: colors.inputBg, borderColor: colors.border }]}>
+                  <Feather name="type" size={18} color="#a78bfa" style={styles.fsInputIcon} />
+                  <TextInput style={[styles.fsInput, { color: colors.text }]} value={notificationData.title} onChangeText={(val) => setNotificationData({...notificationData, title: val})} placeholder="Important Update" placeholderTextColor={colors.subText} />
+                </View>
               </View>
-              <View style={{ marginTop: 10 }}>
-                <Text style={{ color: colors.subText, fontSize: 12, marginBottom: 6, fontWeight: '600' }}>Quick Select:</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ paddingVertical: 4 }}>
-                  <TouchableOpacity
-                    style={{
-                      paddingHorizontal: 12,
-                      paddingVertical: 6,
-                      borderRadius: 16,
-                      backgroundColor: notificationData.email === 'all' ? '#8b5cf6' : 'rgba(139, 92, 246, 0.1)',
-                      marginRight: 8,
-                      borderWidth: 1,
-                      borderColor: '#8b5cf6'
-                    }}
-                    onPress={() => setNotificationData({...notificationData, email: 'all'})}
-                  >
-                    <Text style={{ color: notificationData.email === 'all' ? 'white' : '#8b5cf6', fontSize: 12, fontWeight: '600' }}>+ Broadcast to All</Text>
-                  </TouchableOpacity>
+              
+              <View style={styles.fsFormGroup}>
+                <Text style={[styles.fsLabel, { color: colors.subText }]}>Message</Text>
+                <View style={[styles.fsInputContainer, { backgroundColor: colors.inputBg, borderColor: colors.border, alignItems: 'flex-start', paddingTop: 14 }]}>
+                  <Feather name="message-square" size={18} color="#a78bfa" style={styles.fsInputIcon} />
+                  <TextInput style={[styles.fsInput, { color: colors.text, height: 80, textAlignVertical: 'top' }]} value={notificationData.message} onChangeText={(val) => setNotificationData({...notificationData, message: val})} multiline placeholder="Type your message here..." placeholderTextColor={colors.subText} />
+                </View>
+              </View>
 
-                  {classGroupsList.map(cg => {
-                    const targetVal = `class:${cg}`;
-                    const isSelected = notificationData.email === targetVal;
-                    return (
-                      <TouchableOpacity
-                        key={cg}
-                        style={{
-                          paddingHorizontal: 12,
-                          paddingVertical: 6,
-                          borderRadius: 16,
-                          backgroundColor: isSelected ? '#ec4899' : 'rgba(236, 72, 153, 0.1)',
-                          marginRight: 8,
-                          borderWidth: 1,
-                          borderColor: '#ec4899'
-                        }}
-                        onPress={() => setNotificationData({...notificationData, email: targetVal})}
-                      >
-                        <Text style={{ color: isSelected ? 'white' : '#ec4899', fontSize: 12, fontWeight: '600' }}>+ Class: {cg}</Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </ScrollView>
-              </View>
-            </View>
-
-            <View style={styles.fsFormGroup}>
-              <Text style={[styles.fsLabel, { color: colors.subText }]}>Notification Title</Text>
-              <View style={[styles.fsInputContainer, { backgroundColor: colors.inputBg, borderColor: colors.border }]}>
-                <Feather name="type" size={18} color="#a78bfa" style={styles.fsInputIcon} />
-                <TextInput style={[styles.fsInput, { color: colors.text }]} value={notificationData.title} onChangeText={(val) => setNotificationData({...notificationData, title: val})} placeholder="Important Update" placeholderTextColor={colors.subText} />
-              </View>
-            </View>
-            
-            <View style={styles.fsFormGroup}>
-              <Text style={[styles.fsLabel, { color: colors.subText }]}>Message</Text>
-              <View style={[styles.fsInputContainer, { backgroundColor: colors.inputBg, borderColor: colors.border, alignItems: 'flex-start', paddingTop: 14 }]}>
-                <Feather name="message-square" size={18} color="#a78bfa" style={styles.fsInputIcon} />
-                <TextInput style={[styles.fsInput, { color: colors.text, height: 80, textAlignVertical: 'top' }]} value={notificationData.message} onChangeText={(val) => setNotificationData({...notificationData, message: val})} multiline placeholder="Type your message here..." placeholderTextColor={colors.subText} />
-              </View>
-            </View>
-
-            <TouchableOpacity style={styles.fsSaveBtn} onPress={handleSendNotification} disabled={isSendingNotif}>
-              <Text style={styles.fsSaveBtnText}>{isSendingNotif ? 'Sending...' : 'Send Notification'}</Text>
-            </TouchableOpacity>
-          </ScrollView>
+              <TouchableOpacity style={styles.fsSaveBtn} onPress={handleSendNotification} disabled={isSendingNotif}>
+                <Text style={styles.fsSaveBtnText}>{isSendingNotif ? 'Sending...' : 'Send Notification'}</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </KeyboardAvoidingView>
         </View>
       </Modal>
 
