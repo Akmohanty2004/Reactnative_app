@@ -4,7 +4,6 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator
 import { useDispatch, useSelector } from 'react-redux';
 import { Feather } from '@expo/vector-icons';
 import { getAdminExams } from '../../redux/slices/adminSlice';
-import { getClasses } from '../../redux/slices/classSlice';
 import { ListSkeleton } from '../../components/SkeletonLoader';
 import api from '../../services/api';
 
