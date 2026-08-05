@@ -24,7 +24,7 @@ const CreateExamScreen = ({ navigation }) => {
 
   const isDark = theme === 'dark';
   const colors = {
-    background: isDark ? '#0f172a' : '#f8fafc',
+    background: isDark ? '#000000' : '#f8fafc',
     card: isDark ? '#1e293b' : '#ffffff',
     border: isDark ? '#334155' : '#e2e8f0',
     text: isDark ? '#ffffff' : '#0f172a',

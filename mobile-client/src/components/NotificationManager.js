@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Platform } from 'react-native';
+import { Platform, AppState } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import Toast from 'react-native-toast-message';
 import * as Notifications from 'expo-notifications';
@@ -11,7 +11,7 @@ import api from '../services/api';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
-    shouldShowAlert: true,
+    shouldShowAlert: true, // Allow native system alerts to show up (essential for smartwatches and device notification center)
     shouldPlaySound: true,
     shouldSetBadge: true,
   }),
@@ -37,14 +37,17 @@ export default function NotificationManager() {
   const dispatch = useDispatch();
   const { unreadCount, notifications } = useSelector(state => state.notifications);
   const { isAuthenticated, user } = useSelector(state => state.auth);
+  const { currentUserId } = useSelector(state => state.chat);
   
   const unreadCountRef = useRef(unreadCount);
   const notificationsRef = useRef(notifications);
+  const currentChatRef = useRef(currentUserId);
 
   useEffect(() => {
     unreadCountRef.current = unreadCount;
     notificationsRef.current = notifications;
-  }, [unreadCount, notifications]);
+    currentChatRef.current = currentUserId;
+  }, [unreadCount, notifications, currentUserId]);
 
   // Handle local notification clicks (e.g. file downloads)
   useEffect(() => {
@@ -119,18 +122,29 @@ export default function NotificationManager() {
 
     socket.on('new_notification', (notif) => {
       if (notif) {
-        // 1. Show real phone notification in mobile drawer
-        triggerMobileNotification(
-          notif.title || 'ExamHub Notification',
-          notif.message || 'You have a new notification.',
-          notif.data || {}
-        );
-
-        // If it's a chat message, don't show the in-app notification toast
         const isChatMessage = notif.data && notif.data.messageId;
-        
-        if (!isChatMessage) {
-          // 2. Show in-app banner toast
+        const senderId = notif.data && notif.data.senderId;
+
+        if (isChatMessage) {
+          // If the message is from the person we are currently chatting with, do nothing (silent)
+          if (String(senderId) !== String(currentChatRef.current)) {
+            // Trigger native device notification for other chats
+            triggerMobileNotification(notif.title || 'New Message', notif.message, notif.data);
+            
+            // Also show in-app toast for immediate visibility
+            Toast.show({
+              type: 'info',
+              text1: notif.title,
+              text2: notif.message,
+              visibilityTime: 4000,
+              position: 'top',
+              topOffset: 50
+            });
+          }
+        } else {
+          // Standard notification - trigger native device notification
+          triggerMobileNotification(notif.title || 'ExamHub Notification', notif.message || 'You have a new notification.', notif.data);
+          
           Toast.show({
             type: 'info',
             text1: notif.title || 'ExamHub Notification',
@@ -139,15 +153,30 @@ export default function NotificationManager() {
             position: 'top',
             topOffset: 50
           });
-
-          // 3. Refresh notifications list in redux
           dispatch(getNotifications());
         }
       }
     });
 
+    const handleAppStateChange = (nextAppState) => {
+      if (nextAppState === 'active') {
+        if (!socket.connected) {
+          socket.connect();
+        }
+        socket.emit('set_status', { isOnline: true });
+      } else if (nextAppState === 'background' || nextAppState === 'inactive') {
+        if (socket.connected) {
+          socket.emit('set_status', { isOnline: false });
+        }
+      }
+    };
+
+    const appStateSubscription = AppState.addEventListener('change', handleAppStateChange);
+
     return () => {
-      socket.disconnect();
+      appStateSubscription?.remove();
+      // We intentionally do not disconnect here to allow background notifications
+      // socket.disconnect();
     };
   }, [isAuthenticated, user, dispatch]);
 

@@ -21,7 +21,7 @@ export default function StudentsListScreen({ navigation }) {
   const { theme } = useSelector((state) => state.ui || { theme: 'dark' });
   const isDarkMode = theme === 'dark';
   const colors = {
-    bg: isDarkMode ? '#0f172a' : '#f8fafc',
+    bg: isDarkMode ? '#000000' : '#f8fafc',
     text: isDarkMode ? 'white' : '#0f172a',
     subText: isDarkMode ? '#94a3b8' : '#64748b',
     card: isDarkMode ? '#1e293b' : 'white',
@@ -89,14 +89,14 @@ export default function StudentsListScreen({ navigation }) {
             <Feather name="arrow-left" size={24} color={colors.text} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>
-            Student <Text style={{ color: '#8b5cf6' }}>Directory</Text>
+            Student <Text style={{ color: '#b026ff', textShadowColor: 'rgba(176,38,255,0.4)', textShadowOffset: {width: 0, height: 0}, textShadowRadius: 6 }}>Directory</Text>
           </Text>
           <TouchableOpacity 
-            style={styles.requestsBtn}
+            style={[styles.requestsBtn, { backgroundColor: 'rgba(176,38,255,0.15)', borderColor: 'rgba(176,38,255,0.4)', borderWidth: 1 }]}
             onPress={() => navigation.navigate('Requests')}
           >
-            <Feather name="user-plus" size={18} color={colors.text} />
-            <Text style={styles.requestsBtnText}>Requests</Text>
+            <Feather name="user-plus" size={18} color="#b026ff" />
+            <Text style={[styles.requestsBtnText, { color: '#b026ff' }]}>Requests</Text>
           </TouchableOpacity>
         </View>
         <Text style={styles.headerSub}>Manage your students and view their performance</Text>
@@ -154,7 +154,7 @@ const getStyles = (colors) => ({
   },
   headerContainer: {
     paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 24) + 10 : 20,
+    paddingTop: 10,
     paddingBottom: 16,
   },
   headerTop: {

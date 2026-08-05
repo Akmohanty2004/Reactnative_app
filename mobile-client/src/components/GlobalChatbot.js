@@ -180,12 +180,12 @@ User message: "${text}"`
   if (!isAuthenticated || isExamActive) return null;
 
   const colors = {
-    bg: isDarkMode ? '#0f172a' : '#f8fafc',
-    card: isDarkMode ? '#1e293b' : '#ffffff',
-    text: isDarkMode ? '#f8fafc' : '#0f172a',
+    bg: isDarkMode ? '#000000' : '#f8fafc',
+    card: isDarkMode ? '#000000' : '#ffffff',
+    text: isDarkMode ? '#ffffff' : '#0f172a',
     subText: isDarkMode ? '#94a3b8' : '#64748b',
     primary: '#6366f1',
-    botMsgBg: isDarkMode ? '#334155' : '#e2e8f0',
+    botMsgBg: isDarkMode ? '#1e293b' : '#e2e8f0',
     userMsgBg: '#6366f1',
     border: isDarkMode ? '#334155' : '#e2e8f0',
   };
@@ -290,7 +290,7 @@ User message: "${text}"`
             {/* Input Area */}
             <View style={[styles.inputContainer, { borderTopColor: colors.border, backgroundColor: colors.card }]}>
               <TextInput
-                style={[styles.input, { backgroundColor: isDarkMode ? '#0f172a' : '#f1f5f9', color: colors.text }]}
+                style={[styles.input, { backgroundColor: isDarkMode ? '#1e293b' : '#f1f5f9', color: colors.text }]}
                 placeholder="Ask me anything..."
                 placeholderTextColor={colors.subText}
                 value={inputText}
@@ -354,7 +354,9 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.5)',
   },
   chatContainer: {
-    height: height * 0.7,
+    flex: 1,
+    maxHeight: height * 0.8,
+    marginTop: height * 0.1, // Ensures a gap at the top so it doesn't cover the whole screen
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
     borderWidth: 1,

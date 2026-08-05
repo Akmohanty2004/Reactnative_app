@@ -14,8 +14,13 @@ export default function ResultsScreen({ navigation }) {
   const dispatch = useDispatch();
   const { results: rawResults } = useSelector(state => state.results);
   
-  // Sort results by submittedAt descending to show most recent first
-  const sortedResults = [...(rawResults || [])].sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt));
+  const [sortAscending, setSortAscending] = useState(false);
+  const sortedResults = [...(rawResults || [])].sort((a, b) => {
+    if (sortAscending) {
+      return new Date(a.submittedAt) - new Date(b.submittedAt);
+    }
+    return new Date(b.submittedAt) - new Date(a.submittedAt);
+  });
   const [showAllResults, setShowAllResults] = useState(false);
   const results = showAllResults ? sortedResults : sortedResults.slice(0, 5);
   const { theme } = useSelector(state => state.ui || { theme: 'dark' });
@@ -24,12 +29,12 @@ export default function ResultsScreen({ navigation }) {
 
   const isDarkMode = theme === 'dark';
   const colors = {
-    bg: isDarkMode ? '#0f172a' : '#f8fafc',
-    text: isDarkMode ? 'white' : '#0f172a',
+    bg: isDarkMode ? '#000000' : '#f8fafc',
+    text: isDarkMode ? 'white' : '#050505',
     subText: isDarkMode ? '#94a3b8' : '#64748b',
-    card: isDarkMode ? '#1e293b' : 'white',
-    border: isDarkMode ? '#334155' : '#e2e8f0',
-    primary: '#6366f1',
+    card: isDarkMode ? 'rgba(255,255,255,0.03)' : 'white',
+    border: isDarkMode ? 'rgba(255,255,255,0.08)' : '#e2e8f0',
+    primary: '#06b6d4',
     success: '#10b981',
     danger: '#ef4444',
     warning: '#f59e0b',
@@ -95,7 +100,7 @@ export default function ResultsScreen({ navigation }) {
 
   const chartData = {
     labels: perfLabels,
-    datasets: [{ data: perfScores, color: (opacity = 1) => `rgba(139,92,246,${opacity})`, strokeWidth: 2 }]
+    datasets: [{ data: perfScores, color: (opacity = 1) => `rgba(6,182,212,${opacity})`, strokeWidth: 2 }]
   };
 
   const chartConfig = {
@@ -103,7 +108,7 @@ export default function ResultsScreen({ navigation }) {
     backgroundGradientFromOpacity: 0,
     backgroundGradientTo: colors.card,
     backgroundGradientToOpacity: 0,
-    color: (opacity = 1) => `rgba(139,92,246,${opacity})`,
+    color: (opacity = 1) => `rgba(6,182,212,${opacity})`,
     labelColor: () => colors.subText,
     strokeWidth: 2,
     barPercentage: 0.5,
@@ -127,7 +132,7 @@ export default function ResultsScreen({ navigation }) {
             <Feather name="arrow-left" size={24} color={colors.text} />
           </BouncyTouchable>
           <View style={{ flex: 1 }}>
-            <Text style={[styles.headerTitle, { color: colors.text }]}>My <Text style={{color: '#8b5cf6'}}>Results</Text></Text>
+            <Text style={[styles.headerTitle, { color: colors.text }]}>My <Text style={{color: '#6366f1'}}>Results</Text></Text>
             <Text style={[styles.headerSubtitle, { color: colors.subText }]} numberOfLines={2}>Track your performance and progress</Text>
           </View>
           <BouncyTouchable style={[styles.iconBtn, { borderColor: isDarkMode ? 'rgba(255,255,255,0.1)' : colors.border }]} activeScale={0.8}>
@@ -177,14 +182,14 @@ export default function ResultsScreen({ navigation }) {
           {/* Average Card */}
           <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
-              <View style={[styles.statIconWrapper, { backgroundColor: 'rgba(139,92,246,0.1)' }]}>
-                <Feather name="pie-chart" size={18} color="#8b5cf6" />
+              <View style={[styles.statIconWrapper, { backgroundColor: 'rgba(6,182,212,0.1)' }]}>
+                <Feather name="pie-chart" size={18} color="#6366f1" />
               </View>
               <Text style={[styles.statLabel, { color: colors.subText }]}>Average Score</Text>
             </View>
             <Text style={[styles.statValue, { color: colors.text }]}>{stats.average}%</Text>
             <Text style={[styles.statSubline, { color: colors.subText }]}>Overall Average</Text>
-            {renderSparkline('#8b5cf6')}
+            {renderSparkline('#6366f1')}
           </View>
         </View>
 
@@ -209,7 +214,7 @@ export default function ResultsScreen({ navigation }) {
           ) : (
             <View style={styles.emptyOverviewBox}>
               <View style={styles.illustrationWrapper}>
-                 <Feather name="bar-chart-2" size={60} color="#8b5cf6" />
+                 <Feather name="bar-chart-2" size={60} color="#6366f1" />
                  <View style={styles.illustrationLines}>
                    <View style={styles.illLine1} />
                    <View style={styles.illLine2} />
@@ -222,9 +227,14 @@ export default function ResultsScreen({ navigation }) {
           )}
         </View>
 
-      <View style={[styles.sectionContainer, { backgroundColor: colors.card, borderColor: colors.border, marginTop: 15 }]}>
-        <View style={styles.sectionHeaderRow}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Recent Exams</Text>
+        <View style={[styles.sectionContainer, { backgroundColor: colors.card, borderColor: colors.border, marginTop: 15 }]}>
+          <View style={styles.sectionHeaderRow}>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Text style={[styles.sectionTitle, { color: colors.text, marginRight: 10 }]}>Recent Exams</Text>
+              <TouchableOpacity onPress={() => setSortAscending(!sortAscending)} style={{ padding: 4, backgroundColor: 'rgba(6,182,212,0.1)', borderRadius: 6 }}>
+                <Feather name={sortAscending ? "arrow-up" : "arrow-down"} size={16} color="#6366f1" />
+              </TouchableOpacity>
+            </View>
           {sortedResults.length > 5 && (
             <BouncyTouchable onPress={() => setShowAllResults(!showAllResults)} activeScale={0.9}>
               <Text style={styles.viewAllText}>
@@ -237,7 +247,7 @@ export default function ResultsScreen({ navigation }) {
         {results?.map((result) => (
           <BouncyTouchable 
             key={result._id} 
-            style={[styles.resultCard, { backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc', borderColor: colors.border }]}
+            style={[styles.resultCard, { backgroundColor: isDarkMode ? isDarkMode ? '#000000' : '#f8fafc' : '#f8fafc', borderColor: colors.border }]}
             onPress={() => setSelectedResult(result)}
             activeScale={0.97}
           >
@@ -289,7 +299,7 @@ export default function ResultsScreen({ navigation }) {
         {(!results || results.length === 0) && (
           <View style={styles.emptyListContainer}>
             <View style={styles.folderIllustration}>
-              <Feather name="folder" size={64} color="#8b5cf6" style={{ opacity: 0.8 }} />
+              <Feather name="folder" size={64} color="#6366f1" style={{ opacity: 0.8 }} />
               <View style={styles.folderDoc}>
                 <Feather name="file-text" size={32} color="#a78bfa" />
               </View>
@@ -302,10 +312,10 @@ export default function ResultsScreen({ navigation }) {
     </Animated.ScrollView>
 
     {/* Summary Modal */}
-    {selectedResult && (
-      <Modal visible={true} transparent animationType="slide">
+    <Modal visible={!!selectedResult} transparent animationType="slide">
+      {selectedResult && (
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'center', alignItems: 'center' }}>
-          <View style={{ width: '90%', height: '80%', backgroundColor: '#1e293b', borderRadius: 16, overflow: 'hidden' }}>
+          <View style={{ width: '90%', height: '80%', backgroundColor: isDarkMode ? 'rgba(255,255,255,0.03)' : 'white', borderRadius: 16, overflow: 'hidden' }}>
             {!selectedResult.isPublished ? (
               <View style={{ flex: 1, padding: 24, justifyContent: 'space-between' }}>
                 <View style={{ alignItems: 'center', marginTop: 20 }}>
@@ -320,7 +330,7 @@ export default function ResultsScreen({ navigation }) {
                   </Text>
                 </View>
 
-                <View style={{ width: '100%', backgroundColor: '#0f172a', padding: 18, borderRadius: 14, borderWidth: 1, borderColor: '#334155' }}>
+                <View style={{ width: '100%', backgroundColor: isDarkMode ? '#000000' : '#f8fafc', padding: 18, borderRadius: 14, borderWidth: 1, borderColor: isDarkMode ? 'rgba(255,255,255,0.08)' : '#e2e8f0' }}>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 }}>
                     <Text style={{ color: '#94a3b8', fontSize: 13 }}>Subject</Text>
                     <Text style={{ color: 'white', fontSize: 13, fontWeight: '600' }}>{selectedResult.examId?.subject || 'N/A'}</Text>
@@ -344,7 +354,7 @@ export default function ResultsScreen({ navigation }) {
                 </Text>
 
                 <TouchableOpacity 
-                  style={{ backgroundColor: '#6366f1', padding: 15, borderRadius: 12, alignItems: 'center', marginTop: 10 }}
+                  style={{ backgroundColor: '#06b6d4', padding: 15, borderRadius: 12, alignItems: 'center', marginTop: 10 }}
                   onPress={() => setSelectedResult(null)}
                 >
                   <Text style={{ color: 'white', fontSize: 16, fontWeight: 'bold' }}>Close</Text>
@@ -352,7 +362,7 @@ export default function ResultsScreen({ navigation }) {
               </View>
             ) : (
               <>
-                <View style={{ padding: 20, backgroundColor: '#0f172a', alignItems: 'center', position: 'relative' }}>
+                <View style={{ padding: 20, backgroundColor: isDarkMode ? '#000000' : '#f8fafc', alignItems: 'center', position: 'relative' }}>
                   <TouchableOpacity onPress={() => setSelectedResult(null)} style={{ position: 'absolute', top: 20, right: 20 }}>
                     <Feather name="x" size={24} color="#64748b" />
                   </TouchableOpacity>
@@ -393,7 +403,7 @@ export default function ResultsScreen({ navigation }) {
                     const sAnswer = getAnswerText(ans.selectedAnswer) || 'Not Attempted';
                     
                     return (
-                      <View key={idx} style={{ marginBottom: 20, padding: 15, backgroundColor: '#0f172a', borderRadius: 12, borderWidth: 1, borderColor: ans.isCorrect ? '#10b981' : (ans.selectedAnswer !== null && ans.selectedAnswer !== undefined ? '#ef4444' : '#f59e0b') }}>
+                      <View key={idx} style={{ marginBottom: 20, padding: 15, backgroundColor: isDarkMode ? '#000000' : '#f8fafc', borderRadius: 12, borderWidth: 1, borderColor: ans.isCorrect ? '#10b981' : (ans.selectedAnswer !== null && ans.selectedAnswer !== undefined ? '#ef4444' : '#f59e0b') }}>
                         <Text style={{ color: 'white', fontSize: 15, marginBottom: 10 }}>Q{idx + 1}. {qText}</Text>
                         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 5 }}>
                           <Text style={{ color: '#94a3b8', width: 80 }}>Your Answer:</Text>
@@ -408,9 +418,9 @@ export default function ResultsScreen({ navigation }) {
                   })}
                 </ScrollView>
                 
-                <View style={{ padding: 20, borderTopWidth: 1, borderColor: '#334155' }}>
+                <View style={{ padding: 20, borderTopWidth: 1, borderColor: isDarkMode ? 'rgba(255,255,255,0.08)' : '#e2e8f0' }}>
                   <TouchableOpacity 
-                    style={{ backgroundColor: '#6366f1', padding: 15, borderRadius: 10, alignItems: 'center' }}
+                    style={{ backgroundColor: '#06b6d4', padding: 15, borderRadius: 10, alignItems: 'center' }}
                     onPress={() => setSelectedResult(null)}
                   >
                     <Text style={{ color: 'white', fontSize: 16, fontWeight: 'bold' }}>Close</Text>
@@ -420,8 +430,8 @@ export default function ResultsScreen({ navigation }) {
             )}
           </View>
         </View>
-      </Modal>
-    )}
+      )}
+    </Modal>
     </View>
   );
 }
@@ -445,18 +455,18 @@ const styles = StyleSheet.create({
   sectionContainer: { borderRadius: 20, padding: 20, borderWidth: 1 },
   sectionHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
   sectionTitle: { fontSize: 18, fontWeight: '700' },
-  viewAllText: { color: '#8b5cf6', fontSize: 13, fontWeight: '600' },
+  viewAllText: { color: '#6366f1', fontSize: 13, fontWeight: '600' },
   
   emptyOverviewBox: { alignItems: 'center', paddingVertical: 20 },
-  illustrationWrapper: { flexDirection: 'row', alignItems: 'center', marginBottom: 20, padding: 20, backgroundColor: 'rgba(139,92,246,0.05)', borderRadius: 20 },
+  illustrationWrapper: { flexDirection: 'row', alignItems: 'center', marginBottom: 20, padding: 20, backgroundColor: 'rgba(6,182,212,0.05)', borderRadius: 20 },
   illustrationLines: { marginLeft: 15 },
-  illLine1: { width: 40, height: 6, borderRadius: 3, backgroundColor: 'rgba(139,92,246,0.5)', marginBottom: 8 },
-  illLine2: { width: 60, height: 6, borderRadius: 3, backgroundColor: 'rgba(139,92,246,0.5)', marginBottom: 8 },
-  illLine3: { width: 50, height: 6, borderRadius: 3, backgroundColor: 'rgba(139,92,246,0.5)' },
+  illLine1: { width: 40, height: 6, borderRadius: 3, backgroundColor: 'rgba(6,182,212,0.5)', marginBottom: 8 },
+  illLine2: { width: 60, height: 6, borderRadius: 3, backgroundColor: 'rgba(6,182,212,0.5)', marginBottom: 8 },
+  illLine3: { width: 50, height: 6, borderRadius: 3, backgroundColor: 'rgba(6,182,212,0.5)' },
   
   emptyTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 8 },
   emptySubtitle: { fontSize: 13, textAlign: 'center', lineHeight: 20, marginBottom: 20, paddingHorizontal: 20 },
-  takeExamBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#6366f1', paddingHorizontal: 20, paddingVertical: 12, borderRadius: 12 },
+  takeExamBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#06b6d4', paddingHorizontal: 20, paddingVertical: 12, borderRadius: 12 },
   takeExamBtnText: { color: 'white', fontWeight: 'bold', marginLeft: 8 },
 
   emptyListContainer: { alignItems: 'center', paddingVertical: 30 },

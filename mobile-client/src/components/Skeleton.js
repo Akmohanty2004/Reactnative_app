@@ -1,8 +1,10 @@
 import React, { useEffect, useRef } from 'react';
-import { Animated, View, StyleSheet } from 'react-native';
+import { Animated, View, StyleSheet, useColorScheme } from 'react-native';
 
 const Skeleton = ({ width, height, style, borderRadius = 8 }) => {
   const animatedValue = useRef(new Animated.Value(0)).current;
+  const colorScheme = useColorScheme();
+  const isDarkMode = colorScheme === 'dark';
 
   useEffect(() => {
     Animated.loop(
@@ -33,7 +35,7 @@ const Skeleton = ({ width, height, style, borderRadius = 8 }) => {
           width,
           height,
           borderRadius,
-          backgroundColor: '#334155', // Slate 700 - matches dark theme
+          backgroundColor: isDarkMode ? '#334155' : '#e2e8f0', // Slate 700 for dark, Slate 200 for light
           opacity,
         },
         style,

@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Dimensions, TouchableOpacity, Image, Alert, TextInput , Platform, StatusBar} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Dimensions, TouchableOpacity, Image, Alert, TextInput, Platform, StatusBar, RefreshControl, Modal } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { useFocusEffect } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
@@ -11,6 +11,7 @@ import * as Sharing from 'expo-sharing';
 import { getAdminDashboardStats, getAdminExams } from '../../redux/slices/adminSlice';
 import { triggerMobileNotification } from '../../components/NotificationManager';
 import { CardSkeleton, ListSkeleton } from '../../components/SkeletonLoader';
+import { playRefreshSound } from '../../utils/SoundManager';
 
 const { width } = Dimensions.get('window');
 
@@ -24,9 +25,22 @@ export default function ReportsScreen({ navigation }) {
   const { stats, exams, isLoading } = useSelector(state => state.admin);
   const { theme } = useSelector(state => state.ui || { theme: 'dark' });
   const [timeRange, setTimeRange] = useState('This Month');
+  const [statusFilter, setStatusFilter] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [showAllSummary, setShowAllSummary] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  
+  // Modal states for Android limitations with Alert.alert
+  const [activeModal, setActiveModal] = useState(null); // 'time' or 'status'
+
+  const handleRefresh = async () => {
+    playRefreshSound();
+    setRefreshing(true);
+    await dispatch(getAdminDashboardStats());
+    await dispatch(getAdminExams());
+    setRefreshing(false);
+  };
 
   useFocusEffect(
     useCallback(() => {
@@ -50,11 +64,41 @@ export default function ReportsScreen({ navigation }) {
   };
   const styles = getStyles(colors);
 
-  // Extract real numbers from stats
-  const totalExams = stats?.totalExams || 0;
-  const totalAttempts = stats?.totalResults || 0;
-  const passed = stats?.totalPassed || 0;
-  const failed = stats?.totalFailed || 0;
+  // Map Real Exams and apply filters
+  const realExams = Array.isArray(exams) ? exams : [];
+  const now = new Date();
+  
+  const filteredExams = realExams.filter(e => {
+    if (searchQuery && !e.title?.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+    if (statusFilter !== 'All') {
+      const dbStatus = e.status?.toLowerCase() || '';
+      const st = dbStatus === 'published' ? 'Published' : dbStatus === 'completed' ? 'Completed' : 'Draft';
+      if (st !== statusFilter) return false;
+    }
+    if (timeRange !== 'All Time' && e.createdAt) {
+      const examDate = new Date(e.createdAt);
+      if (timeRange === 'This Week') {
+        const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        if (examDate < oneWeekAgo) return false;
+      } else if (timeRange === 'This Month') {
+        if (examDate.getMonth() !== now.getMonth() || examDate.getFullYear() !== now.getFullYear()) return false;
+      } else if (timeRange === 'This Year') {
+        if (examDate.getFullYear() !== now.getFullYear()) return false;
+      }
+    }
+    return true;
+  });
+
+  // Calculate dynamic stats from filtered data
+  const totalExams = filteredExams.length;
+  let totalAttempts = 0;
+  let passed = 0;
+  let failed = 0;
+  filteredExams.forEach(e => {
+    totalAttempts += e.totalSubmitted || 0;
+    passed += e.totalPassed || 0;
+    failed += e.totalFailed || 0;
+  });
   
   const passRate = totalAttempts > 0 ? (passed / totalAttempts) * 100 : 0;
   const failRate = totalAttempts > 0 ? (failed / totalAttempts) * 100 : 0;
@@ -84,42 +128,78 @@ export default function ReportsScreen({ navigation }) {
     decimalPlaces: 0,
   };
 
-  // Dynamically scale realistic performance curves based on actual totals
-  const attemptShape = [4, 6, 5, 8, 7, 9, 8, 10, 7, 11];
-  const attemptSum = attemptShape.reduce((a, b) => a + b, 0);
-  const attemptData = totalAttempts > 0 ? attemptShape.map(v => Math.round((v / attemptSum) * totalAttempts)) : [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-
-  const passShape = [2, 4, 3, 5, 4, 6, 5, 7, 4, 8];
-  const passSum = passShape.reduce((a, b) => a + b, 0);
-  const passData = passed > 0 ? passShape.map(v => Math.round((v / passSum) * passed)) : [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-
-  const performanceData = {
-    labels: ['1 May', '6 May', '12 May', '18 May', '24 May', '31 May'],
-    datasets: [
-      {
-        data: attemptData,
-        color: (opacity = 1) => colors.accent,
-        strokeWidth: 2
-      },
-      {
-        data: passData,
-        color: (opacity = 1) => colors.success,
-        strokeWidth: 2
-      }
-    ],
-    legend: ['Attempts', 'Passed']
+  // Calculate real performance data based on timeRange
+  const getPerformanceData = () => {
+    let labels = [];
+    let attemptData = [];
+    let passData = [];
+    
+    if (timeRange === 'This Week') {
+      labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+      attemptData = [0, 0, 0, 0, 0, 0, 0];
+      passData = [0, 0, 0, 0, 0, 0, 0];
+      
+      filteredExams.forEach(e => {
+        const d = new Date(e.createdAt);
+        const day = d.getDay() === 0 ? 6 : d.getDay() - 1; // 0=Mon, 6=Sun
+        attemptData[day] += e.totalSubmitted || 0;
+        passData[day] += e.totalPassed || 0;
+      });
+      
+    } else if (timeRange === 'This Month') {
+      labels = ['Wk 1', 'Wk 2', 'Wk 3', 'Wk 4', 'Wk 5'];
+      attemptData = [0, 0, 0, 0, 0];
+      passData = [0, 0, 0, 0, 0];
+      
+      filteredExams.forEach(e => {
+        const d = new Date(e.createdAt);
+        const week = Math.min(Math.floor((d.getDate() - 1) / 7), 4);
+        attemptData[week] += e.totalSubmitted || 0;
+        passData[week] += e.totalPassed || 0;
+      });
+    } else { 
+      labels = ['Jan', 'Mar', 'May', 'Jul', 'Sep', 'Nov'];
+      attemptData = [0, 0, 0, 0, 0, 0];
+      passData = [0, 0, 0, 0, 0, 0];
+      
+      filteredExams.forEach(e => {
+        const d = new Date(e.createdAt);
+        const bucket = Math.floor(d.getMonth() / 2); // 0-5
+        attemptData[bucket] += e.totalSubmitted || 0;
+        passData[bucket] += e.totalPassed || 0;
+      });
+    }
+    
+    return {
+      labels,
+      datasets: [
+        {
+          data: attemptData.every(v => v === 0) ? attemptData.map(() => 0.001) : attemptData, // Prevent flat 0 error
+          color: (opacity = 1) => colors.accent,
+          strokeWidth: 2
+        },
+        {
+          data: passData.every(v => v === 0) ? passData.map(() => 0.001) : passData,
+          color: (opacity = 1) => colors.success,
+          strokeWidth: 2
+        }
+      ],
+      legend: ['Attempts', 'Passed']
+    };
   };
 
-  // Map Real Exams
-  const realExams = Array.isArray(exams) ? exams : [];
-  
-  // Filter by search query
-  const filteredExams = realExams.filter(e => e.title?.toLowerCase().includes(searchQuery.toLowerCase()));
+  const performanceData = getPerformanceData();
 
   const sortedExams = [...filteredExams].sort((a, b) => {
     const rateA = a.totalSubmitted > 0 ? (a.totalPassed / a.totalSubmitted) : 0;
     const rateB = b.totalSubmitted > 0 ? (b.totalPassed / b.totalSubmitted) : 0;
-    return rateB - rateA;
+    
+    if (rateB !== rateA) return rateB - rateA; // Sort by pass rate
+    
+    // For ties (or when pass rate is 0), sort by latest first
+    const dateA = new Date(a.createdAt).getTime();
+    const dateB = new Date(b.createdAt).getTime();
+    return dateB - dateA; 
   });
 
   const topExams = sortedExams.slice(0, 5).map((exam, i) => {
@@ -138,7 +218,7 @@ export default function ReportsScreen({ navigation }) {
     };
   });
 
-  const recentExamsList = [...filteredExams].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 5);
+  const recentExamsList = [...filteredExams].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 5);
   
   const recentActivity = recentExamsList.map(exam => {
     return {
@@ -156,12 +236,11 @@ export default function ReportsScreen({ navigation }) {
   const passedStrokeDashoffset = circumference - (passRate / 100) * circumference;
   
   const handleTimeRange = () => {
-    Alert.alert('Select Time Range', '', [
-      { text: 'This Week', onPress: () => setTimeRange('This Week') },
-      { text: 'This Month', onPress: () => setTimeRange('This Month') },
-      { text: 'This Year', onPress: () => setTimeRange('This Year') },
-      { text: 'Cancel', style: 'cancel' }
-    ]);
+    setActiveModal('time');
+  };
+
+  const handleStatusFilter = () => {
+    setActiveModal('status');
   };
 
   const handleDownloadReport = async () => {
@@ -245,9 +324,9 @@ export default function ReportsScreen({ navigation }) {
           <TouchableOpacity style={styles.iconBtn} onPress={() => setIsSearching(!isSearching)}>
             <Feather name="search" size={18} color={colors.text} />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.iconBtn} onPress={() => Alert.alert('Filter', 'Filter options coming soon!')}>
-            <Feather name="filter" size={18} color={colors.text} />
-          </TouchableOpacity>
+            <TouchableOpacity style={styles.iconBtn} onPress={handleStatusFilter}>
+              <Feather name="filter" size={18} color={statusFilter !== 'All' ? colors.primary : colors.text} />
+            </TouchableOpacity>
           <TouchableOpacity style={styles.dropdownBtn} onPress={handleTimeRange}>
             <Feather name="calendar" size={14} color={colors.text} style={{ marginRight: 6 }} />
             <Text style={{ color: colors.text, fontSize: 11, marginRight: 6 }}>{timeRange}</Text>
@@ -269,9 +348,17 @@ export default function ReportsScreen({ navigation }) {
         </View>
       )}
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {isLoading ? (
-          <View style={{ paddingTop: 10 }}>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}        refreshControl={
+          <RefreshControl 
+            refreshing={refreshing} 
+            onRefresh={handleRefresh} 
+            tintColor="#8b5cf6" 
+            colors={['#8b5cf6', '#3b82f6']} 
+          />
+        }
+      >
+        {(isLoading || refreshing) ? (
+          <View style={styles.scrollContent}>
             <CardSkeleton isDarkMode={isDarkMode} count={4} />
             <ListSkeleton isDarkMode={isDarkMode} count={3} />
           </View>
@@ -459,7 +546,7 @@ export default function ReportsScreen({ navigation }) {
           <View style={[styles.card, { flex: 1 }]}>
             <View style={styles.cardHeader}>
               <Text style={styles.cardTitle}>Top Performing Exams</Text>
-              <TouchableOpacity><Text style={styles.viewAllBtn}>View All</Text></TouchableOpacity>
+              <TouchableOpacity onPress={() => navigation.navigate('AdminTabs', {screen: 'Exams'})}><Text style={styles.viewAllBtn}>View All</Text></TouchableOpacity>
             </View>
             {topExams.map((exam, i) => (
               <View key={i} style={styles.topExamRow}>
@@ -489,7 +576,7 @@ export default function ReportsScreen({ navigation }) {
           <View style={[styles.card, { flex: 1 }]}>
             <View style={styles.cardHeader}>
               <Text style={styles.cardTitle}>Recent Exam Activity</Text>
-              <TouchableOpacity><Text style={styles.viewAllBtn}>View All</Text></TouchableOpacity>
+              <TouchableOpacity onPress={() => navigation.navigate('AdminTabs', {screen: 'Exams'})}><Text style={styles.viewAllBtn}>View All</Text></TouchableOpacity>
             </View>
             {recentActivity.map((act, i) => {
               const stColor = act.status === 'Published' ? colors.success : act.status === 'Pending' ? colors.warning : colors.danger;
@@ -569,6 +656,47 @@ export default function ReportsScreen({ navigation }) {
         </>
         )}
       </ScrollView>
+      {/* Selection Modal */}
+      <Modal
+        visible={activeModal !== null}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setActiveModal(null)}
+      >
+        <TouchableOpacity 
+          style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 20 }}
+          activeOpacity={1}
+          onPress={() => setActiveModal(null)}
+        >
+          <View style={{ backgroundColor: colors.card, width: '100%', maxWidth: 300, borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: colors.border }}>
+            <View style={{ padding: 20, borderBottomWidth: 1, borderBottomColor: colors.border, alignItems: 'center' }}>
+              <Text style={{ fontSize: 18, fontWeight: '700', color: colors.text }}>
+                {activeModal === 'time' ? 'Select Time Range' : 'Filter by Status'}
+              </Text>
+            </View>
+            
+            {activeModal === 'time' && ['This Week', 'This Month', 'This Year', 'All Time'].map((opt, i) => (
+              <TouchableOpacity 
+                key={i} 
+                style={{ padding: 18, borderBottomWidth: i < 3 ? 1 : 0, borderBottomColor: colors.border, alignItems: 'center', backgroundColor: timeRange === opt ? colors.accent + '15' : 'transparent' }}
+                onPress={() => { setTimeRange(opt); setActiveModal(null); }}
+              >
+                <Text style={{ fontSize: 16, color: timeRange === opt ? colors.accent : colors.text, fontWeight: timeRange === opt ? '600' : '400' }}>{opt}</Text>
+              </TouchableOpacity>
+            ))}
+
+            {activeModal === 'status' && ['All', 'Published', 'Completed', 'Draft'].map((opt, i) => (
+              <TouchableOpacity 
+                key={i} 
+                style={{ padding: 18, borderBottomWidth: i < 3 ? 1 : 0, borderBottomColor: colors.border, alignItems: 'center', backgroundColor: statusFilter === opt ? colors.primary + '15' : 'transparent' }}
+                onPress={() => { setStatusFilter(opt); setActiveModal(null); }}
+              >
+                <Text style={{ fontSize: 16, color: statusFilter === opt ? colors.primary : colors.text, fontWeight: statusFilter === opt ? '600' : '400' }}>{opt}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 }

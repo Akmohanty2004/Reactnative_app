@@ -23,10 +23,10 @@ const SkeletonLoader = ({ style, isDarkMode }) => {
 
   const opacity = animatedValue.interpolate({
     inputRange: [0, 1],
-    outputRange: [0.3, 0.7],
+    outputRange: [0.4, 0.8],
   });
 
-  const backgroundColor = isDarkMode ? '#334155' : '#e2e8f0';
+  const backgroundColor = isDarkMode ? '#475569' : '#cbd5e1';
 
   return (
     <Animated.View style={[styles.skeleton, { backgroundColor, opacity }, style]} />
@@ -57,6 +57,28 @@ export const CardSkeleton = ({ isDarkMode, count = 4 }) => {
           <SkeletonLoader isDarkMode={isDarkMode} style={styles.cardHeader} />
           <SkeletonLoader isDarkMode={isDarkMode} style={styles.cardBody} />
           <SkeletonLoader isDarkMode={isDarkMode} style={styles.cardFooter} />
+        </View>
+      ))}
+    </View>
+  );
+};
+
+export const UserSkeleton = ({ isDarkMode, count = 5 }) => {
+  return (
+    <View style={styles.container}>
+      {Array.from({ length: count }).map((_, index) => (
+        <View key={index} style={[styles.userListItem, { backgroundColor: isDarkMode ? '#1e293b' : '#ffffff' }]}>
+          <View style={styles.userUserInfo}>
+            <SkeletonLoader isDarkMode={isDarkMode} style={styles.userAvatar} />
+            <View style={styles.userContent}>
+              <SkeletonLoader isDarkMode={isDarkMode} style={styles.userTitle} />
+              <SkeletonLoader isDarkMode={isDarkMode} style={styles.userSubtitle} />
+            </View>
+          </View>
+          <View style={styles.userMeta}>
+            <SkeletonLoader isDarkMode={isDarkMode} style={styles.userBadge} />
+            <SkeletonLoader isDarkMode={isDarkMode} style={styles.userBadge} />
+          </View>
         </View>
       ))}
     </View>
@@ -134,6 +156,54 @@ const styles = StyleSheet.create({
   cardFooter: {
     height: 12,
     width: '50%',
+  },
+  userListItem: {
+    padding: 20,
+    borderRadius: 24,
+    marginBottom: 18,
+    shadowColor: '#8b5cf6',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.1,
+    shadowRadius: 16,
+    elevation: 4,
+  },
+  userUserInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 18,
+  },
+  userAvatar: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    marginRight: 18,
+  },
+  userContent: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  userTitle: {
+    height: 18,
+    width: '60%',
+    marginBottom: 10,
+    borderRadius: 4,
+  },
+  userSubtitle: {
+    height: 14,
+    width: '80%',
+    borderRadius: 4,
+  },
+  userMeta: {
+    flexDirection: 'row',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(148,163,184,0.1)',
+    paddingTop: 16,
+    gap: 10,
+  },
+  userBadge: {
+    width: 60,
+    height: 28,
+    borderRadius: 14,
   },
 });
 

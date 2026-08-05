@@ -1,9 +1,62 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, StatusBar, Platform, Animated } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, StatusBar, Platform, Animated, SafeAreaView } from 'react-native';
 import { useSelector, useDispatch } from 'react-redux';
 import { Feather } from '@expo/vector-icons';
 import { getNotifications, markAsRead, markAllAsRead } from '../../redux/slices/notificationSlice';
 import BouncyTouchable from '../../components/BouncyTouchable';
+
+const AnimatedNotificationItem = ({ item, index, colors, isDarkMode, handleNotificationPress, pulseAnim }) => {
+  const fadeAnim = React.useRef(new Animated.Value(0)).current;
+  const slideAnim = React.useRef(new Animated.Value(30)).current;
+
+  React.useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 400,
+        delay: index * 100,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 400,
+        delay: index * 100,
+        useNativeDriver: true,
+      })
+    ]).start();
+  }, []);
+
+  return (
+    <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
+      <BouncyTouchable 
+        style={[
+          styles.notificationCard, 
+          { backgroundColor: colors.card, borderColor: colors.border },
+          !item.isRead && { borderLeftWidth: 4, borderLeftColor: colors.primary }
+        ]}
+        onPress={() => handleNotificationPress(item)}
+        activeScale={0.97}
+      >
+        <Animated.View style={[
+          styles.iconContainer, 
+          { backgroundColor: isDarkMode ? 'rgba(139,92,246,0.1)' : '#f3e8ff' },
+          !item.isRead && { transform: [{ scale: pulseAnim }] }
+        ]}>
+          <Feather 
+            name={item.type === 'exam_created' ? 'file-text' : item.type === 'exam_submitted' ? 'check-circle' : 'bell'} 
+            size={20} 
+            color={colors.primary} 
+          />
+        </Animated.View>
+        <View style={styles.notificationContent}>
+          <Text style={[styles.notificationTitle, { color: colors.text, fontWeight: item.isRead ? '500' : '700' }]}>{item.title}</Text>
+          <Text style={[styles.notificationMessage, { color: colors.subText }]}>{item.message}</Text>
+          <Text style={[styles.notificationTime, { color: colors.subText }]}>{new Date(item.createdAt).toLocaleString()}</Text>
+        </View>
+      </BouncyTouchable>
+    </Animated.View>
+  );
+};
 
 export default function NotificationsScreen({ navigation }) {
   const dispatch = useDispatch();
@@ -12,7 +65,8 @@ export default function NotificationsScreen({ navigation }) {
   
   const isDarkMode = theme === 'dark';
   const colors = {
-    bg: isDarkMode ? '#0f172a' : '#f8fafc',
+    bg: isDarkMode ? '#000000' : '#f8fafc',
+    headerBg: isDarkMode ? '#000000' : 'white',
     text: isDarkMode ? '#f8fafc' : '#0f172a',
     subText: isDarkMode ? '#94a3b8' : '#64748b',
     card: isDarkMode ? '#1e293b' : 'white',
@@ -20,17 +74,10 @@ export default function NotificationsScreen({ navigation }) {
     primary: '#8b5cf6',
   };
 
-  const [fadeAnim] = React.useState(new Animated.Value(0));
-  const [slideAnim] = React.useState(new Animated.Value(150));
   const [pulseAnim] = React.useState(new Animated.Value(1));
 
   useEffect(() => {
     dispatch(getNotifications());
-    
-    Animated.parallel([
-      Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
-      Animated.spring(slideAnim, { toValue: 0, friction: 6, tension: 40, useNativeDriver: true })
-    ]).start();
 
     Animated.loop(
       Animated.sequence([
@@ -50,45 +97,27 @@ export default function NotificationsScreen({ navigation }) {
     }
   };
 
-  const renderItem = ({ item }) => (
-    <BouncyTouchable 
-      style={[
-        styles.notificationCard, 
-        { backgroundColor: colors.card, borderColor: colors.border },
-        !item.isRead && { borderLeftWidth: 4, borderLeftColor: colors.primary }
-      ]}
-      onPress={() => handleNotificationPress(item)}
-      activeScale={0.97}
-    >
-      <Animated.View style={[
-        styles.iconContainer, 
-        { backgroundColor: isDarkMode ? 'rgba(139,92,246,0.1)' : '#f3e8ff' },
-        !item.isRead && { transform: [{ scale: pulseAnim }] }
-      ]}>
-        <Feather 
-          name={item.type === 'exam_created' ? 'file-text' : item.type === 'exam_submitted' ? 'check-circle' : 'bell'} 
-          size={20} 
-          color={colors.primary} 
-        />
-      </Animated.View>
-      <View style={styles.notificationContent}>
-        <Text style={[styles.notificationTitle, { color: colors.text, fontWeight: item.isRead ? '500' : '700' }]}>{item.title}</Text>
-        <Text style={[styles.notificationMessage, { color: colors.subText }]}>{item.message}</Text>
-        <Text style={[styles.notificationTime, { color: colors.subText }]}>{new Date(item.createdAt).toLocaleString()}</Text>
-      </View>
-    </BouncyTouchable>
+  const renderItem = ({ item, index }) => (
+    <AnimatedNotificationItem 
+      item={item} 
+      index={index} 
+      colors={colors} 
+      isDarkMode={isDarkMode} 
+      handleNotificationPress={handleNotificationPress} 
+      pulseAnim={pulseAnim} 
+    />
   );
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.bg }]}>
-      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
-      <View style={styles.header}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]}>
+      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} translucent={false} backgroundColor={colors.bg} />
+      <View style={[styles.header, { backgroundColor: colors.headerBg, borderBottomWidth: 1, borderBottomColor: colors.border }]}>
         <BouncyTouchable onPress={() => navigation.goBack()} style={[styles.backBtn, { backgroundColor: isDarkMode ? '#1e293b' : 'white', borderColor: colors.border }]} activeScale={0.8}>
           <Feather name="arrow-left" size={20} color={colors.text} />
         </BouncyTouchable>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Notifications</Text>
+        <Text style={[styles.headerTitle, { color: '#00f2fe', textShadowColor: 'rgba(0,242,254,0.4)', textShadowOffset: {width: 0, height: 0}, textShadowRadius: 6 }]}>Notifications</Text>
         <BouncyTouchable onPress={handleMarkAllRead} style={styles.markAllBtn} activeScale={0.9}>
-          <Text style={[styles.markAllText, { color: colors.primary }]}>Mark all read</Text>
+          <Text style={[styles.markAllText, { color: '#b026ff', textShadowColor: 'rgba(176,38,255,0.4)', textShadowOffset: {width: 0, height: 0}, textShadowRadius: 4 }]}>Mark all read</Text>
         </BouncyTouchable>
       </View>
 
@@ -97,7 +126,7 @@ export default function NotificationsScreen({ navigation }) {
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
       ) : (
-        <Animated.View style={{ flex: 1, opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
+        <View style={{ flex: 1 }}>
           <FlatList
             data={notifications}
             keyExtractor={item => item._id}
@@ -114,9 +143,9 @@ export default function NotificationsScreen({ navigation }) {
               </View>
             }
           />
-        </Animated.View>
+        </View>
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -127,7 +156,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 24) + 10 : 20,
+    paddingTop: 15,
     paddingBottom: 15,
   },
   backBtn: {

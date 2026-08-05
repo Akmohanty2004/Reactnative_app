@@ -5,12 +5,14 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
 import { PieChart } from 'react-native-chart-kit';
 import Svg, { Path } from 'react-native-svg';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getTeacherExams } from '../../redux/slices/examSlice';
 import { getToppers, likeTopper } from '../../redux/slices/resultSlice';
 import Skeleton from '../../components/Skeleton';
 import BouncyTouchable from '../../components/BouncyTouchable';
 import api from '../../services/api';
+import { playTeacherRefreshSound, playLikeSound } from '../../utils/SoundManager';
 
 const getImageUrl = (path) => {
   if (!path) return null;
@@ -163,6 +165,7 @@ export default function DashboardScreen() {
   );
 
   const onRefresh = useCallback(async () => {
+    playTeacherRefreshSound();
     setRefreshing(true);
     await dispatch(getTeacherExams());
     await dispatch(getToppers());
@@ -170,13 +173,14 @@ export default function DashboardScreen() {
   }, [dispatch]);
 
   const handleLike = (resultId) => {
+    playLikeSound();
     dispatch({ type: 'results/likeTopperOptimistic', payload: { resultId, userId: user._id || user.id } });
     dispatch(likeTopper(resultId));
   };
 
   const isDarkMode = theme === 'dark';
   const colors = {
-    bg: isDarkMode ? '#0f172a' : '#f8fafc',
+    bg: isDarkMode ? '#000000' : '#f8fafc',
     text: isDarkMode ? 'white' : '#0f172a',
     subText: isDarkMode ? '#94a3b8' : '#64748b',
     card: isDarkMode ? '#1e293b' : 'white',
@@ -205,15 +209,15 @@ export default function DashboardScreen() {
   // Status Distribution Pie
   const totalPie1 = published + ongoing + completed;
   const pieData1 = totalPie1 > 0 ? [
-    { name: 'Published', count: published, color: '#10b981', legendFontColor: colors.subText, legendFontSize: 12 },
-    { name: 'Ongoing', count: ongoing, color: '#f59e0b', legendFontColor: colors.subText, legendFontSize: 12 },
-    { name: 'Completed', count: completed, color: '#6366f1', legendFontColor: colors.subText, legendFontSize: 12 },
+    { name: 'Published', count: published, color: '#00f2fe', legendFontColor: colors.subText, legendFontSize: 12 },
+    { name: 'Ongoing', count: ongoing, color: '#fe0979', legendFontColor: colors.subText, legendFontSize: 12 },
+    { name: 'Completed', count: completed, color: '#7b2ff7', legendFontColor: colors.subText, legendFontSize: 12 },
   ] : [];
 
   // Pass/Fail Pie
   const pieData2 = totalPie2 > 0 ? [
-    { name: 'Passed', count: passed, color: '#10b981', legendFontColor: colors.subText, legendFontSize: 12 },
-    { name: 'Failed', count: failed, color: '#ef4444', legendFontColor: colors.subText, legendFontSize: 12 },
+    { name: 'Passed', count: passed, color: '#00ff87', legendFontColor: colors.subText, legendFontSize: 12 },
+    { name: 'Failed', count: failed, color: '#ff0f7b', legendFontColor: colors.subText, legendFontSize: 12 },
   ] : [];
 
   return (
@@ -279,92 +283,191 @@ export default function DashboardScreen() {
 
         {/* Welcome Banner */}
         <View style={styles.bannerContainer}>
-          <View style={[styles.banner, { backgroundColor: isDarkMode ? '#1e1145' : '#4f46e5', borderColor: isDarkMode ? '#2e1065' : '#6366f1' }]}>
+          <LinearGradient
+            colors={isDarkMode ? ['#1a1060', '#0d1b4b'] : ['#6366f1', '#4f46e5']}
+            start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+            style={[styles.banner, { borderWidth: 0 }]}
+          >
             <View style={styles.bannerTextContainer}>
               <Text style={[styles.bannerWelcome, { color: '#e0e7ff' }]}>Welcome back,</Text>
               <Text style={[styles.bannerTitle, { color: '#ffffff' }]}>
-                {user?.name?.split(' ')[0]}! 👋✨
+                Teacher {user?.name?.split(' ')[0]}! <Animated.Text style={{ transform: [{ scale: breatheAnim }] }}>🎓</Animated.Text>
               </Text>
               <Text style={[styles.bannerSubtitle, { color: '#c4b5fd' }]}>Here's your teaching statistics and{'\n'}exam performance at a glance.</Text>
             </View>
-            {/* Decorative icons on the banner */}
-            <View style={styles.bannerDecorations}>
-              <Animated.View style={[styles.bannerIconCircle, { backgroundColor: 'rgba(139,92,246,0.3)', top: 10, right: 30, transform: [{ translateY: floatAnim }] }]}>
-                <Feather name="bar-chart-2" size={18} color="#c4b5fd" />
-              </Animated.View>
-              <Animated.View style={[styles.bannerIconCircle, { backgroundColor: 'rgba(99,102,241,0.4)', top: 60, right: 5, transform: [{ translateY: floatAnim }] }]}>
-                <Feather name="pie-chart" size={22} color="#a5b4fc" />
-              </Animated.View>
-            </View>
-          </View>
+            
+            {/* Attractive Banner Illustration */}
+            <Animated.View style={[styles.bannerIllustration, { position: 'absolute', right: -20, bottom: -20, width: 140, height: 140, opacity: 0.9, transform: [{ translateY: floatAnim }] }]}>
+              <View style={{ width: 120, height: 120, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.1)', transform: [{ rotate: '15deg' }], justifyContent: 'center', alignItems: 'center' }}>
+                <Feather name="book-open" size={54} color="rgba(255,255,255,0.8)" />
+                <Animated.View style={{ position: 'absolute', top: -10, right: -10, backgroundColor: 'rgba(236,72,153,0.8)', width: 30, height: 30, borderRadius: 15, justifyContent: 'center', alignItems: 'center', transform: [{ scale: pulseAnim }] }}>
+                  <Feather name="star" size={14} color="#fff" />
+                </Animated.View>
+              </View>
+            </Animated.View>
+          </LinearGradient>
         </View>
 
         {/* Stat Cards Row - Scrollable */}
-        {examsLoading ? (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 2, gap: 12, marginBottom: 20 }}>
-             <Skeleton width={130} height={130} borderRadius={20} />
-             <Skeleton width={130} height={130} borderRadius={20} />
-             <Skeleton width={130} height={130} borderRadius={20} />
-          </ScrollView>
+        {(examsLoading || refreshing) ? (
+          <View style={{ paddingHorizontal: 0 }}>
+            {/* Stat Cards Skeleton */}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -15 }} contentContainerStyle={{ paddingHorizontal: 15, gap: 12, marginBottom: 20 }}>
+               {[1, 2, 3, 4].map((w, i) => (
+                 <View key={i} style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border, width: 130, height: 85, alignItems: 'center' }]}>
+                   <View style={[styles.statCardTopStripe, { backgroundColor: colors.border }]} />
+                   <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%' }}>
+                     <Skeleton width={32} height={32} borderRadius={10} style={{ marginBottom: 4 }} />
+                     <Skeleton width={30} height={20} borderRadius={6} style={{ marginBottom: 4 }} />
+                   </View>
+                   <Skeleton width={60} height={10} borderRadius={5} />
+                 </View>
+               ))}
+            </ScrollView>
+            
+            <View style={{ paddingHorizontal: 20 }}>
+              {/* Pie Chart Skeleton 1 */}
+              <View style={[styles.sectionCard, { backgroundColor: colors.card, borderColor: colors.border, marginBottom: 20 }]}>
+                 <View style={styles.sectionHeader}>
+                   <Skeleton width={130} height={18} borderRadius={9} />
+                   <Skeleton width={70} height={26} borderRadius={13} />
+                 </View>
+                 <View style={styles.chartRow}>
+                   <View style={styles.pieChartWrapper}>
+                     <Skeleton width={180} height={180} borderRadius={90} />
+                     <View style={[styles.pieCenterLabel, { width: 100, height: 100, borderRadius: 50, backgroundColor: colors.card }]} />
+                   </View>
+                   <View style={styles.legendContainerSide}>
+                      {[1,2,3].map(i => (
+                        <View key={i} style={styles.legendItem}>
+                          <View style={styles.legendLeft}>
+                            <Skeleton width={8} height={8} borderRadius={4} style={{ marginRight: 8 }} />
+                            <Skeleton width={60} height={13} borderRadius={6} />
+                          </View>
+                          <Skeleton width={20} height={14} borderRadius={7} />
+                        </View>
+                      ))}
+                   </View>
+                 </View>
+              </View>
+
+              {/* Pie Chart Skeleton 2 */}
+              <View style={[styles.sectionCard, { backgroundColor: colors.card, borderColor: colors.border, marginBottom: 20 }]}>
+                 <View style={styles.sectionHeader}>
+                   <Skeleton width={110} height={18} borderRadius={9} />
+                   <Skeleton width={70} height={26} borderRadius={13} />
+                 </View>
+                 <View style={styles.chartRow}>
+                   <View style={styles.pieChartWrapperSmall}>
+                     <Skeleton width={140} height={140} borderRadius={70} />
+                     <View style={[styles.pieCenterLabel, { width: 80, height: 80, borderRadius: 40, backgroundColor: colors.card }]} />
+                   </View>
+                   <View style={styles.passFailLegend}>
+                     {[1,2].map(i => (
+                       <View key={i} style={[styles.passFailRow, i===1 && { borderBottomColor: colors.border }]}>
+                         <Skeleton width={50} height={15} borderRadius={7} />
+                         <Skeleton width={30} height={18} borderRadius={9} />
+                       </View>
+                     ))}
+                   </View>
+                 </View>
+              </View>
+
+              {/* Recent Activity Skeleton */}
+              <View style={[styles.sectionCard, { backgroundColor: colors.card, borderColor: colors.border, marginBottom: 20 }]}>
+                 <Skeleton width={120} height={18} borderRadius={9} style={{ marginBottom: 15 }} />
+                 {[1,2,3].map(i => (
+                   <View key={i} style={[styles.recentItem, { borderBottomColor: colors.border, borderBottomWidth: i===3 ? 0 : 1 }]}>
+                      <View style={styles.recentInfo}>
+                        <Skeleton width="60%" height={15} borderRadius={7} style={{ marginBottom: 8 }} />
+                        <Skeleton width="40%" height={12} borderRadius={6} />
+                      </View>
+                      <Skeleton width={70} height={26} borderRadius={13} />
+                   </View>
+                 ))}
+              </View>
+
+              {/* Exam Toppers Skeleton */}
+              <View style={[styles.sectionCard, { backgroundColor: colors.card, borderColor: colors.border, paddingBottom: 25 }]}>
+                 <View style={styles.sectionHeader}>
+                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                     <Skeleton width={20} height={20} borderRadius={10} style={{ marginRight: 8 }} />
+                     <View>
+                       <Skeleton width={100} height={16} borderRadius={8} style={{ marginBottom: 6 }} />
+                       <Skeleton width={140} height={12} borderRadius={6} />
+                     </View>
+                   </View>
+                   <Skeleton width={60} height={16} borderRadius={8} />
+                 </View>
+                 
+                 <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 12 }}>
+                   {[1,2].map(i => (
+                     <View key={i} style={[styles.leaderCard, { width: 250, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: colors.card, borderColor: colors.border, marginRight: 15 }]}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                          <Skeleton width={44} height={44} borderRadius={22} style={{ marginRight: 12 }} />
+                          <View style={{ flex: 1, marginRight: 10 }}>
+                            <Skeleton width="80%" height={15} borderRadius={7} style={{ marginBottom: 6 }} />
+                            <Skeleton width="60%" height={13} borderRadius={6} />
+                          </View>
+                        </View>
+                        <View style={{ alignItems: 'flex-end' }}>
+                          <Skeleton width={40} height={18} borderRadius={9} style={{ marginBottom: 6 }} />
+                          <Skeleton width={30} height={30} borderRadius={15} />
+                        </View>
+                     </View>
+                   ))}
+                 </ScrollView>
+              </View>
+            </View>
+          </View>
         ) : (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 2, gap: 12, marginBottom: 20 }}>
+          <View>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -15 }} contentContainerStyle={{ paddingHorizontal: 15, gap: 12, marginBottom: 20 }}>
           {/* Total Exams */}
-          <BouncyTouchable activeScale={0.9} style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border, width: 140 }]} onPress={() => navigation.navigate('ManageExams')}>  
+          <BouncyTouchable activeScale={0.9} style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border, width: 130, alignItems: 'center' }]} onPress={() => navigation.navigate('ManageExams')}>  
             <View style={[styles.statCardTopStripe, { backgroundColor: '#6366f1' }]} />
-            <View style={[styles.iconWrapper, { backgroundColor: 'rgba(99,102,241,0.15)' }]}>
-              <Feather name="file-text" size={22} color="#6366f1" />
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 4, width: '100%' }}>
+              <Animated.View style={[styles.iconWrapper, { backgroundColor: 'rgba(99,102,241,0.15)', transform: [{ scale: breatheAnim }] }]}>
+                <Feather name="file-text" size={16} color="#6366f1" />
+              </Animated.View>
+              <Text style={[styles.statValue, { color: colors.text }]} numberOfLines={1} adjustsFontSizeToFit>{totalExams}</Text>
             </View>
-            <Text style={[styles.statLabel, { color: colors.subText }]} numberOfLines={1}>Total Exams</Text>
-            <Text style={[styles.statValue, { color: colors.text }]} numberOfLines={1} adjustsFontSizeToFit>{totalExams}</Text>
-            <View style={styles.statSubRow}>
-              <Text style={[styles.statSub, { color: '#10b981' }]}>All time</Text>
-              <WaveLine color="#10b981" />
-            </View>
+            <Text style={[styles.statLabel, { color: colors.subText, textAlign: 'center' }]} numberOfLines={1}>Total Exams</Text>
           </BouncyTouchable>
 
-          {/* Published */}
-          <BouncyTouchable activeScale={0.9} style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border, width: 130 }]} onPress={() => navigation.navigate('ManageExams')}>  
+          <BouncyTouchable activeScale={0.9} style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border, width: 130, alignItems: 'center' }]} onPress={() => navigation.navigate('ManageExams')}>  
             <View style={[styles.statCardTopStripe, { backgroundColor: '#10b981' }]} />
-            <View style={[styles.iconWrapper, { backgroundColor: 'rgba(16, 185, 129, 0.15)' }]}>
-              <Feather name="check-circle" size={22} color="#10b981" />
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 4, width: '100%' }}>
+              <Animated.View style={[styles.iconWrapper, { backgroundColor: 'rgba(16, 185, 129, 0.15)', transform: [{ translateY: floatAnim }] }]}>
+                <Feather name="check-circle" size={16} color="#10b981" />
+              </Animated.View>
+              <Text style={[styles.statValue, { color: colors.text }]} numberOfLines={1} adjustsFontSizeToFit>{published}</Text>
             </View>
-            <Text style={[styles.statLabel, { color: colors.subText }]} numberOfLines={1}>Published</Text>
-            <Text style={[styles.statValue, { color: colors.text }]} numberOfLines={1} adjustsFontSizeToFit>{published}</Text>
-            <View style={styles.statSubRow}>
-              <Text style={[styles.statSub, { color: '#10b981' }]}>All time</Text>
-              <WaveLine color="#10b981" />
-            </View>
+            <Text style={[styles.statLabel, { color: colors.subText, textAlign: 'center' }]} numberOfLines={1}>Published</Text>
           </BouncyTouchable>
 
-          {/* Ongoing */}
-          <BouncyTouchable activeScale={0.9} style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border, width: 130 }]} onPress={() => navigation.navigate('ManageExams')}>  
+          <BouncyTouchable activeScale={0.9} style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border, width: 130, alignItems: 'center' }]} onPress={() => navigation.navigate('ManageExams')}>  
             <View style={[styles.statCardTopStripe, { backgroundColor: '#f59e0b' }]} />
-            <View style={[styles.iconWrapper, { backgroundColor: 'rgba(245, 158, 11, 0.15)' }]}>
-              <Feather name="clock" size={22} color="#f59e0b" />
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 4, width: '100%' }}>
+              <Animated.View style={[styles.iconWrapper, { backgroundColor: 'rgba(245, 158, 11, 0.15)', transform: [{ scale: breatheAnim }] }]}>
+                <Feather name="clock" size={16} color="#f59e0b" />
+              </Animated.View>
+              <Text style={[styles.statValue, { color: colors.text }]} numberOfLines={1} adjustsFontSizeToFit>{ongoing}</Text>
             </View>
-            <Text style={[styles.statLabel, { color: colors.subText }]} numberOfLines={1}>Ongoing</Text>
-            <Text style={[styles.statValue, { color: colors.text }]} numberOfLines={1} adjustsFontSizeToFit>{ongoing}</Text>
-            <View style={styles.statSubRow}>
-              <Text style={[styles.statSub, { color: '#f59e0b' }]}>Currently</Text>
-              <WaveLine color="#f59e0b" />
-            </View>
+            <Text style={[styles.statLabel, { color: colors.subText, textAlign: 'center' }]} numberOfLines={1}>Ongoing</Text>
           </BouncyTouchable>
 
-          {/* Completed */}
-          <BouncyTouchable activeScale={0.9} style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border, width: 130 }]} onPress={() => navigation.navigate('ManageExams')}>  
+          <BouncyTouchable activeScale={0.9} style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border, width: 130, alignItems: 'center' }]} onPress={() => navigation.navigate('ManageExams')}>  
             <View style={[styles.statCardTopStripe, { backgroundColor: '#3b82f6' }]} />
-            <View style={[styles.iconWrapper, { backgroundColor: 'rgba(59, 130, 246, 0.15)' }]}>
-              <Feather name="check-square" size={22} color="#3b82f6" />
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 4, width: '100%' }}>
+              <View style={[styles.iconWrapper, { backgroundColor: 'rgba(59, 130, 246, 0.15)' }]}>
+                <Feather name="check-square" size={16} color="#3b82f6" />
+              </View>
+              <Text style={[styles.statValue, { color: colors.text }]} numberOfLines={1} adjustsFontSizeToFit>{completed}</Text>
             </View>
-            <Text style={[styles.statLabel, { color: colors.subText }]} numberOfLines={1}>Completed</Text>
-            <Text style={[styles.statValue, { color: colors.text }]} numberOfLines={1} adjustsFontSizeToFit>{completed}</Text>
-            <View style={styles.statSubRow}>
-              <Text style={[styles.statSub, { color: '#3b82f6' }]}>Finished</Text>
-              <WaveLine color="#3b82f6" />
-            </View>
+            <Text style={[styles.statLabel, { color: colors.subText, textAlign: 'center' }]} numberOfLines={1}>Completed</Text>
           </BouncyTouchable>
         </ScrollView>
-        )}
 
         {/* Status Distribution Card */}
         <View style={[styles.sectionCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -385,40 +488,40 @@ export default function DashboardScreen() {
               <Animated.View style={{ transform: [{ rotate: spin }] }}>
                 <PieChart
                   data={pieData1}
-                  width={180}
-                  height={180}
+                  width={140}
+                  height={140}
                   chartConfig={chartConfig}
                   accessor={"count"}
                   backgroundColor={"transparent"}
-                  paddingLeft={"42"}
+                  paddingLeft={"32"}
                   hasLegend={false}
                   absolute
                 />
               </Animated.View>
-              <Animated.View style={[styles.pieCenterLabel, { width: 100, height: 100, borderRadius: 50, backgroundColor: colors.card, transform: [{ scale: breatheAnim }] }]}>
-                <Text style={[styles.pieCenterTitle, { color: colors.subText }]}>Total</Text>
-                <Text style={[styles.pieCenterValue, { color: colors.text }]}>{totalPie1}</Text>
+              <Animated.View style={[styles.pieCenterLabel, { width: 80, height: 80, borderRadius: 40, backgroundColor: colors.card, transform: [{ scale: breatheAnim }] }]}>
+                <Text style={[styles.pieCenterTitle, { color: colors.subText, fontSize: 11 }]}>Total</Text>
+                <Text style={[styles.pieCenterValue, { color: colors.text, fontSize: 18 }]}>{totalPie1}</Text>
               </Animated.View>
             </View>
 
             <View style={styles.legendContainerSide}>
               <View style={styles.legendItem}>
                 <View style={styles.legendLeft}>
-                  <View style={[styles.legendDot, { backgroundColor: '#10b981' }]} />
+                  <View style={[styles.legendDot, { backgroundColor: '#00f2fe', shadowColor: '#00f2fe', shadowOpacity: 0.8, shadowRadius: 5, elevation: 3 }]} />
                   <Text style={[styles.legendText, { color: colors.subText }]}>Published</Text>
                 </View>
                 <Text style={[styles.legendCount, { color: colors.subText }]}>{published}</Text>
               </View>
               <View style={styles.legendItem}>
                 <View style={styles.legendLeft}>
-                  <View style={[styles.legendDot, { backgroundColor: '#f59e0b' }]} />
+                  <View style={[styles.legendDot, { backgroundColor: '#fe0979', shadowColor: '#fe0979', shadowOpacity: 0.8, shadowRadius: 5, elevation: 3 }]} />
                   <Text style={[styles.legendText, { color: colors.subText }]}>Ongoing</Text>
                 </View>
                 <Text style={[styles.legendCount, { color: colors.subText }]}>{ongoing}</Text>
               </View>
               <View style={styles.legendItem}>
                 <View style={styles.legendLeft}>
-                  <View style={[styles.legendDot, { backgroundColor: '#6366f1' }]} />
+                  <View style={[styles.legendDot, { backgroundColor: '#7b2ff7', shadowColor: '#7b2ff7', shadowOpacity: 0.8, shadowRadius: 5, elevation: 3 }]} />
                   <Text style={[styles.legendText, { color: colors.subText }]}>Completed</Text>
                 </View>
                 <Text style={[styles.legendCount, { color: colors.subText }]}>{completed}</Text>
@@ -445,19 +548,19 @@ export default function DashboardScreen() {
               <Animated.View style={{ transform: [{ rotate: spin }] }}>
                 <PieChart
                   data={pieData2}
-                  width={140}
-                  height={140}
+                  width={130}
+                  height={130}
                   chartConfig={chartConfig}
                   accessor={"count"}
                   backgroundColor={"transparent"}
-                  paddingLeft={"32"}
+                  paddingLeft={"30"}
                   hasLegend={false}
                   absolute
                 />
               </Animated.View>
-              <Animated.View style={[styles.pieCenterLabel, { width: 80, height: 80, borderRadius: 40, backgroundColor: colors.card, transform: [{ scale: breatheAnim }] }]}>
-                <Text style={[styles.pieCenterPassRate, { color: colors.text }]}>{passRate}%</Text>
-                <Text style={[styles.pieCenterPassLabel, { color: colors.subText }]}>Pass Rate</Text>
+              <Animated.View style={[styles.pieCenterLabel, { width: 70, height: 70, borderRadius: 35, backgroundColor: colors.card, transform: [{ scale: breatheAnim }] }]}>
+                <Text style={[styles.pieCenterPassRate, { color: colors.text, fontSize: 16 }]}>{passRate}%</Text>
+                <Text style={[styles.pieCenterPassLabel, { color: colors.subText, fontSize: 10 }]}>Pass Rate</Text>
               </Animated.View>
               {/* Star badge at bottom of chart */}
               <Animated.View style={[styles.starBadge, { transform: [{ scale: breatheAnim }] }]}>
@@ -467,11 +570,11 @@ export default function DashboardScreen() {
 
             <View style={styles.passFailLegend}>
               <View style={[styles.passFailRow, { borderBottomColor: colors.border }]}>
-                <Text style={{ color: '#10b981', fontSize: 15, fontWeight: '600' }}>Passed</Text>
+                <Text style={{ color: '#00ff87', fontSize: 15, fontWeight: '700', textShadowColor: 'rgba(0,255,135,0.4)', textShadowOffset: {width: 0, height: 0}, textShadowRadius: 6 }}>Passed</Text>
                 <Text style={{ color: colors.text, fontSize: 18, fontWeight: '700' }}>{passed}</Text>
               </View>
               <View style={styles.passFailRow}>
-                <Text style={{ color: '#ef4444', fontSize: 15, fontWeight: '600' }}>Failed</Text>
+                <Text style={{ color: '#ff0f7b', fontSize: 15, fontWeight: '700', textShadowColor: 'rgba(255,15,123,0.4)', textShadowOffset: {width: 0, height: 0}, textShadowRadius: 6 }}>Failed</Text>
                 <Text style={{ color: colors.text, fontSize: 18, fontWeight: '700' }}>{failed}</Text>
               </View>
             </View>
@@ -490,14 +593,14 @@ export default function DashboardScreen() {
               <View style={[styles.badge, 
                 exam.status === 'published' ? styles.badgeInfo :
                 exam.status === 'ongoing' ? styles.badgeWarn :
-                exam.status === 'completed' && !exam.isResultPublished ? { backgroundColor: '#f59e0b20' } :
+                exam.status === 'completed' && !exam.isResultPublished ? { backgroundColor: 'rgba(255,184,0,0.15)', borderColor: 'rgba(255,184,0,0.4)', borderWidth: 1 } :
                 exam.status === 'completed' ? styles.badgeSuccess :
                 styles.badgeSec
               ]}>
                 <Text style={[styles.badgeText, 
                   exam.status === 'published' ? styles.badgeTextInfo :
                   exam.status === 'ongoing' ? styles.badgeTextWarn :
-                  exam.status === 'completed' && !exam.isResultPublished ? { color: '#f59e0b' } :
+                  exam.status === 'completed' && !exam.isResultPublished ? { color: '#ffb800', fontSize: 11, fontWeight: '800', textShadowColor: 'rgba(255,184,0,0.4)', textShadowOffset: {width: 0, height: 0}, textShadowRadius: 4 } :
                   exam.status === 'completed' ? styles.badgeTextSuccess :
                   styles.badgeTextSec
                 ]}>{exam.status === 'completed' && !exam.isResultPublished ? 'Publish Pending' : exam.status}</Text>
@@ -556,14 +659,14 @@ export default function DashboardScreen() {
                       activeScale={0.85}
                     >
                       {item.student?.profileImage ? (
-                        <Image source={{ uri: getImageUrl(item.student.profileImage) }} style={{ width: 44, height: 44, borderRadius: 22, borderWidth: 2, borderColor: idx === 0 ? '#fbbf24' : idx === 1 ? '#94a3b8' : idx === 2 ? '#b45309' : '#334155' }} />
+                        <Image source={{ uri: getImageUrl(item.student.profileImage) }} style={{ width: 44, height: 44, borderRadius: 22, borderWidth: 2, borderColor: idx === 0 ? '#ffdf00' : idx === 1 ? '#e2e8f0' : idx === 2 ? '#ff7e67' : '#334155' }} />
                       ) : (
-                        <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: idx === 0 ? '#fbbf24' : idx === 1 ? '#94a3b8' : idx === 2 ? '#b45309' : '#334155', justifyContent: 'center', alignItems: 'center' }}>
-                          <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold' }}>{(item.student?.name || 'U').charAt(0).toUpperCase()}</Text>
+                        <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: idx === 0 ? '#ffdf00' : idx === 1 ? '#e2e8f0' : idx === 2 ? '#ff7e67' : '#334155', justifyContent: 'center', alignItems: 'center', shadowColor: idx === 0 ? '#ffdf00' : idx === 1 ? '#e2e8f0' : idx === 2 ? '#ff7e67' : 'transparent', shadowOpacity: 0.6, shadowRadius: 6, elevation: 4 }}>
+                          <Text style={{ color: idx > 2 ? '#fff' : '#0f172a', fontSize: 18, fontWeight: 'bold' }}>{(item.student?.name || 'U').charAt(0).toUpperCase()}</Text>
                         </View>
                       )}
-                      <View style={{ position: 'absolute', bottom: -2, right: -2, backgroundColor: idx === 0 ? '#fbbf24' : idx === 1 ? '#94a3b8' : idx === 2 ? '#b45309' : '#334155', width: 20, height: 20, borderRadius: 10, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#0f172a' }}>
-                        <Text style={{ color: '#fff', fontSize: 10, fontWeight: '900' }}>{idx + 1}</Text>
+                      <View style={{ position: 'absolute', bottom: -2, right: -2, backgroundColor: idx === 0 ? '#ffdf00' : idx === 1 ? '#e2e8f0' : idx === 2 ? '#ff7e67' : '#334155', width: 20, height: 20, borderRadius: 10, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#0f172a', shadowColor: idx === 0 ? '#ffdf00' : idx === 1 ? '#e2e8f0' : idx === 2 ? '#ff7e67' : 'transparent', shadowOpacity: 0.8, shadowRadius: 4, elevation: 3 }}>
+                        <Text style={{ color: idx > 2 ? '#fff' : '#0f172a', fontSize: 10, fontWeight: '900' }}>{idx + 1}</Text>
                       </View>
                     </BouncyTouchable>
                     <View style={{ flex: 1, marginRight: 10 }}>
@@ -591,6 +694,8 @@ export default function DashboardScreen() {
             </View>
           )}
         </View>
+        </View>
+        )}
 
       </Animated.ScrollView>
 
@@ -692,10 +797,10 @@ export default function DashboardScreen() {
       </Modal>
 
       {/* ── Topper Student Profile Modal ── */}
-      {selectedTopper && (
-        <Modal visible={true} transparent animationType="fade" onRequestClose={() => setSelectedTopper(null)}>
+      <Modal visible={!!selectedTopper} transparent animationType="fade" onRequestClose={() => setSelectedTopper(null)}>
+        {selectedTopper && (
           <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-            <Animated.View style={{ transform: [{ scale: modalZoomAnim }], width: '90%', backgroundColor: colors.card, borderRadius: 20, overflow: 'hidden', borderWidth: 1, borderColor: colors.border, padding: 24, alignItems: 'center', position: 'relative' }}>
+            <View style={{ width: '90%', backgroundColor: colors.card, borderRadius: 20, overflow: 'hidden', borderWidth: 1, borderColor: colors.border, padding: 24, alignItems: 'center', position: 'relative' }}>
               <TouchableOpacity style={{ position: 'absolute', top: 16, right: 16, zIndex: 10 }} onPress={() => setSelectedTopper(null)}>
                 <Feather name="x" size={24} color={colors.subText} />
               </TouchableOpacity>
@@ -746,10 +851,10 @@ export default function DashboardScreen() {
               >
                 <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700' }}>Close Profile</Text>
               </TouchableOpacity>
-            </Animated.View>
+            </View>
           </View>
-        </Modal>
-      )}
+        )}
+      </Modal>
 
     </View>
   );
@@ -792,13 +897,11 @@ const styles = StyleSheet.create({
 
   // Stat Cards
   statsRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20, gap: 10 },
-  statCard: { padding: 14, borderRadius: 20, borderWidth: 1, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 10, elevation: 4, overflow: 'hidden' },
-  statCardTopStripe: { position: 'absolute', top: 0, left: 0, right: 0, height: 4, borderTopLeftRadius: 20, borderTopRightRadius: 20 },
-  iconWrapper: { width: 42, height: 42, borderRadius: 14, justifyContent: 'center', alignItems: 'center', marginBottom: 10 },
-  statLabel: { fontSize: 12, marginBottom: 2, fontWeight: '500' },
-  statValue: { fontSize: 22, fontWeight: '800' },
-  statSubRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 },
-  statSub: { fontSize: 11, fontWeight: '500' },
+  statCard: { padding: 12, borderRadius: 14, borderWidth: 1, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 10, elevation: 4, overflow: 'hidden', justifyContent: 'center' },
+  statCardTopStripe: { position: 'absolute', top: 0, left: 0, right: 0, height: 4, borderTopLeftRadius: 14, borderTopRightRadius: 14 },
+  iconWrapper: { width: 32, height: 32, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
+  statLabel: { fontSize: 12, fontWeight: '600' },
+  statValue: { fontSize: 24, fontWeight: '800' },
 
   // Section Card
   sectionCard: { borderRadius: 16, padding: 18, marginBottom: 18, borderWidth: 1, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 3 },
@@ -809,8 +912,8 @@ const styles = StyleSheet.create({
 
   // Chart layout
   chartRow: { flexDirection: 'row', alignItems: 'center' },
-  pieChartWrapper: { width: 180, height: 180, alignItems: 'center', justifyContent: 'center' },
-  pieChartWrapperSmall: { width: 140, height: 140, alignItems: 'center', justifyContent: 'center', position: 'relative' },
+  pieChartWrapper: { width: 140, height: 140, alignItems: 'center', justifyContent: 'center' },
+  pieChartWrapperSmall: { width: 130, height: 130, alignItems: 'center', justifyContent: 'center', position: 'relative' },
   pieCenterLabel: { position: 'absolute', alignItems: 'center', justifyContent: 'center' },
   pieCenterTitle: { fontSize: 12 },
   pieCenterValue: { fontSize: 22, fontWeight: 'bold' },
@@ -848,12 +951,12 @@ const styles = StyleSheet.create({
 
   // Badges
   badge: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 },
-  badgeInfo: { backgroundColor: 'rgba(59,130,246,0.1)' },
-  badgeTextInfo: { color: '#3b82f6', fontSize: 11, fontWeight: 'bold', textTransform: 'capitalize' },
-  badgeWarn: { backgroundColor: 'rgba(245,158,11,0.1)' },
-  badgeTextWarn: { color: '#f59e0b', fontSize: 11, fontWeight: 'bold', textTransform: 'capitalize' },
-  badgeSuccess: { backgroundColor: 'rgba(16,185,129,0.1)' },
-  badgeTextSuccess: { color: '#10b981', fontSize: 11, fontWeight: 'bold', textTransform: 'capitalize' },
+  badgeInfo: { backgroundColor: 'rgba(0,242,254,0.15)', borderColor: 'rgba(0,242,254,0.4)', borderWidth: 1 },
+  badgeTextInfo: { color: '#00f2fe', fontSize: 11, fontWeight: '800', textTransform: 'capitalize', textShadowColor: 'rgba(0,242,254,0.4)', textShadowOffset: {width: 0, height: 0}, textShadowRadius: 4 },
+  badgeWarn: { backgroundColor: 'rgba(254,9,121,0.15)', borderColor: 'rgba(254,9,121,0.4)', borderWidth: 1 },
+  badgeTextWarn: { color: '#fe0979', fontSize: 11, fontWeight: '800', textTransform: 'capitalize', textShadowColor: 'rgba(254,9,121,0.4)', textShadowOffset: {width: 0, height: 0}, textShadowRadius: 4 },
+  badgeSuccess: { backgroundColor: 'rgba(0,255,135,0.15)', borderColor: 'rgba(0,255,135,0.4)', borderWidth: 1 },
+  badgeTextSuccess: { color: '#00ff87', fontSize: 11, fontWeight: '800', textTransform: 'capitalize', textShadowColor: 'rgba(0,255,135,0.4)', textShadowOffset: {width: 0, height: 0}, textShadowRadius: 4 },
   badgeSec: { backgroundColor: 'rgba(148,163,184,0.1)' },
   badgeTextSec: { color: '#94a3b8', fontSize: 11, fontWeight: 'bold', textTransform: 'capitalize' },
 
@@ -863,7 +966,7 @@ const styles = StyleSheet.create({
   rankText: { fontWeight: '800', fontSize: 13 },
   leaderName: { fontSize: 12, fontWeight: '600' },
   recentSub: { fontSize: 11 },
-  leaderScore: { color: '#10b981', fontSize: 14, fontWeight: '800' },
+  leaderScore: { color: '#00ff87', fontSize: 16, fontWeight: '900', textShadowColor: 'rgba(0,255,135,0.4)', textShadowOffset: {width:0, height:0}, textShadowRadius: 5 },
   likeBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, borderRadius: 20, borderWidth: 1 },
   likeBtnActive: { backgroundColor: 'rgba(236,72,153,0.15)', borderColor: 'rgba(236,72,153,0.4)' },
   likeText: { fontSize: 13, fontWeight: '700' },

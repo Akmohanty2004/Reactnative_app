@@ -1,5 +1,5 @@
 import React, { useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, ActivityIndicator, StatusBar, Platform } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, ActivityIndicator, StatusBar, Platform, Animated, AppState, SafeAreaView } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { useFocusEffect } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
@@ -25,6 +25,59 @@ const getImageUrl = (path) => {
   return `${baseUrl}/${normalized.replace(/^\//, '')}`;
 };
 
+const AnimatedChatItem = ({ item, index, navigation, colors, getImageUrl }) => {
+  const fadeAnim = React.useRef(new Animated.Value(0)).current;
+  const slideAnim = React.useRef(new Animated.Value(30)).current;
+
+  React.useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 400,
+        delay: index * 100, // Stagger effect
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 400,
+        delay: index * 100,
+        useNativeDriver: true,
+      })
+    ]).start();
+  }, []);
+
+  return (
+    <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
+      <BouncyTouchable
+        style={[styles.chatItem, { backgroundColor: colors.card, borderColor: colors.border }]}
+        onPress={() => navigation.navigate('ChatRoom', { user: item })}
+        activeScale={0.97}
+      >
+        <View style={styles.avatarContainer}>
+          {item.profileImage ? (
+            <Image source={{ uri: getImageUrl(item.profileImage) }} style={styles.avatar} />
+          ) : (
+            <View style={[styles.avatar, styles.avatarPlaceholder]}>
+              <Text style={styles.avatarText}>{item.name?.charAt(0).toUpperCase()}</Text>
+            </View>
+          )}
+          {item.isOnline && <View style={[styles.onlineBadge, { borderColor: colors.card }]} />}
+        </View>
+        <View style={styles.chatInfo}>
+          <Text style={[styles.chatName, { color: colors.headerText }]}>{item.name}</Text>
+          <Text style={[styles.chatRole, { color: colors.subText }]}>{item.role.charAt(0).toUpperCase() + item.role.slice(1)}</Text>
+        </View>
+        {item.unreadCount > 0 && (
+          <View style={styles.unreadBadge}>
+            <Text style={styles.unreadText}>{item.unreadCount > 99 ? '99+' : item.unreadCount}</Text>
+          </View>
+        )}
+        <Feather name="chevron-right" size={20} color={colors.subText} style={{ marginLeft: 10 }} />
+      </BouncyTouchable>
+    </Animated.View>
+  );
+};
+
 export default function ChatListScreen({ navigation }) {
   const dispatch = useDispatch();
   const insets = useSafeAreaInsets();
@@ -35,8 +88,8 @@ export default function ChatListScreen({ navigation }) {
 
   const isDarkMode = theme === 'dark';
   const colors = {
-    bg: isDarkMode ? '#0f172a' : '#f8fafc',
-    headerBg: isDarkMode ? '#1e293b' : '#ffffff',
+    bg: isDarkMode ? '#000000' : '#f8fafc',
+    headerBg: isDarkMode ? '#000000' : '#ffffff',
     headerText: isDarkMode ? '#ffffff' : '#0f172a',
     card: isDarkMode ? '#1e293b' : '#ffffff',
     border: isDarkMode ? '#334155' : '#e2e8f0',
@@ -64,46 +117,39 @@ export default function ChatListScreen({ navigation }) {
       dispatch(setContactOnlineStatus({ userId: uid, isOnline: false }));
     });
 
-    return () => newSocket.disconnect();
+    const handleAppStateChange = (nextAppState) => {
+      if (nextAppState === 'active') {
+        if (!newSocket.connected) {
+          newSocket.connect();
+        }
+        newSocket.emit('set_status', { isOnline: true });
+      } else if (nextAppState === 'background' || nextAppState === 'inactive') {
+        if (newSocket.connected) {
+          newSocket.emit('set_status', { isOnline: false });
+        }
+      }
+    };
+
+    const appStateSubscription = AppState.addEventListener('change', handleAppStateChange);
+
+    return () => {
+      appStateSubscription?.remove();
+      // newSocket.disconnect();
+    };
   }, [dispatch, user?._id]);
 
-  const renderItem = ({ item }) => (
-    <BouncyTouchable
-      style={[styles.chatItem, { backgroundColor: colors.card, borderColor: colors.border }]}
-      onPress={() => navigation.navigate('ChatRoom', { user: item })}
-      activeScale={0.97}
-    >
-      <View style={styles.avatarContainer}>
-        {item.profileImage ? (
-          <Image source={{ uri: getImageUrl(item.profileImage) }} style={styles.avatar} />
-        ) : (
-          <View style={[styles.avatar, styles.avatarPlaceholder]}>
-            <Text style={styles.avatarText}>{item.name?.charAt(0).toUpperCase()}</Text>
-          </View>
-        )}
-        {item.isOnline && <View style={styles.onlineBadge} />}
-      </View>
-      <View style={styles.chatInfo}>
-        <Text style={[styles.chatName, { color: colors.headerText }]}>{item.name}</Text>
-        <Text style={[styles.chatRole, { color: colors.subText }]}>{item.role.charAt(0).toUpperCase() + item.role.slice(1)}</Text>
-      </View>
-      {item.unreadCount > 0 && (
-        <View style={styles.unreadBadge}>
-          <Text style={styles.unreadText}>{item.unreadCount > 99 ? '99+' : item.unreadCount}</Text>
-        </View>
-      )}
-      <Feather name="chevron-right" size={20} color={colors.subText} style={{ marginLeft: 10 }} />
-    </BouncyTouchable>
+  const renderItem = ({ item, index }) => (
+    <AnimatedChatItem item={item} index={index} navigation={navigation} colors={colors} getImageUrl={getImageUrl} />
   );
 
   return (
-    <View style={[styles.safeArea, { backgroundColor: colors.bg }]}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.bg }]}>
       <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} translucent={false} backgroundColor={colors.headerBg} />
-      <View style={[styles.header, { paddingTop: Math.max((insets.top || 20) - 15, 5), backgroundColor: colors.headerBg, borderBottomColor: colors.border }]}>
+      <View style={[styles.header, { paddingTop: 15, backgroundColor: colors.headerBg, borderBottomColor: colors.border }]}>
         <BouncyTouchable style={styles.backBtn} onPress={() => navigation.goBack()} activeScale={0.8}>
           <Feather name="arrow-left" size={24} color={colors.headerText} />
         </BouncyTouchable>
-        <Text style={[styles.headerTitle, { color: colors.headerText }]}>Messages</Text>
+        <Text style={[styles.headerTitle, { color: '#00f2fe', textShadowColor: 'rgba(0,242,254,0.4)', textShadowOffset: {width: 0, height: 0}, textShadowRadius: 6 }]}>Messages</Text>
       </View>
 
       {isLoadingContacts ? (
@@ -124,7 +170,7 @@ export default function ChatListScreen({ navigation }) {
           }
         />
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 

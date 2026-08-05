@@ -1,11 +1,13 @@
 import React, { useCallback } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator , Platform, StatusBar} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Platform, StatusBar, RefreshControl, TextInput } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { Feather } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { getAdminExams } from '../../redux/slices/adminSlice';
 import { ListSkeleton } from '../../components/SkeletonLoader';
 import api from '../../services/api';
+import { playRefreshSound } from '../../utils/SoundManager';
 
 export default function ExamsScreen({ navigation }) {
   const dispatch = useDispatch();
@@ -15,6 +17,8 @@ export default function ExamsScreen({ navigation }) {
   const [classes, setClasses] = React.useState([]);
   const [selectedClass, setSelectedClass] = React.useState('All');
   const [isFetchingClasses, setIsFetchingClasses] = React.useState(false);
+  const [refreshing, setRefreshing] = React.useState(false);
+  const [searchQuery, setSearchQuery] = React.useState('');
 
   useFocusEffect(
     useCallback(() => {
@@ -22,6 +26,14 @@ export default function ExamsScreen({ navigation }) {
       fetchClasses();
     }, [dispatch])
   );
+
+  const handleRefresh = async () => {
+    playRefreshSound();
+    setRefreshing(true);
+    await dispatch(getAdminExams());
+    await fetchClasses();
+    setRefreshing(false);
+  };
 
   const fetchClasses = async () => {
     setIsFetchingClasses(true);
@@ -37,13 +49,23 @@ export default function ExamsScreen({ navigation }) {
 
   const filteredExams = React.useMemo(() => {
     if (!exams) return [];
-    if (selectedClass === 'All') return exams;
+    
     return exams.filter(exam => {
-      if (!exam.classGroup) return false;
-      const groups = exam.classGroup.split(',').map(s => s.trim());
-      return groups.includes(selectedClass);
+      // 1. Search Query filter
+      if (searchQuery && !exam.title?.toLowerCase().includes(searchQuery.toLowerCase())) {
+        return false;
+      }
+      
+      // 2. Class Group filter
+      if (selectedClass !== 'All') {
+        if (!exam.classGroup) return false;
+        const groups = exam.classGroup.split(',').map(s => s.trim());
+        if (!groups.includes(selectedClass)) return false;
+      }
+      
+      return true;
     });
-  }, [exams, selectedClass]);
+  }, [exams, selectedClass, searchQuery]);
 
   const isDarkMode = theme === 'dark';
   const colors = {
@@ -67,6 +89,23 @@ export default function ExamsScreen({ navigation }) {
           <Text style={[styles.title, { color: colors.headerTitle, marginBottom: 0 }]}>All Exams</Text>
           <Text style={[styles.subtitle, { color: colors.subText }]}>View and manage all exams on the platform</Text>
         </View>
+      </View>
+
+      {/* Search Bar */}
+      <View style={[styles.searchContainer, { backgroundColor: colors.btnBg, borderColor: colors.cardBorder }]}>
+        <Feather name="search" size={20} color={colors.subText} style={styles.searchIcon} />
+        <TextInput 
+          style={[styles.searchInput, { color: colors.text }]}
+          placeholder="Search exams by title..."
+          placeholderTextColor={colors.subText}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+        />
+        {searchQuery.length > 0 && (
+          <TouchableOpacity onPress={() => setSearchQuery('')}>
+            <Feather name="x-circle" size={18} color={colors.subText} />
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Class Filter */}
@@ -94,8 +133,19 @@ export default function ExamsScreen({ navigation }) {
         )}
       </View>
 
-      <ScrollView style={styles.listContainer} contentContainerStyle={{ paddingBottom: 30 }}>
-        {(isLoading && (!exams || exams.length === 0)) ? (
+      <ScrollView 
+        style={styles.listContainer} 
+        contentContainerStyle={{ paddingBottom: 30 }}
+        refreshControl={
+          <RefreshControl 
+            refreshing={refreshing} 
+            onRefresh={handleRefresh} 
+            tintColor="#6366f1" 
+            colors={['#6366f1', '#4f46e5']} 
+          />
+        }
+      >
+        {(isLoading || refreshing) ? (
           <ListSkeleton isDarkMode={isDarkMode} count={4} />
         ) : (
           <>
@@ -133,11 +183,17 @@ export default function ExamsScreen({ navigation }) {
             </View>
             
             <TouchableOpacity 
-              style={[styles.actionBtn, { backgroundColor: colors.btnBg }]}
               onPress={() => navigation.navigate('Results', { initialExamId: exam._id })}
             >
-              <Feather name="bar-chart-2" size={16} color={colors.btnText} style={{ marginRight: 8 }} />
-              <Text style={[styles.actionBtnText, { color: colors.btnText }]}>View Results</Text>
+              <LinearGradient
+                colors={isDarkMode ? ['#4f46e5', '#3730a3'] : ['#6366f1', '#4f46e5']}
+                style={styles.actionBtn}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              >
+                <Feather name="bar-chart-2" size={16} color="white" style={{ marginRight: 8 }} />
+                <Text style={styles.actionBtnText}>View Results</Text>
+              </LinearGradient>
             </TouchableOpacity>
           </View>
         ))}
@@ -163,11 +219,11 @@ const styles = StyleSheet.create({
   title: { fontSize: 28, fontWeight: '800', marginBottom: 4 },
   subtitle: { fontSize: 14 },
   listContainer: { paddingHorizontal: 20 },
-  examCard: { borderRadius: 20, padding: 18, marginBottom: 15, borderWidth: 1, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 3 },
-  examHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 },
+  examCard: { borderRadius: 20, padding: 18, marginBottom: 15, borderWidth: 1, shadowColor: '#6366f1', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 5 },
+  examHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 },
   titleWrapper: { flex: 1, marginRight: 15 },
-  examTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 4 },
-  creatorText: { fontSize: 12 },
+  examTitle: { fontSize: 19, fontWeight: '800', marginBottom: 6, letterSpacing: 0.2 },
+  creatorText: { fontSize: 13 },
   badge: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 },
   badgeInfo: { backgroundColor: 'rgba(59,130,246,0.1)' },
   badgeTextInfo: { color: '#3b82f6', fontSize: 11, fontWeight: 'bold', textTransform: 'capitalize' },
@@ -180,8 +236,8 @@ const styles = StyleSheet.create({
   examMeta: { marginBottom: 18, flexDirection: 'row', gap: 20 },
   metaItem: { flexDirection: 'row', alignItems: 'center' },
   metaText: { fontSize: 13, fontWeight: '500' },
-  actionBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, borderRadius: 14, alignSelf: 'flex-start' },
-  actionBtnText: { fontWeight: 'bold', fontSize: 14 },
+  actionBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 12, borderRadius: 14, alignSelf: 'flex-start', shadowColor: '#4f46e5', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 6, elevation: 4 },
+  actionBtnText: { fontWeight: 'bold', fontSize: 14, color: 'white' },
   
   emptyState: { alignItems: 'center', justifyContent: 'center', marginTop: 80, paddingHorizontal: 30 },
   emptyIconBg: { width: 80, height: 80, borderRadius: 40, alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
@@ -193,5 +249,26 @@ const styles = StyleSheet.create({
   filterPill: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: 'transparent' },
   filterPillActive: { backgroundColor: '#6366f1' },
   filterPillText: { fontSize: 13, fontWeight: '600' },
-  filterPillTextActive: { color: 'white' },
+  filterPillTextActive: {
+    color: 'white',
+    fontWeight: '600',
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 15,
+    paddingHorizontal: 15,
+    height: 48,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 15,
+  },
+  searchIcon: {
+    marginRight: 10,
+  },
+  searchInput: {
+    flex: 1,
+    height: '100%',
+    fontSize: 15,
+  },
 });

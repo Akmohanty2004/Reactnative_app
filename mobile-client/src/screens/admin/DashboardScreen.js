@@ -11,6 +11,7 @@ import { getAdminDashboardStats } from '../../redux/slices/adminSlice';
 import { getToppers, likeTopper } from '../../redux/slices/resultSlice';
 import BouncyTouchable from '../../components/BouncyTouchable';
 import api from '../../services/api';
+import { playRefreshSound } from '../../utils/SoundManager';
 
 const getImageUrl = (path) => {
   if (!path) return null;
@@ -118,6 +119,7 @@ export default function DashboardScreen({ navigation }) {
   });
 
   const handleRefresh = useCallback(async () => {
+    playRefreshSound();
     setRefreshing(true);
     await Promise.all([
       dispatch(getAdminDashboardStats()),
@@ -277,7 +279,7 @@ export default function DashboardScreen({ navigation }) {
           >
             <View style={styles.bannerTextContainer}>
               <Text style={[styles.bannerTitle, { color: '#ffffff' }]}>
-                <Text style={{ color: '#e0e7ff' }}>Welcome back,</Text>{'\n'}Admin! 👑
+                <Text style={{ color: '#e0e7ff' }}>Welcome back,</Text>{'\n'}Admin! <Animated.Text style={{ transform: [{ scale: breatheAnim }] }}>👑</Animated.Text>
               </Text>
               <Text style={[styles.bannerSubtitle, { color: '#c4b5fd' }]}>Here's what's happening{'\n'}on your platform today.</Text>
             </View>
@@ -288,13 +290,13 @@ export default function DashboardScreen({ navigation }) {
                   {/* Mini chart bars */}
                   <View style={styles.miniChartRow}>
                     {[40,65,45,80,55,70].map((h,i) => (
-                      <View key={i} style={[styles.miniBar, { height: h * 0.6, backgroundColor: i % 2 === 0 ? '#8b5cf6' : '#6366f1' }]} />
+                      <Animated.View key={i} style={[styles.miniBar, { height: h * 0.6, backgroundColor: i % 2 === 0 ? '#8b5cf6' : '#6366f1', transform: [{ scaleY: i % 2 === 0 ? breatheAnim : pulseAnim }] }]} />
                     ))}
                   </View>
                   {/* Mini pie placeholder */}
                   <View style={styles.miniPieWrapper}>
                     <View style={[styles.miniPie, { borderColor: '#8b5cf6' }]} />
-                    <View style={[styles.miniPieSlice, { borderColor: '#f59e0b' }]} />
+                    <Animated.View style={[styles.miniPieSlice, { borderColor: '#f59e0b', transform: [{ rotate: spin }] }]} />
                   </View>
                 </LinearGradient>
               </View>
@@ -312,9 +314,9 @@ export default function DashboardScreen({ navigation }) {
               activeScale={stat.route ? 0.9 : 1}
             >
               <View style={[styles.statCardTopStripe, { backgroundColor: stat.color }]} />
-              <View style={[styles.iconWrapper, { backgroundColor: stat.color + '22' }]}>
+              <Animated.View style={[styles.iconWrapper, { backgroundColor: stat.color + '22', transform: [{ scale: i % 2 === 0 ? breatheAnim : 1 }, { translateY: i % 2 !== 0 ? floatAnim : 0 }] }]}>
                 <Feather name={stat.icon} size={20} color={stat.color} />
-              </View>
+              </Animated.View>
               <Text style={[styles.statLabel, { color: colors.subText }]} numberOfLines={1}>{stat.label}</Text>
               <Text style={[styles.statValue, { color: colors.text }]} numberOfLines={1} adjustsFontSizeToFit>{stat.value}</Text>
             </BouncyTouchable>
@@ -382,9 +384,9 @@ export default function DashboardScreen({ navigation }) {
             <Text style={[styles.cardTitle, { color: colors.text }]}>Recent Activity</Text>
             {activities.map((act) => (
               <View key={act.id} style={styles.activityItem}>
-                <View style={[styles.activityIconWrapper, { backgroundColor: act.color + '22' }]}>
+                <Animated.View style={[styles.activityIconWrapper, { backgroundColor: act.color + '22', opacity: pulseAnim }]}>
                   <Feather name={act.icon} size={14} color={act.color} />
-                </View>
+                </Animated.View>
                 <View style={styles.activityInfo}>
                   <Text style={[styles.activityTitle, { color: colors.text }]} numberOfLines={1}>{act.title}</Text>
                   <Text style={[styles.activityDesc, { color: colors.subText }]} numberOfLines={1}>{act.desc}</Text>
@@ -426,16 +428,18 @@ export default function DashboardScreen({ navigation }) {
                       style={{ position: 'relative', marginRight: 12 }}
                       activeScale={0.85}
                     >
-                      {item.student?.profileImage ? (
-                        <Image source={{ uri: getImageUrl(item.student.profileImage) }} style={{ width: 44, height: 44, borderRadius: 22, borderWidth: 2, borderColor: idx === 0 ? '#fbbf24' : idx === 1 ? '#94a3b8' : idx === 2 ? '#b45309' : '#334155' }} />
-                      ) : (
-                        <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: idx === 0 ? '#fbbf24' : idx === 1 ? '#94a3b8' : idx === 2 ? '#b45309' : '#334155', justifyContent: 'center', alignItems: 'center' }}>
-                          <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold' }}>{(item.student?.name || 'U').charAt(0).toUpperCase()}</Text>
+                      <Animated.View style={{ transform: [{ scale: idx === 0 ? breatheAnim : 1 }] }}>
+                        {item.student?.profileImage ? (
+                          <Image source={{ uri: getImageUrl(item.student.profileImage) }} style={{ width: 44, height: 44, borderRadius: 22, borderWidth: 2, borderColor: idx === 0 ? '#fbbf24' : idx === 1 ? '#94a3b8' : idx === 2 ? '#b45309' : '#334155' }} />
+                        ) : (
+                          <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: idx === 0 ? '#fbbf24' : idx === 1 ? '#94a3b8' : idx === 2 ? '#b45309' : '#334155', justifyContent: 'center', alignItems: 'center' }}>
+                            <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold' }}>{(item.student?.name || 'U').charAt(0).toUpperCase()}</Text>
+                          </View>
+                        )}
+                        <View style={{ position: 'absolute', bottom: -2, right: -2, backgroundColor: idx === 0 ? '#fbbf24' : idx === 1 ? '#94a3b8' : idx === 2 ? '#b45309' : '#334155', width: 20, height: 20, borderRadius: 10, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#0f172a' }}>
+                          <Text style={{ color: '#fff', fontSize: 10, fontWeight: '900' }}>{idx + 1}</Text>
                         </View>
-                      )}
-                      <View style={{ position: 'absolute', bottom: -2, right: -2, backgroundColor: idx === 0 ? '#fbbf24' : idx === 1 ? '#94a3b8' : idx === 2 ? '#b45309' : '#334155', width: 20, height: 20, borderRadius: 10, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#0f172a' }}>
-                        <Text style={{ color: '#fff', fontSize: 10, fontWeight: '900' }}>{idx + 1}</Text>
-                      </View>
+                      </Animated.View>
                     </BouncyTouchable>
                     <View style={{ flex: 1, marginRight: 8 }}>
                       <Text style={[styles.leaderName, { color: colors.text, textAlign: 'left', marginBottom: 2 }]} numberOfLines={1}>{item.student?.name || 'Unknown'}</Text>
@@ -645,10 +649,10 @@ export default function DashboardScreen({ navigation }) {
       </Modal>
 
       {/* ── Topper Student Profile Modal ── */}
-      {selectedTopper && (
-        <Modal visible={true} transparent animationType="fade" onRequestClose={() => setSelectedTopper(null)}>
+      <Modal visible={!!selectedTopper} transparent animationType="fade" onRequestClose={() => setSelectedTopper(null)}>
+        {selectedTopper && (
           <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-            <Animated.View style={{ transform: [{ scale: modalZoomAnim }], width: '90%', backgroundColor: colors.card, borderRadius: 20, overflow: 'hidden', borderWidth: 1, borderColor: colors.border, padding: 24, alignItems: 'center', position: 'relative' }}>
+            <View style={{ width: '90%', backgroundColor: colors.card, borderRadius: 20, overflow: 'hidden', borderWidth: 1, borderColor: colors.border, padding: 24, alignItems: 'center', position: 'relative' }}>
               <TouchableOpacity style={{ position: 'absolute', top: 16, right: 16, zIndex: 10 }} onPress={() => setSelectedTopper(null)}>
                 <Feather name="x" size={24} color={colors.subText} />
               </TouchableOpacity>
@@ -699,10 +703,10 @@ export default function DashboardScreen({ navigation }) {
               >
                 <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700' }}>Close Profile</Text>
               </TouchableOpacity>
-            </Animated.View>
+            </View>
           </View>
-        </Modal>
-      )}
+        )}
+      </Modal>
 
     </View>
   );

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Image, Modal, Alert, KeyboardAvoidingView, Platform, Switch , StatusBar} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Image, Modal, Alert, KeyboardAvoidingView, Platform, Switch, StatusBar, Animated } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
@@ -30,6 +30,47 @@ export default function ProfileScreen() {
   const [notificationData, setNotificationData] = useState({ email: '', title: '', message: '' });
   const [isSendingNotif, setIsSendingNotif] = useState(false);
   const [availableClasses, setAvailableClasses] = useState([]);
+
+  // Animation states
+  const fadeAnim = React.useRef(new Animated.Value(0)).current;
+  const slideAnim = React.useRef(new Animated.Value(20)).current;
+  const pulseAnim = React.useRef(new Animated.Value(1)).current;
+  const floatAnim = React.useRef(new Animated.Value(0)).current;
+  const breatheAnim = React.useRef(new Animated.Value(1)).current;
+
+  useFocusEffect(
+    useCallback(() => {
+      Animated.parallel([
+        Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
+        Animated.spring(slideAnim, { toValue: 0, friction: 6, tension: 40, useNativeDriver: true })
+      ]).start();
+
+      Animated.loop(
+        Animated.parallel([
+          Animated.sequence([
+            Animated.timing(floatAnim, { toValue: -6, duration: 2000, useNativeDriver: true }),
+            Animated.timing(floatAnim, { toValue: 0, duration: 2000, useNativeDriver: true })
+          ]),
+          Animated.sequence([
+            Animated.timing(pulseAnim, { toValue: 0.5, duration: 1200, useNativeDriver: true }),
+            Animated.timing(pulseAnim, { toValue: 1, duration: 1200, useNativeDriver: true })
+          ]),
+          Animated.sequence([
+            Animated.timing(breatheAnim, { toValue: 1.05, duration: 1500, useNativeDriver: true }),
+            Animated.timing(breatheAnim, { toValue: 1, duration: 1500, useNativeDriver: true })
+          ])
+        ])
+      ).start();
+
+      return () => {
+        fadeAnim.setValue(0);
+        slideAnim.setValue(20);
+        floatAnim.setValue(0);
+        pulseAnim.setValue(1);
+        breatheAnim.setValue(1);
+      };
+    }, [])
+  );
 
   useEffect(() => {
     const fetchClasses = async () => {
@@ -204,7 +245,7 @@ export default function ProfileScreen() {
 
   const isDarkMode = theme === 'dark';
   const colors = {
-    bg: isDarkMode ? '#09090b' : '#f8fafc',
+    bg: isDarkMode ? '#000000' : '#f8fafc',
     text: isDarkMode ? 'white' : '#0f172a',
     subText: isDarkMode ? '#94a3b8' : '#64748b',
     card: isDarkMode ? '#13102b' : 'white',
@@ -214,8 +255,8 @@ export default function ProfileScreen() {
     iconBg: isDarkMode ? '#1e293b' : '#f1f5f9',
     iconColor: isDarkMode ? 'white' : '#334155',
     modalBg: isDarkMode ? '#1e293b' : 'white',
-    inputBg: isDarkMode ? '#0f172a' : '#f1f5f9',
-    modalOverlay: isDarkMode ? '#0B0E14' : '#f8fafc',
+    inputBg: isDarkMode ? '#000000' : '#f1f5f9',
+    modalOverlay: isDarkMode ? '#000000' : '#f8fafc',
     modalCard: isDarkMode ? '#131823' : '#ffffff',
     modalBorder: isDarkMode ? '#1e293b' : '#e2e8f0',
     modalInputBg: isDarkMode ? '#131823' : '#f1f5f9',
@@ -225,32 +266,34 @@ export default function ProfileScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <Animated.ScrollView contentContainerStyle={styles.content} style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }} showsVerticalScrollIndicator={false}>
 
         {/* Custom Header */}
         <View style={[styles.header, { backgroundColor: 'transparent', borderBottomWidth: 0, paddingHorizontal: 0, paddingBottom: 25, paddingTop: Math.max((insets.top || 20) - 15, 5), flexDirection: 'row', alignItems: 'center' }]}>
-          <TouchableOpacity onPress={() => navigation.navigate('Home')} style={{ marginRight: 18, padding: 4 }}>
-            <Feather name="arrow-left" size={24} color={colors.text} />
-          </TouchableOpacity>
           <View style={{ flex: 1, paddingRight: 10 }}>
             <Text style={[styles.headerTitle, { color: colors.text }]}>My <Text style={{color: '#8b5cf6'}}>Profile</Text></Text>
             <Text style={[styles.headerSubtitle, { color: colors.subText }]} numberOfLines={2}>Manage your teacher account and details</Text>
           </View>
         <View style={[styles.headerRight, { flexDirection: 'row' }]}>
           <TouchableOpacity style={[styles.iconBtn, { width: 42, height: 42, borderRadius: 21, justifyContent: 'center', alignItems: 'center', marginLeft: 10, borderWidth: 1, borderColor: isDarkMode ? 'rgba(255,255,255,0.1)' : colors.border, backgroundColor: 'rgba(139, 92, 246, 0.1)' }]} onPress={() => navigation.navigate('Notifications')}>
-            <Feather name="bell" size={20} color={colors.text} />
+            <Animated.View style={{ transform: [{ scale: breatheAnim }] }}>
+              <Feather name="bell" size={20} color={colors.text} />
+            </Animated.View>
             {unreadCount > 0 && <View style={styles.badgeDot} />}
           </TouchableOpacity>
           <TouchableOpacity style={[styles.iconBtn, { width: 42, height: 42, borderRadius: 21, justifyContent: 'center', alignItems: 'center', marginLeft: 10, borderWidth: 1, borderColor: isDarkMode ? 'rgba(255,255,255,0.1)' : colors.border, backgroundColor: 'rgba(139, 92, 246, 0.1)' }]} onPress={() => setSettingsModalVisible(true)}>
-            <Feather name="settings" size={20} color={colors.text} />
+            <Animated.View style={{ transform: [{ scale: breatheAnim }] }}>
+              <Feather name="settings" size={20} color={colors.text} />
+            </Animated.View>
           </TouchableOpacity>
         </View>
       </View>
 
         {/* Profile Card */}
-        <View style={[styles.profileCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <Animated.View style={[styles.profileCard, { backgroundColor: colors.card, borderColor: colors.border, transform: [{ translateY: floatAnim }] }]}>
           <View style={styles.profileTopSection}>
             <TouchableOpacity style={styles.avatarContainer} onPress={pickImage} activeOpacity={0.85}>
+              <Animated.View style={[styles.avatarGlow, { opacity: pulseAnim, transform: [{ scale: breatheAnim }] }]} />
               <View style={styles.avatarRing}>
                 {user?.profileImage ? (
                   <Image source={{ uri: getImageUrl(user.profileImage) }} style={styles.avatarImage} />
@@ -261,7 +304,7 @@ export default function ProfileScreen() {
                 )}
               </View>
               <View style={styles.onlineDot} />
-              <View style={[styles.cameraIconBadge, { backgroundColor: '#8b5cf6', borderColor: '#0f172a' }]}>
+              <View style={[styles.cameraIconBadge, { backgroundColor: '#8b5cf6', borderColor: isDarkMode ? '#000000' : '#f8fafc' }]}>
                 <Feather name="camera" size={13} color="#fff" />
               </View>
             </TouchableOpacity>
@@ -310,10 +353,10 @@ export default function ProfileScreen() {
               </Text>
             </View>
           </View>
-        </View>
+        </Animated.View>
 
         {/* Stats Row */}
-        <View style={[styles.statsCard, { backgroundColor: colors.listCard, borderColor: colors.listBorder }]}>
+        <Animated.View style={[styles.statsCard, { backgroundColor: colors.listCard, borderColor: colors.listBorder, transform: [{ translateY: floatAnim }] }]}>
           <View style={styles.statItem}>
             <View style={[styles.statIconWrapper, {backgroundColor: 'rgba(99, 102, 241, 0.15)'}]}>
               <Feather name="file-text" size={18} color="#818cf8" />
@@ -351,7 +394,7 @@ export default function ProfileScreen() {
             <Text style={[styles.statValue, { color: colors.text }]}>{activeExams}</Text>
             <Text style={[styles.statLabel, { color: colors.subText }]}>Active</Text>
           </View>
-        </View>
+        </Animated.View>
 
         {/* Menu Items */}
         <View style={[styles.listCard, { backgroundColor: colors.listCard, borderColor: colors.listBorder }]}>
@@ -442,7 +485,7 @@ export default function ProfileScreen() {
           <Feather name="log-out" size={16} color="#ef4444" />
         </TouchableOpacity>
 
-      </ScrollView>
+      </Animated.ScrollView>
 
       {/* Edit Profile Modal */}
       <Modal visible={isEditModalVisible} transparent animationType="slide">
@@ -890,25 +933,26 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0f172a' },
+  container: { flex: 1, backgroundColor: '#000000' },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: Platform.OS === 'android' ? 10 : 20, paddingBottom: 15 },
   headerLeft: { flex: 1 },
   headerTitle: { fontSize: 24, fontWeight: '800', color: 'white', marginBottom: 4 },
   headerSubtitle: { fontSize: 13, color: '#94a3b8' },
   headerRight: { flexDirection: 'row', alignItems: 'center' },
   iconBtn: { marginLeft: 15, position: 'relative' },
-  badgeDot: { position: 'absolute', top: -2, right: -2, width: 8, height: 8, borderRadius: 4, backgroundColor: '#8b5cf6', borderWidth: 1, borderColor: '#0f172a' },
+  badgeDot: { position: 'absolute', top: -2, right: -2, width: 8, height: 8, borderRadius: 4, backgroundColor: '#8b5cf6', borderWidth: 1, borderColor: '#000000' },
   
   content: { padding: 15, paddingBottom: 40 },
 
   profileCard: { borderRadius: 24, padding: 22, marginBottom: 24, borderWidth: 1, shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.25, shadowRadius: 16, elevation: 8 },
   profileTopSection: { flexDirection: 'row', alignItems: 'center' },
   avatarContainer: { width: 84, height: 84, position: 'relative' },
+  avatarGlow: { position: 'absolute', top: -6, left: -6, right: -6, bottom: -6, borderRadius: 66, borderWidth: 2, borderColor: '#8b5cf6', opacity: 0.5 },
   avatarRing: { width: 84, height: 84, borderRadius: 42, borderWidth: 3, borderColor: '#8b5cf6', padding: 3, backgroundColor: 'transparent' },
   avatarImage: { width: '100%', height: '100%', borderRadius: 42 },
   avatarPlaceholder: { width: '100%', height: '100%', borderRadius: 42, backgroundColor: '#334155', justifyContent: 'center', alignItems: 'center' },
   avatarText: { fontSize: 28, color: 'white', fontWeight: 'bold' },
-  onlineDot: { position: 'absolute', top: 4, right: 4, width: 14, height: 14, borderRadius: 7, backgroundColor: '#22c55e', borderWidth: 2, borderColor: '#0f172a' },
+  onlineDot: { position: 'absolute', top: 4, right: 4, width: 14, height: 14, borderRadius: 7, backgroundColor: '#22c55e', borderWidth: 2, borderColor: '#000000' },
   cameraIconBadge: { position: 'absolute', bottom: 0, right: 0, width: 28, height: 28, borderRadius: 14, justifyContent: 'center', alignItems: 'center', borderWidth: 2 },
 
   profileTitleArea: { flex: 1, marginLeft: 16, justifyContent: 'center' },

@@ -13,6 +13,7 @@ import { getStudentResults, getLeaderboard, getToppers, likeTopper } from '../..
 import Skeleton from '../../components/Skeleton';
 import BouncyTouchable from '../../components/BouncyTouchable';
 import api from '../../services/api';
+import { playRefreshSound, playHomeChime, playLikeSound } from '../../utils/SoundManager';
 
 const getImageUrl = (path) => {
   if (!path) return null;
@@ -35,7 +36,8 @@ const CARD_W = (SCREEN_W - 44) / 2;   // two columns with spacing
 const AnimatedLikeButton = ({ item, handleLike, styles, colors, extraStyle }) => {
   const scale = useRef(new Animated.Value(1)).current;
   
-  const onPress = () => {
+  const onPress = (e) => {
+    if (e && e.stopPropagation) e.stopPropagation();
     Animated.sequence([
       Animated.timing(scale, { toValue: 1.4, duration: 150, useNativeDriver: true }),
       Animated.timing(scale, { toValue: 1, duration: 150, useNativeDriver: true })
@@ -112,11 +114,15 @@ export default function DashboardScreen() {
 
   const isDarkMode = theme === 'dark';
   const colors = {
-    bg: isDarkMode ? '#0f172a' : '#f8fafc',
-    text: isDarkMode ? 'white' : '#0f172a',
+    bg: isDarkMode ? '#000000' : '#f8fafc',
+    text: isDarkMode ? 'white' : '#050505',
     subText: isDarkMode ? '#94a3b8' : '#64748b',
-    card: isDarkMode ? '#1e293b' : 'white',
-    border: isDarkMode ? '#334155' : '#e2e8f0',
+    card: isDarkMode ? 'rgba(255,255,255,0.03)' : 'white',
+    border: isDarkMode ? 'rgba(255,255,255,0.08)' : '#e2e8f0',
+    primary: '#06b6d4', // Cyan accent
+    success: '#10b981',
+    danger: '#ef4444',
+    warning: '#f59e0b',
   };
 
   const styles = getStyles(colors);
@@ -206,6 +212,7 @@ export default function DashboardScreen() {
   }, [exams, results]));
 
   const onRefresh = useCallback(async () => {
+    playRefreshSound();
     setRefreshing(true);
     await Promise.all([
       dispatch(getStudentExams()),
@@ -217,6 +224,7 @@ export default function DashboardScreen() {
   }, [dispatch]);
 
   const handleLike = (resultId) => {
+    playLikeSound();
     dispatch({ type: 'results/likeTopperOptimistic', payload: { resultId, userId: user._id || user.id } });
     dispatch(likeTopper(resultId));
   };
@@ -238,6 +246,9 @@ export default function DashboardScreen() {
         break;
       case 'Best Score':
         setStatModalConfig({ visible: true, title: 'Best Score Exam', filterType: 'best' });
+        break;
+      case 'Missing':
+        setStatModalConfig({ visible: true, title: 'Missing Exams', filterType: 'missing' });
         break;
       case 'Avg Score':
         setStatModalConfig({ visible: true, title: 'All Published Exams', filterType: 'all_published' });
@@ -271,6 +282,13 @@ export default function DashboardScreen() {
     if (statModalConfig.filterType === 'all_published') {
       return [...published].sort((a, b) => new Date(b.submittedAt || b.createdAt || 0) - new Date(a.submittedAt || a.createdAt || 0));
     }
+        if (statModalConfig.filterType === 'missing') {
+      return (exams || []).filter(e => {
+        const isExpired = getExamStatus(e) === 'Expired';
+        const hasTaken = results?.some(r => r.examId?._id === e._id || r.examId === e._id);
+        return isExpired && !hasTaken;
+      }).sort((a, b) => new Date(b.date || b.createdAt || 0) - new Date(a.date || a.createdAt || 0));
+    }
     return [];
   };
 
@@ -292,7 +310,7 @@ export default function DashboardScreen() {
 
   const lineData = {
     labels: perfLabels,
-    datasets: [{ data: perfScores, color: (op = 1) => `rgba(99,102,241,${op})`, strokeWidth: 2 }],
+    datasets: [{ data: perfScores, color: (op = 1) => `rgba(6,182,212,${op})`, strokeWidth: 2 }],
   };
 
   /* subject bar & pass/fail breakdown */
@@ -317,21 +335,21 @@ export default function DashboardScreen() {
 
   /* pass/fail pie */
   const pieData = stats.publishedCount > 0 ? [
-    { name: 'Passed', population: stats.passed || 0.001, color: '#10b981', legendFontColor: '#94a3b8', legendFontSize: 13 },
-    { name: 'Failed', population: stats.totalFailed || 0.001, color: '#ef4444', legendFontColor: '#94a3b8', legendFontSize: 13 },
+    { name: 'Passed', population: stats.passed || 0.001, color: '#00e676', legendFontColor: '#94a3b8', legendFontSize: 13 },
+    { name: 'Failed', population: stats.totalFailed || 0.001, color: '#ff3d00', legendFontColor: '#94a3b8', legendFontSize: 13 },
   ] : [];
 
   const chartCfg = {
-    backgroundGradientFrom: '#1e293b',
+    backgroundGradientFrom: isDarkMode ? 'rgba(255,255,255,0.03)' : 'white',
     backgroundGradientFromOpacity: 0,
-    backgroundGradientTo: '#0f172a',
+    backgroundGradientTo: isDarkMode ? '#000000' : '#f8fafc',
     backgroundGradientToOpacity: 0,
-    color: (op = 1) => `rgba(139,92,246,${op})`,
+    color: (op = 1) => `rgba(0, 242, 254, ${op})`,
     labelColor: () => '#94a3b8',
-    strokeWidth: 2,
-    barPercentage: 0.55,
-    propsForDots: { r: '4', strokeWidth: '2', stroke: '#1e293b' },
-    propsForBackgroundLines: { strokeDasharray: '4', stroke: 'rgba(255,255,255,0.05)' },
+    strokeWidth: 3,
+    barPercentage: 0.7,
+    propsForDots: { r: '5', strokeWidth: '3', stroke: colors.card },
+    propsForBackgroundLines: { strokeDasharray: '4', stroke: 'rgba(148,163,184,0.1)' },
     decimalPlaces: 1,
   };
 
@@ -346,7 +364,7 @@ export default function DashboardScreen() {
     .slice(0, 5);
 
   const statusStyle = {
-    'Completed': { bg: 'rgba(99,102,241,0.15)', color: '#818cf8' },
+    'Completed': { bg: 'rgba(6,182,212,0.15)', color: '#818cf8' },
     'Available': { bg: 'rgba(245,158,11,0.15)', color: '#f59e0b' },
     'Upcoming': { bg: 'rgba(56,189,248,0.15)', color: '#38bdf8' },
     'Expired': { bg: 'rgba(148,163,184,0.15)', color: colors.subText },
@@ -428,18 +446,18 @@ export default function DashboardScreen() {
           </View>
         </View>
 
-        {/* ── Welcome Banner ── */}
-        <View style={[styles.banner, { backgroundColor: isDarkMode ? '#1e1145' : '#4f46e5', borderColor: isDarkMode ? '#2e1065' : '#6366f1' }]}>
+        {/* 🌟 Welcome Banner 🌟 */}
+        <View style={styles.banner}>
           <View style={{ flex: 1 }}>
-            <Text style={[styles.bannerWelcome, { color: '#e0e7ff' }]}>Welcome back,</Text>
-            <Text style={[styles.bannerName, { color: '#ffffff' }]}>{user?.name?.split(' ')[0]}! 👋</Text>
-            <Text style={[styles.bannerSub, { color: '#c4b5fd' }]}>Here's your exam performance summary.</Text>
+            <Text style={[styles.bannerWelcome, { color: isDarkMode ? '#e0e7ff' : '#4f46e5' }]}>Welcome back,</Text>
+            <Text style={[styles.bannerName]}>{user?.name?.split(' ')[0]}! 👋</Text>
+            <Text style={[styles.bannerSub]}>Here's your exam performance summary.</Text>
           </View>
           <Animated.View style={[styles.bannerGraphic, { transform: [{ translateY: floatAnim }] }]}>
             <View style={styles.monitorOuter}>
-              <Feather name="monitor" size={70} color="#ffffff" style={{ opacity: 0.85 }} />
-              <View style={styles.monitorInner}>
-                <Feather name="trending-up" size={22} color="#ffffff" />
+              <Feather name="monitor" size={70} color={isDarkMode ? "#ffffff" : "#6366f1"} style={{ opacity: 0.85 }} />
+              <View style={[styles.monitorInner, { backgroundColor: isDarkMode ? 'rgba(0,242,254,0.3)' : 'rgba(6,182,212,0.2)' }]}>
+                <Feather name="activity" size={24} color={isDarkMode ? "#00f2fe" : "#4f46e5"} />
               </View>
             </View>
           </Animated.View>
@@ -477,7 +495,7 @@ export default function DashboardScreen() {
               { label: 'Passed', value: stats.passed || 0, icon: 'check-circle', iconBg: '#14532d', iconColor: '#4ade80', stripeColor: '#10b981' },
               { label: 'Failed', value: stats.totalFailed || 0, icon: 'x-circle', iconBg: '#450a0a', iconColor: '#f87171', stripeColor: '#ef4444' },
               { label: 'Pending Result', value: stats.pendingCount || 0, icon: 'clock', iconBg: '#422006', iconColor: '#fb923c', stripeColor: '#f59e0b' },
-              { label: 'Avg Score', value: `${(stats.avgScore || 0).toFixed(1)}%`, icon: 'trending-up', iconBg: '#3b0764', iconColor: '#c084fc', stripeColor: '#8b5cf6' },
+              { label: 'Avg Score', value: `${(stats.avgScore || 0).toFixed(1)}%`, icon: 'trending-up', iconBg: '#3b0764', iconColor: '#c084fc', stripeColor: '#6366f1' },
               { label: 'Best Score', value: `${(stats.bestScore || 0).toFixed(1)}%`, icon: 'star', iconBg: '#312e81', iconColor: '#fbbf24', stripeColor: '#eab308' },
               { label: 'Missing', value: stats.missedExams || 0, icon: 'alert-triangle', iconBg: '#451a03', iconColor: '#fbbf24', stripeColor: '#f59e0b' },
             ].map((s, i) => (
@@ -494,13 +512,19 @@ export default function DashboardScreen() {
         )}
 
         {/* ── Performance Trend (full width) ── */}
+        {((examsLoading && (!exams || exams.length === 0)) || refreshing) ? (
+          <View style={styles.fullCard}>
+            <Skeleton width="100%" height={24} style={{marginBottom: 16}} borderRadius={8} />
+            <Skeleton width="100%" height={200} borderRadius={12} />
+          </View>
+        ) : (
         <View style={styles.fullCard}>
           <View style={styles.cardHeader}>
             <Text style={styles.cardTitleLg}>Performance Trend (Recent Exams)</Text>
             <BouncyTouchable 
               activeScale={0.9}
               onPress={() => setStatModalConfig({ visible: true, title: 'All Attempted Exams', filterType: 'attempted' })}
-              style={{ backgroundColor: 'rgba(139,92,246,0.15)', paddingHorizontal: 12, paddingVertical: 5, borderRadius: 14 }}
+              style={{ backgroundColor: 'rgba(6,182,212,0.15)', paddingHorizontal: 12, paddingVertical: 5, borderRadius: 14 }}
             >
               <Text style={{ color: '#a855f7', fontSize: 12, fontWeight: '700' }}>View All</Text>
             </BouncyTouchable>
@@ -523,7 +547,7 @@ export default function DashboardScreen() {
                 />
               </ScrollView>
               <View style={styles.legendRow}>
-                <View style={[styles.legendDot, { backgroundColor: '#6366f1' }]} />
+                <View style={[styles.legendDot, { backgroundColor: '#00f2fe' }]} />
                 <Text style={styles.legendText}>Score (%)</Text>
               </View>
             </>
@@ -537,8 +561,15 @@ export default function DashboardScreen() {
             </View>
           )}
         </View>
+        )}
 
         {/* ── Subject Performance (full width) ── */}
+        {((examsLoading && (!exams || exams.length === 0)) || refreshing) ? (
+          <View style={styles.fullCard}>
+            <Skeleton width="100%" height={24} style={{marginBottom: 16}} borderRadius={8} />
+            <Skeleton width="100%" height={200} borderRadius={12} />
+          </View>
+        ) : (
         <View style={styles.fullCard}>
           <View style={styles.cardHeader}>
             <Text style={styles.cardTitleLg}>Subject Performance</Text>
@@ -553,9 +584,9 @@ export default function DashboardScreen() {
                   return (
                     <View key={subj} style={{ width: 80, alignItems: 'center' }}>
                       <View style={{ flexDirection: 'row', backgroundColor: 'rgba(30,41,59,0.9)', paddingHorizontal: 6, paddingVertical: 3, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)' }}>
-                        <Text style={{ fontSize: 11, fontWeight: '800', color: '#10b981' }}>P:{data.passed}</Text>
+                        <Text style={{ fontSize: 11, fontWeight: '800', color: '#00e676' }}>P:{data.passed}</Text>
                         <Text style={{ fontSize: 11, fontWeight: '800', color: '#94a3b8', marginHorizontal: 3 }}>|</Text>
-                        <Text style={{ fontSize: 11, fontWeight: '800', color: '#ef4444' }}>F:{data.failed}</Text>
+                        <Text style={{ fontSize: 11, fontWeight: '800', color: '#ff3d00' }}>F:{data.failed}</Text>
                       </View>
                     </View>
                   );
@@ -565,7 +596,7 @@ export default function DashboardScreen() {
                 data={barData}
                 width={Math.max(SCREEN_W - 64, subLabels.length * 80)}
                 height={200}
-                chartConfig={{ ...chartCfg, color: (op = 1) => `rgba(139,92,246,${op})` }}
+                chartConfig={{ ...chartCfg, color: (op = 1) => `rgba(176, 38, 255, ${op})`, strokeWidth: 0, fillShadowGradient: '#b026ff', fillShadowGradientOpacity: 1 }}
                 style={{ marginLeft: -8, marginTop: 4, borderRadius: 12 }}
                 withInnerLines
                 showValuesOnTopOfBars
@@ -575,12 +606,19 @@ export default function DashboardScreen() {
             </View>
           </ScrollView>
           <View style={styles.legendRow}>
-            <View style={[styles.legendDot, { backgroundColor: '#8b5cf6' }]} />
+            <View style={[styles.legendDot, { backgroundColor: '#b026ff' }]} />
             <Text style={styles.legendText}>Score (%)</Text>
           </View>
         </View>
+        )}
 
         {/* ── Pass/Fail Distribution (full width, matching teacher layout) ── */}
+        {((examsLoading && (!exams || exams.length === 0)) || refreshing) ? (
+          <View style={styles.fullCard}>
+            <Skeleton width="100%" height={24} style={{marginBottom: 16}} borderRadius={8} />
+            <Skeleton width="100%" height={140} borderRadius={12} />
+          </View>
+        ) : (
         <View style={styles.fullCard}>
           <Text style={styles.cardTitleLg}>Pass/Fail Distribution</Text>
           <View style={styles.passFailRow}>
@@ -599,7 +637,7 @@ export default function DashboardScreen() {
                   absolute
                 />
               </Animated.View>
-              <Animated.View style={[styles.passFailDonutCenter, { width: 80, height: 80, borderRadius: 40, backgroundColor: colors.card, transform: [{ scale: breatheAnim }] }]}>
+              <Animated.View style={[styles.passFailDonutCenter, { width: 80, height: 80, borderRadius: 40, backgroundColor: isDarkMode ? '#000000' : '#ffffff', transform: [{ scale: breatheAnim }] }]}>
                 <Text style={styles.passFailDonutValue}>{stats.publishedCount || 0}</Text>
                 <Text style={styles.passFailDonutLabel}>Total Exam</Text>
               </Animated.View>
@@ -608,15 +646,15 @@ export default function DashboardScreen() {
             {/* Legend */}
             <View style={styles.passFailLegend}>
               <View style={styles.passFailLegendItem}>
-                <View style={[styles.legendDot, { backgroundColor: '#10b981' }]} />
-                <Text style={{ color: '#10b981', fontSize: 13, fontWeight: '600' }}>
+                <View style={[styles.legendDot, { backgroundColor: '#00e676' }]} />
+                <Text style={{ color: '#00e676', fontSize: 13, fontWeight: '600' }}>
                   {stats.publishedCount > 0 ? ((stats.passed / stats.publishedCount) * 100).toFixed(0) : 0}% Passed
                 </Text>
               </View>
               <Text style={styles.passFailLegendCount}>{stats.passed} Exam</Text>
               <View style={[styles.passFailLegendItem, { marginTop: 10 }]}>
-                <View style={[styles.legendDot, { backgroundColor: '#ef4444' }]} />
-                <Text style={{ color: '#ef4444', fontSize: 13, fontWeight: '600' }}>
+                <View style={[styles.legendDot, { backgroundColor: '#ff3d00' }]} />
+                <Text style={{ color: '#ff3d00', fontSize: 13, fontWeight: '600' }}>
                   {stats.publishedCount > 0 ? ((stats.totalFailed / stats.publishedCount) * 100).toFixed(0) : 0}% Failed
                 </Text>
               </View>
@@ -633,6 +671,7 @@ export default function DashboardScreen() {
             </View>
           </View>
         </View>
+        )}
 
         {/* ── Recent Exams (full width) ── */}
         <View style={styles.fullCard}>
@@ -740,24 +779,25 @@ export default function DashboardScreen() {
           {toppers && toppers.length > 0 ? (
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 12 }}>
               {toppers.slice(0, 2).map((item, idx) => (
-                <View key={item.resultId} style={[styles.leaderCard, { width: 280, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: colors.card, borderColor: colors.border }]}>
+                <TouchableOpacity 
+                  key={item.resultId} 
+                  onPress={() => setSelectedTopper(item)}
+                  activeOpacity={0.7}
+                  style={[styles.leaderCard, { width: 280, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: colors.card, borderColor: colors.border }]}
+                >
                   <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                    <BouncyTouchable 
-                      onPress={() => setSelectedTopper(item)} 
-                      style={{ position: 'relative', marginRight: 12 }}
-                      activeScale={0.85}
-                    >
+                    <View style={{ position: 'relative', marginRight: 12 }}>
                       {item.student?.profileImage ? (
-                        <Image source={{ uri: getImageUrl(item.student.profileImage) }} style={{ width: 44, height: 44, borderRadius: 22, borderWidth: 2, borderColor: idx === 0 ? '#fbbf24' : idx === 1 ? '#94a3b8' : idx === 2 ? '#b45309' : '#334155' }} />
+                        <Image source={{ uri: getImageUrl(item.student.profileImage) }} style={{ width: 44, height: 44, borderRadius: 22, borderWidth: 2, borderColor: idx === 0 ? '#fbbf24' : idx === 1 ? '#94a3b8' : idx === 2 ? '#b45309' : isDarkMode ? 'rgba(255,255,255,0.08)' : '#e2e8f0' }} />
                       ) : (
-                        <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: idx === 0 ? '#fbbf24' : idx === 1 ? '#94a3b8' : idx === 2 ? '#b45309' : '#334155', justifyContent: 'center', alignItems: 'center' }}>
+                        <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: idx === 0 ? '#fbbf24' : idx === 1 ? '#94a3b8' : idx === 2 ? '#b45309' : isDarkMode ? 'rgba(255,255,255,0.08)' : '#e2e8f0', justifyContent: 'center', alignItems: 'center' }}>
                           <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold' }}>{(item.student?.name || 'U').charAt(0).toUpperCase()}</Text>
                         </View>
                       )}
-                      <View style={{ position: 'absolute', bottom: -2, right: -2, backgroundColor: idx === 0 ? '#fbbf24' : idx === 1 ? '#94a3b8' : idx === 2 ? '#b45309' : '#334155', width: 20, height: 20, borderRadius: 10, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#0f172a' }}>
+                      <View style={{ position: 'absolute', bottom: -2, right: -2, backgroundColor: idx === 0 ? '#fbbf24' : idx === 1 ? '#94a3b8' : idx === 2 ? '#b45309' : isDarkMode ? 'rgba(255,255,255,0.08)' : '#e2e8f0', width: 20, height: 20, borderRadius: 10, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: isDarkMode ? '#000000' : '#f8fafc' }}>
                         <Text style={{ color: '#fff', fontSize: 10, fontWeight: '900' }}>{idx + 1}</Text>
                       </View>
-                    </BouncyTouchable>
+                    </View>
                     <View style={{ flex: 1, marginRight: 10 }}>
                       <Text style={[styles.leaderName, { textAlign: 'left', marginBottom: 2, color: colors.text }]} numberOfLines={1}>{item.student?.name || 'Unknown'}</Text>
                       <Text style={[styles.recentSub, { textAlign: 'left', color: colors.subText }]} numberOfLines={1}>{item.examTitle}</Text>
@@ -773,7 +813,7 @@ export default function DashboardScreen() {
                       extraStyle={{ marginTop: 6, paddingVertical: 4, paddingHorizontal: 10, width: 'auto' }}
                     />
                   </View>
-                </View>
+                </TouchableOpacity>
               ))}
             </ScrollView>
           ) : (
@@ -791,7 +831,7 @@ export default function DashboardScreen() {
       <Modal visible={isSidebarVisible} transparent animationType="fade">
         <View style={styles.sidebarOverlay}>
           <TouchableOpacity style={{ flex: 1 }} onPress={() => setSidebarVisible(false)} />
-          <View style={[styles.sidebar, { backgroundColor: colors.card }]}>
+          <View style={[styles.sidebar, { backgroundColor: isDarkMode ? '#09090b' : '#ffffff', borderLeftWidth: 1, borderLeftColor: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }]}>
             <View style={styles.sidebarHead}>
               <Text style={[styles.sidebarTitle, { color: colors.text }]}>Menu</Text>
               <TouchableOpacity onPress={() => setSidebarVisible(false)}>
@@ -825,7 +865,7 @@ export default function DashboardScreen() {
         onRequestClose={() => setShowAllToppers(false)}
       >
         <View style={[styles.modalContainer, { backgroundColor: colors.bg }]}>
-          <View style={[styles.modalHeader, { backgroundColor: colors.card, borderBottomColor: colors.border || '#334155', paddingTop: Math.max((insets.top || 20) + 15, 30) + 15, paddingBottom: 15 }]}>
+          <View style={[styles.modalHeader, { backgroundColor: colors.card, borderBottomColor: colors.border || isDarkMode ? 'rgba(255,255,255,0.08)' : '#e2e8f0', paddingTop: Math.max((insets.top || 20) + 15, 30) + 15, paddingBottom: 15 }]}>
             <Text style={[styles.modalTitle, { color: colors.text }]}>All Exam Toppers</Text>
             <TouchableOpacity onPress={() => setShowAllToppers(false)} style={styles.modalCloseBtn}>
               <Feather name="x" size={24} color={colors.text} />
@@ -837,27 +877,25 @@ export default function DashboardScreen() {
             keyExtractor={item => item.resultId}
             contentContainerStyle={{ padding: 16 }}
             renderItem={({ item, index }) => (
-              <View style={[styles.leaderCard, { width: '100%', marginBottom: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, backgroundColor: colors.card, borderColor: colors.border }]}>
+              <TouchableOpacity 
+                key={item.resultId} 
+                onPress={() => { setShowAllToppers(false); setSelectedTopper(item); }}
+                activeOpacity={0.7}
+                style={[styles.leaderCard, { width: '100%', marginBottom: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, backgroundColor: colors.card, borderColor: colors.border }]}
+              >
                 <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                  <BouncyTouchable 
-                    onPress={() => {
-                      setShowAllToppers(false);
-                      setSelectedTopper(item);
-                    }} 
-                    style={{ position: 'relative', marginRight: 12 }}
-                    activeScale={0.85}
-                  >
+                  <View style={{ position: 'relative', marginRight: 12 }}>
                     {item.student?.profileImage ? (
-                      <Image source={{ uri: getImageUrl(item.student.profileImage) }} style={{ width: 44, height: 44, borderRadius: 22, borderWidth: 2, borderColor: index === 0 ? '#fbbf24' : index === 1 ? '#94a3b8' : index === 2 ? '#b45309' : '#334155' }} />
+                      <Image source={{ uri: getImageUrl(item.student.profileImage) }} style={{ width: 44, height: 44, borderRadius: 22, borderWidth: 2, borderColor: index === 0 ? '#fbbf24' : index === 1 ? '#94a3b8' : index === 2 ? '#b45309' : isDarkMode ? 'rgba(255,255,255,0.08)' : '#e2e8f0' }} />
                     ) : (
-                      <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: index === 0 ? '#fbbf24' : index === 1 ? '#94a3b8' : index === 2 ? '#b45309' : '#334155', justifyContent: 'center', alignItems: 'center' }}>
+                      <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: index === 0 ? '#fbbf24' : index === 1 ? '#94a3b8' : index === 2 ? '#b45309' : isDarkMode ? 'rgba(255,255,255,0.08)' : '#e2e8f0', justifyContent: 'center', alignItems: 'center' }}>
                         <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold' }}>{(item.student?.name || 'U').charAt(0).toUpperCase()}</Text>
                       </View>
                     )}
-                    <View style={{ position: 'absolute', bottom: -2, right: -2, backgroundColor: index === 0 ? '#fbbf24' : index === 1 ? '#94a3b8' : index === 2 ? '#b45309' : '#334155', width: 20, height: 20, borderRadius: 10, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#0f172a' }}>
+                    <View style={{ position: 'absolute', bottom: -2, right: -2, backgroundColor: index === 0 ? '#fbbf24' : index === 1 ? '#94a3b8' : index === 2 ? '#b45309' : isDarkMode ? 'rgba(255,255,255,0.08)' : '#e2e8f0', width: 20, height: 20, borderRadius: 10, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: isDarkMode ? '#000000' : '#f8fafc' }}>
                       <Text style={{ color: '#fff', fontSize: 10, fontWeight: '900' }}>{index + 1}</Text>
                     </View>
-                  </BouncyTouchable>
+                  </View>
                   <View style={{ flex: 1 }}>
                     <Text style={[styles.leaderName, { marginBottom: 2, textAlign: 'left', color: colors.text }]} numberOfLines={1}>{item.student?.name || 'Unknown'}</Text>
                     <Text style={[styles.recentSub, { textAlign: 'left', color: colors.subText }]}>{item.examTitle}</Text>
@@ -873,7 +911,7 @@ export default function DashboardScreen() {
                     extraStyle={{ marginTop: 0, paddingVertical: 4, paddingHorizontal: 10, width: 'auto', backgroundColor: colors.card, borderColor: colors.border }}
                   />
                 </View>
-              </View>
+              </TouchableOpacity>
             )}
           />
         </View>
@@ -887,7 +925,7 @@ export default function DashboardScreen() {
         onRequestClose={() => setShowRecentExamsModal(false)}
       >
         <View style={styles.modalContainer}>
-          <View style={[styles.modalHeader, { borderBottomColor: colors.border || '#334155' }]}>
+          <View style={[styles.modalHeader, { borderBottomColor: colors.border || isDarkMode ? 'rgba(255,255,255,0.08)' : '#e2e8f0' }]}>
             <Text style={styles.modalTitle}>All Recent Exams</Text>
             <TouchableOpacity onPress={() => setShowRecentExamsModal(false)} style={styles.modalCloseBtn}>
               <Feather name="x" size={24} color={colors.text} />
@@ -903,7 +941,7 @@ export default function DashboardScreen() {
               const ss = statusStyle[status] || statusStyle['Expired'];
               return (
                 <View style={[styles.recentRow, { backgroundColor: colors.card, padding: 12, borderRadius: 12, marginBottom: 10 }]}>
-                  <View style={[styles.examIconBox, { backgroundColor: 'rgba(99,102,241,0.15)' }]}>
+                  <View style={[styles.examIconBox, { backgroundColor: 'rgba(6,182,212,0.15)' }]}>
                     <Feather name="file-text" size={16} color="#818cf8" />
                   </View>
                   <View style={{ flex: 1 }}>
@@ -931,15 +969,15 @@ export default function DashboardScreen() {
       </Modal>
 
       {/* ── Topper Student Profile Modal ── */}
-      {selectedTopper && (
-        <Modal visible={true} transparent animationType="fade" onRequestClose={() => setSelectedTopper(null)}>
+      <Modal visible={!!selectedTopper} transparent animationType="fade" onRequestClose={() => setSelectedTopper(null)}>
+        {selectedTopper && (
           <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-            <Animated.View style={{ transform: [{ scale: modalZoomAnim }], width: '90%', backgroundColor: colors.card, borderRadius: 20, overflow: 'hidden', borderWidth: 1, borderColor: colors.border, padding: 24, alignItems: 'center', position: 'relative' }}>
+            <View style={{ width: '90%', backgroundColor: isDarkMode ? '#09090b' : '#ffffff', borderRadius: 20, overflow: 'hidden', borderWidth: 1, borderColor: colors.border, padding: 24, alignItems: 'center', position: 'relative' }}>
               <TouchableOpacity style={{ position: 'absolute', top: 16, right: 16, zIndex: 10 }} onPress={() => setSelectedTopper(null)}>
                 <Feather name="x" size={24} color={colors.subText} />
               </TouchableOpacity>
 
-              <View style={{ width: 110, height: 110, borderRadius: 55, marginBottom: 16, borderWidth: 3, borderColor: '#6366f1', justifyContent: 'center', alignItems: 'center', backgroundColor: colors.card, overflow: 'hidden' }}>
+              <View style={{ width: 110, height: 110, borderRadius: 55, marginBottom: 16, borderWidth: 3, borderColor: '#06b6d4', justifyContent: 'center', alignItems: 'center', backgroundColor: colors.card, overflow: 'hidden' }}>
                 {selectedTopper.student?.profileImage ? (
                   <Image source={{ uri: getImageUrl(selectedTopper.student.profileImage) }} style={{ width: 110, height: 110 }} resizeMode="cover" />
                 ) : (
@@ -947,24 +985,24 @@ export default function DashboardScreen() {
                 )}
               </View>
 
-              <Text style={{ fontSize: 22, fontWeight: '800', color: colors.text, textAlign: 'center' }}>
+              <Text style={{ fontSize: 22, fontWeight: '800', color: colors.text, textAlign: 'center', marginBottom: 4 }}>
                 {selectedTopper.student?.name || 'Unknown Student'}
               </Text>
 
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6, backgroundColor: 'rgba(139,92,246,0.15)', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 16 }}>
-                <Feather name="users" size={14} color="#a855f7" style={{ marginRight: 6 }} />
-                <Text style={{ fontSize: 14, fontWeight: '700', color: '#a855f7' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4, backgroundColor: 'rgba(6,182,212,0.15)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16 }}>
+                <Feather name="users" size={14} color="#06b6d4" style={{ marginRight: 6 }} />
+                <Text style={{ fontSize: 13, fontWeight: '700', color: '#06b6d4' }}>
                   {selectedTopper.student?.classGroup || selectedTopper.student?.department || 'General Class'}
                 </Text>
               </View>
 
               {selectedTopper.student?.email && (
-                <Text style={{ fontSize: 13, color: colors.subText, marginTop: 8 }}>
+                <Text style={{ fontSize: 13, color: colors.subText, marginTop: 12 }}>
                   {selectedTopper.student.email}
                 </Text>
               )}
 
-              <View style={{ width: '100%', marginTop: 22, padding: 16, backgroundColor: isDarkMode ? '#0f172a' : '#f8fafc', borderRadius: 14, borderWidth: 1, borderColor: colors.border }}>
+              <View style={{ width: '100%', marginTop: 22, padding: 16, backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 14, borderWidth: 1, borderColor: colors.border }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
                   <Text style={{ fontSize: 13, color: colors.subText }}>Achievement</Text>
                   <Text style={{ fontSize: 13, fontWeight: '700', color: '#fbbf24' }}>🏆 Exam Topper</Text>
@@ -975,20 +1013,20 @@ export default function DashboardScreen() {
                 </View>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                   <Text style={{ fontSize: 13, color: colors.subText }}>Score</Text>
-                  <Text style={{ fontSize: 14, fontWeight: '800', color: '#10b981' }}>{selectedTopper.score?.toFixed(1)}%</Text>
+                  <Text style={{ fontSize: 14, fontWeight: '800', color: '#00e676' }}>{selectedTopper.score?.toFixed(1)}%</Text>
                 </View>
               </View>
 
               <TouchableOpacity 
-                style={{ width: '100%', backgroundColor: '#6366f1', paddingVertical: 14, borderRadius: 12, alignItems: 'center', marginTop: 22 }}
+                style={{ width: '100%', backgroundColor: 'rgba(6,182,212,0.15)', borderWidth: 1, borderColor: '#06b6d4', paddingVertical: 14, borderRadius: 12, alignItems: 'center', marginTop: 22 }}
                 onPress={() => setSelectedTopper(null)}
               >
-                <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700' }}>Close Profile</Text>
+                <Text style={{ color: '#06b6d4', fontSize: 16, fontWeight: '700' }}>Close Profile</Text>
               </TouchableOpacity>
-            </Animated.View>
+            </View>
           </View>
-        </Modal>
-      )}
+        )}
+      </Modal>
 
       {/* ── Stat Filtered Exams Modal ── */}
       <Modal
@@ -1031,8 +1069,8 @@ export default function DashboardScreen() {
               </View>
             }
             renderItem={({ item }) => {
-              const examTitle = item.examId?.title || item.examTitle || 'Exam';
-              const examSubject = item.examId?.subject || 'General Subject';
+              const examTitle = item.examId?.title || item.examTitle || item.title || 'Exam';
+              const examSubject = item.examId?.subject || item.subject || 'General Subject';
               const dateStr = new Date(item.submittedAt || item.createdAt || Date.now()).toLocaleDateString('en-IN', {
                 day: 'numeric',
                 month: 'short',
@@ -1147,24 +1185,24 @@ const getStyles = (colors) => ({
   headerRight: { flexDirection: 'row', alignItems: 'center' },
   headerIconBtn: { width: 44, height: 44, borderRadius: 22, borderWidth: 1, justifyContent: 'center', alignItems: 'center', marginLeft: 10, position: 'relative', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 8, elevation: 3 },
   dotBadge: { position: 'absolute', top: 10, right: 10, width: 8, height: 8, borderRadius: 4, backgroundColor: '#fb7185', borderWidth: 1, borderColor: colors.bg },
-  badgeTextDot: { position: 'absolute', top: 4, right: 4, backgroundColor: '#ef4444', borderRadius: 10, paddingHorizontal: 5, paddingVertical: 2, minWidth: 20, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: colors.bg },
+  badgeTextDot: { position: 'absolute', top: 4, right: 4, backgroundColor: '#ff3d00', borderRadius: 10, paddingHorizontal: 5, paddingVertical: 2, minWidth: 20, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: colors.bg },
   badgeText: { color: colors.text, fontSize: 10, fontWeight: '800' },
 
   /* banner */
   banner: {
-    backgroundColor: '#1e1145', borderRadius: 20, padding: 22,
+    backgroundColor: colors.card, borderRadius: 20, padding: 22,
     flexDirection: 'row', alignItems: 'center', marginBottom: 20,
-    borderWidth: 1, borderColor: '#2e1065',
-    shadowColor: '#7c3aed', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.25, shadowRadius: 16, elevation: 8,
+    borderWidth: 1, borderColor: colors.border,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 4,
   },
-  bannerWelcome: { color: '#c4b5fd', fontSize: 13, fontWeight: '500', marginBottom: 4 },
-  bannerName: { color: '#ffffff', fontSize: 26, fontWeight: '800', marginBottom: 6 },
-  bannerSub: { color: '#a78bfa', fontSize: 12, lineHeight: 18 },
+  bannerWelcome: { color: '#00f2fe', fontSize: 13, fontWeight: '700', marginBottom: 4, textShadowColor: 'rgba(0, 242, 254, 0.4)', textShadowOffset: {width: 0, height: 0}, textShadowRadius: 4 },
+  bannerName: { color: colors.text, fontSize: 26, fontWeight: '900', marginBottom: 6 },
+  bannerSub: { color: colors.subText, fontSize: 12, lineHeight: 18, fontWeight: '500' },
   bannerGraphic: { marginLeft: 10 },
   monitorOuter: { width: 90, height: 80, justifyContent: 'center', alignItems: 'center', position: 'relative' },
   monitorInner: {
     position: 'absolute', bottom: 10, right: 10,
-    backgroundColor: 'rgba(99,102,241,0.3)', borderRadius: 8, padding: 4,
+    backgroundColor: 'rgba(0,242,254,0.3)', borderRadius: 8, padding: 4,
   },
 
   /* stat grid (scrollable) */
@@ -1172,12 +1210,12 @@ const getStyles = (colors) => ({
   statCard: {
     backgroundColor: colors.card, borderRadius: 20,
     padding: 14, marginBottom: 10, borderWidth: 1, borderColor: colors.border,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 10, elevation: 4, overflow: 'hidden',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 2, overflow: 'hidden',
   },
   statCardTopStripe: { position: 'absolute', top: 0, left: 0, right: 0, height: 4, borderTopLeftRadius: 20, borderTopRightRadius: 20 },
-  statIconBox: { width: 34, height: 34, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginBottom: 8 },
-  statLabel: { color: colors.subText, fontSize: 11, fontWeight: '500', marginBottom: 4 },
-  statValue: { color: colors.text, fontSize: 22, fontWeight: '800' },
+  statIconBox: { width: 34, height: 34, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginBottom: 8, backgroundColor: 'rgba(176, 38, 255, 0.15)', borderColor: 'rgba(176, 38, 255, 0.4)', borderWidth: 1 },
+  statLabel: { color: colors.subText, fontSize: 11, fontWeight: '600', marginBottom: 4 },
+  statValue: { color: colors.text, fontSize: 22, fontWeight: '900' },
 
   /* card common */
   cardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
@@ -1187,7 +1225,7 @@ const getStyles = (colors) => ({
 
   filterPill: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: 'rgba(139,92,246,0.2)', borderRadius: 12,
+    backgroundColor: 'rgba(6,182,212,0.2)', borderRadius: 12,
     paddingHorizontal: 8, paddingVertical: 4,
   },
   filterPillActive: { backgroundColor: '#4f46e5' },
@@ -1215,11 +1253,11 @@ const getStyles = (colors) => ({
   passRateValue: { color: colors.text, fontSize: 16, fontWeight: '800', marginTop: 4 },
 
   /* recent exams */
-  viewAll: { color: '#6366f1', fontSize: 12, fontWeight: '600' },
+  viewAll: { color: '#06b6d4', fontSize: 12, fontWeight: '600' },
   recentRow: { flexDirection: 'row', alignItems: 'flex-start', marginTop: 8, gap: 6 },
   examIconBox: {
     width: 28, height: 28, borderRadius: 8,
-    backgroundColor: 'rgba(99,102,241,0.15)', justifyContent: 'center', alignItems: 'center', marginTop: 2,
+    backgroundColor: 'rgba(6,182,212,0.15)', justifyContent: 'center', alignItems: 'center', marginTop: 2,
   },
   recentTitle: { color: colors.text, fontSize: 12, fontWeight: '600' },
   recentSub: { color: colors.subText, fontSize: 10, marginTop: 2 },
@@ -1231,9 +1269,10 @@ const getStyles = (colors) => ({
   fullCard: {
     backgroundColor: colors.card, borderRadius: 16, padding: 16,
     borderWidth: 1, borderColor: colors.border, marginBottom: 16,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2,
   },
   leaderboardBtn: {
-    backgroundColor: 'rgba(99,102,241,0.15)', borderRadius: 10,
+    backgroundColor: 'rgba(6,182,212,0.15)', borderRadius: 10,
     paddingHorizontal: 12, paddingVertical: 6, borderWidth: 1, borderColor: '#4f46e5',
   },
   leaderboardBtnText: { color: '#818cf8', fontSize: 12, fontWeight: '600' },
@@ -1244,7 +1283,7 @@ const getStyles = (colors) => ({
   rankBadge: { width: 28, height: 28, borderRadius: 14, justifyContent: 'center', alignItems: 'center', marginBottom: 8 },
   rankText: { color: colors.text, fontWeight: '800', fontSize: 13 },
   leaderName: { color: colors.text, fontSize: 12, fontWeight: '600', marginBottom: 4, textAlign: 'center', maxWidth: 80 },
-  leaderScore: { color: '#10b981', fontSize: 14, fontWeight: '800' },
+  leaderScore: { color: '#00e676', fontSize: 14, fontWeight: '800' },
   emptyLeader: { alignItems: 'center', paddingVertical: 20 },
   emptyText: { color: colors.subText, fontSize: 13, textAlign: 'center' },
 

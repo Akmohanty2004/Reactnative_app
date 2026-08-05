@@ -19,6 +19,7 @@ import { Feather } from '@expo/vector-icons';
 import { getTeacherExams } from '../../redux/slices/examSlice';
 import Skeleton from '../../components/Skeleton';
 import api from '../../services/api';
+import { playRefreshSound } from '../../utils/SoundManager';
 
 const FILTERS = ['All', 'Published', 'Ongoing', 'Completed'];
 
@@ -39,6 +40,7 @@ export default function ExamsScreen({ navigation }) {
   const [searchQuery, setSearchQuery]   = useState('');
   const [activeFilter, setActiveFilter] = useState('All');
   const [refreshing, setRefreshing]     = useState(false);
+  const [showFilters, setShowFilters]   = useState(true);
   
   const [classes, setClasses] = useState([]);
   const [selectedClass, setSelectedClass] = useState('All Classes');
@@ -47,7 +49,7 @@ export default function ExamsScreen({ navigation }) {
   
   const isDarkMode = theme === 'dark';
   const colors = {
-    bg: isDarkMode ? '#0f172a' : '#f8fafc',
+    bg: isDarkMode ? '#000000' : '#f8fafc',
     text: isDarkMode ? 'white' : '#0f172a',
     subText: isDarkMode ? '#94a3b8' : '#64748b',
     card: isDarkMode ? '#1e293b' : 'white',
@@ -76,6 +78,7 @@ export default function ExamsScreen({ navigation }) {
   };
 
   const onRefresh = async () => {
+    playRefreshSound();
     setRefreshing(true);
     await dispatch(getTeacherExams());
     await fetchClasses();
@@ -85,16 +88,18 @@ export default function ExamsScreen({ navigation }) {
   const filteredExams = useMemo(() => {
     return exams.filter((exam) => {
       const matchSearch = exam.title?.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchFilter =
-        activeFilter === 'All' || exam.status === activeFilter.toLowerCase();
+      
+      const dbStatus = exam.status?.toLowerCase() || '';
+      const st = dbStatus === 'published' ? 'Published' : dbStatus === 'completed' ? 'Completed' : dbStatus === 'ongoing' ? 'Ongoing' : 'Draft';
+      const matchFilter = activeFilter === 'All' || st === activeFilter;
         
       let matchClass = true;
       if (selectedClass !== 'All Classes') {
         if (!exam.classGroup) {
           matchClass = false;
         } else {
-          const groups = exam.classGroup.split(',').map(s => s.trim());
-          matchClass = groups.includes(selectedClass);
+          const groups = exam.classGroup.split(',').map(s => s.trim().toLowerCase());
+          matchClass = groups.includes(selectedClass.toLowerCase());
         }
       }
       return matchSearch && matchFilter && matchClass;
@@ -194,17 +199,22 @@ export default function ExamsScreen({ navigation }) {
         </TouchableOpacity>
 
         <Text style={styles.headerTitle}>
-          All <Text style={{ color: '#a78bfa' }}>Exams</Text>
+          All <Text style={{ color: '#b026ff', textShadowColor: 'rgba(176,38,255,0.4)', textShadowOffset: {width: 0, height: 0}, textShadowRadius: 6 }}>Exams</Text>
         </Text>
 
-        <TouchableOpacity style={styles.filterBtn}>
-          <Feather name="filter" size={18} color={colors.subText} />
+        <TouchableOpacity 
+          style={[styles.filterBtn, !showFilters && { backgroundColor: 'rgba(176,38,255,0.15)', borderColor: 'rgba(176,38,255,0.4)', borderWidth: 1 }]} 
+          onPress={() => setShowFilters(!showFilters)}
+        >
+          <Feather name="filter" size={18} color={!showFilters ? '#b026ff' : colors.subText} />
         </TouchableOpacity>
       </View>
 
       <Text style={styles.subtitle}>Select an exam to view detailed results</Text>
 
-      {/* ── Search ── */}
+      {showFilters && (
+        <>
+          {/* ── Search ── */}
       <View style={styles.searchWrap}>
         <Feather name="search" size={18} color="#64748b" />
         <TextInput
@@ -234,26 +244,28 @@ export default function ExamsScreen({ navigation }) {
       {/* ── Class Filter Tabs ── */}
       <View style={[styles.tabsWrap, { marginTop: 0, marginBottom: 15 }]}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabs}>
-          <TouchableOpacity
-            style={[styles.tab, { backgroundColor: colors.card, borderColor: colors.border }, selectedClass === 'All Classes' && styles.tabActive]}
-            onPress={() => setSelectedClass('All Classes')}
-          >
-            <Text style={[styles.tabText, selectedClass === 'All Classes' && styles.tabTextActive]}>All Classes</Text>
-          </TouchableOpacity>
-          {classes.map((cls) => (
             <TouchableOpacity
-              key={cls._id}
-              style={[styles.tab, { backgroundColor: colors.card, borderColor: colors.border }, selectedClass === cls.name && styles.tabActive]}
-              onPress={() => setSelectedClass(cls.name)}
+              style={[styles.tab, { backgroundColor: colors.card, borderColor: colors.border }, selectedClass === 'All Classes' && { backgroundColor: 'rgba(0,242,254,0.15)', borderColor: 'rgba(0,242,254,0.4)', borderWidth: 1 }]}
+              onPress={() => setSelectedClass('All Classes')}
             >
-              <Text style={[styles.tabText, selectedClass === cls.name && styles.tabTextActive]}>{cls.name}</Text>
+              <Text style={[styles.tabText, selectedClass === 'All Classes' && { color: '#00f2fe', textShadowColor: 'rgba(0,242,254,0.4)', textShadowOffset: {width: 0, height: 0}, textShadowRadius: 4 }]}>All Classes</Text>
             </TouchableOpacity>
+            {classes.map((cls) => (
+              <TouchableOpacity
+                key={cls._id}
+                style={[styles.tab, { backgroundColor: colors.card, borderColor: colors.border }, selectedClass === cls.name && { backgroundColor: 'rgba(0,242,254,0.15)', borderColor: 'rgba(0,242,254,0.4)', borderWidth: 1 }]}
+                onPress={() => setSelectedClass(cls.name)}
+              >
+                <Text style={[styles.tabText, selectedClass === cls.name && { color: '#00f2fe', textShadowColor: 'rgba(0,242,254,0.4)', textShadowOffset: {width: 0, height: 0}, textShadowRadius: 4 }]}>{cls.name}</Text>
+              </TouchableOpacity>
           ))}
         </ScrollView>
       </View>
+      </>
+      )}
 
       {/* ── List ── */}
-      {isLoading && exams.length === 0 ? (
+      {(isLoading || refreshing) ? (
         <View style={styles.list}>
           {[1, 2, 3, 4].map(i => (
             <Skeleton key={i} width="100%" height={90} borderRadius={16} style={{ marginBottom: 12 }} />
@@ -299,7 +311,7 @@ const getStyles = (colors) => ({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 18,
-    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 24) + 10 : 20,
+    paddingTop: 20,
     paddingBottom: 10,
   },
   backBtn: {
@@ -366,15 +378,19 @@ const getStyles = (colors) => ({
     backgroundColor: colors.cardAlt,
   },
   tabActive: {
-    backgroundColor: '#7c3aed',
+    backgroundColor: 'rgba(0,242,254,0.15)',
+    borderColor: 'rgba(0,242,254,0.4)',
   },
   tabText: {
-    fontSize: 14,
-    fontWeight: '600',
     color: colors.subText,
+    fontSize: 13,
+    fontWeight: '600',
   },
   tabTextActive: {
-    color: colors.text,
+    color: '#00f2fe',
+    textShadowColor: 'rgba(0,242,254,0.4)',
+    textShadowOffset: {width: 0, height: 0},
+    textShadowRadius: 4,
   },
 
   /* List */

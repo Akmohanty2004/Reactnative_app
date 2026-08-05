@@ -3,7 +3,7 @@ import {
   View, Text, StyleSheet, TextInput, TouchableOpacity,
   FlatList, KeyboardAvoidingView, Platform, StatusBar,
   Image, Linking, Modal, Alert, Dimensions, ActivityIndicator,
-  ImageBackground, PanResponder, Animated, ScrollView,
+  ImageBackground, PanResponder, Animated, ScrollView, AppState,
 } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { Feather } from '@expo/vector-icons';
@@ -61,6 +61,22 @@ const dayLabel = (date) => {
   yesterday.setDate(now.getDate() - 1);
   if (isSameDay(d, yesterday)) return 'Yesterday';
   return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+};
+
+const formatLastSeen = (dateString) => {
+  if (!dateString) return '';
+  const d = new Date(dateString);
+  const now = new Date();
+  
+  const timeStr = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+  
+  if (isSameDay(d, now)) return `today at ${timeStr}`;
+  
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  if (isSameDay(d, yesterday)) return `yesterday at ${timeStr}`;
+  
+  return `on ${d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} at ${timeStr}`;
 };
 
 const ZoomableImage = ({ uri, width, height, onZoomChange }) => {
@@ -364,6 +380,7 @@ export default function ChatRoomScreen({ route, navigation }) {
 
   const [inputText, setInputText] = useState('');
   const [isOnline, setIsOnline] = useState(otherUser?.isOnline || false);
+  const [lastSeen, setLastSeen] = useState(otherUser?.lastSeen || null);
   const [reportVisible, setReportVisible] = useState(false);
   const [reportLoading, setReportLoading] = useState(false);
   const [studentStats, setStudentStats] = useState(null);
@@ -429,10 +446,16 @@ export default function ChatRoomScreen({ route, navigation }) {
     newSocket.on('delete_message', (msgId) =>
       dispatch(removeMessageLocally({ messageId: msgId, otherUserId: targetId })));
     newSocket.on('user_online', (uid) => { if (String(uid) === targetId) setIsOnline(true); });
-    newSocket.on('user_offline', (uid) => { if (String(uid) === targetId) setIsOnline(false); });
+    newSocket.on('user_offline', (uid) => { 
+      if (String(uid) === targetId) {
+        setIsOnline(false);
+        setLastSeen(new Date().toISOString());
+      }
+    });
     newSocket.on('user_status_response', (data) => {
       if (String(data.userId) === targetId) {
         setIsOnline(data.isOnline);
+        if (data.lastSeen) setLastSeen(data.lastSeen);
       }
     });
 
@@ -443,11 +466,28 @@ export default function ChatRoomScreen({ route, navigation }) {
       // Fallback polling for Vercel/stateless environments where Socket.io might fail
       dispatch(getChatHistory(otherIdStr));
     }, 1000);
-
-    return () => {
-      clearInterval(statusInterval);
-      newSocket.disconnect();
+    const handleAppStateChange = (nextAppState) => {
+      if (nextAppState === 'active') {
+        if (!newSocket.connected) {
+          newSocket.connect();
+        }
+        newSocket.emit('set_status', { isOnline: true });
+      } else if (nextAppState === 'background' || nextAppState === 'inactive') {
+        if (newSocket.connected) {
+          newSocket.emit('set_status', { isOnline: false });
+        }
+      } else {
+        newSocket.emit('set_status', { isOnline: false });
+      }
     };
+
+    const appStateSubscription = AppState.addEventListener('change', handleAppStateChange);
+
+      return () => {
+        clearInterval(statusInterval);
+        appStateSubscription?.remove();
+        // newSocket.disconnect();
+      };
   }, [dispatch, otherUser._id, otherUser.id, user._id, user.id, otherIdStr]);
 
   const handleSend = async () => {
@@ -791,12 +831,11 @@ export default function ChatRoomScreen({ route, navigation }) {
                 <Text style={styles.msgAvatarText}>{otherUser.name?.charAt(0).toUpperCase()}</Text>
               </View>
             )}
-            {isOnline && <View style={styles.msgAvatarDot} />}
           </View>
         )}
 
         <TouchableOpacity
-          style={[styles.bubble, isMe ? styles.bubbleMe : { backgroundColor: colors.bubbleThem, borderBottomLeftRadius: 4 }]}
+          style={[styles.bubble, isMe ? styles.bubbleMe : { backgroundColor: colors.bubbleThem, borderBottomLeftRadius: 4, borderTopLeftRadius: 20 }]}
           onLongPress={() => handleLongPress(item, isMe)}
           delayLongPress={500}
           activeOpacity={0.85}
@@ -867,8 +906,8 @@ export default function ChatRoomScreen({ route, navigation }) {
           <View style={{ marginLeft: 10 }}>
             <Text style={[styles.headerName, { color: colors.headerText }]}>{otherUser.name}</Text>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <View style={[styles.statusDot, { backgroundColor: isOnline ? '#34d399' : '#94a3b8' }]} />
-              <Text style={[styles.headerStatus, { color: colors.statusText }]}>{isOnline ? 'Online' : 'Offline'}</Text>
+              {isOnline && <View style={[styles.statusDot, { backgroundColor: '#34d399' }]} />}
+              <Text style={[styles.headerStatus, { color: colors.statusText }]}>{isOnline ? 'Online' : (lastSeen ? `last seen ${formatLastSeen(lastSeen)}` : 'Offline')}</Text>
             </View>
           </View>
         </View>
@@ -1209,36 +1248,36 @@ const styles = StyleSheet.create({
   },
 
   /* list */
-  list: { paddingHorizontal: 12, paddingVertical: 12 },
+  list: { padding: 15, paddingBottom: 25 },
 
   /* date separator */
-  separator: { alignItems: 'center', marginVertical: 12 },
-  separatorText: {
-    color: '#94a3b8', fontSize: 12, fontWeight: '600',
-    backgroundColor: '#1e293b', paddingHorizontal: 14, paddingVertical: 4,
-    borderRadius: 12, overflow: 'hidden',
-  },
+  separator: { alignItems: 'center', marginVertical: 15 },
+  separatorText: { fontSize: 11, paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12, overflow: 'hidden', fontWeight: '500' },
 
   /* message rows */
-  msgRow: { flexDirection: 'row', marginBottom: 10, alignItems: 'flex-end' },
+  msgRow: { flexDirection: 'row', marginBottom: 12, alignItems: 'flex-end' },
   msgRowLeft: { justifyContent: 'flex-start' },
   msgRowRight: { justifyContent: 'flex-end' },
 
-  avatarWrap: { position: 'relative', marginRight: 8 },
-  msgAvatar: { width: 36, height: 36, borderRadius: 18, borderWidth: 2, borderColor: '#6366f1' },
-  msgAvatarPlaceholder: { backgroundColor: '#6366f1', justifyContent: 'center', alignItems: 'center' },
-  msgAvatarText: { color: '#fff', fontSize: 14, fontWeight: 'bold' },
-  msgAvatarDot: {
-    position: 'absolute', bottom: 0, right: 0,
-    width: 10, height: 10, borderRadius: 5,
-    backgroundColor: '#34d399', borderWidth: 2, borderColor: '#0d1117',
-  },
+  avatarWrap: { marginRight: 8, position: 'relative' },
+  msgAvatar: { width: 32, height: 32, borderRadius: 16 },
+  msgAvatarPlaceholder: { backgroundColor: '#e2e8f0', justifyContent: 'center', alignItems: 'center' },
+  msgAvatarText: { color: '#64748b', fontSize: 13, fontWeight: 'bold' },
 
   /* bubbles */
-  bubble: { maxWidth: '72%', borderRadius: 18, padding: 12 },
-  bubbleMe: { backgroundColor: '#6366f1', borderBottomRightRadius: 4 },
+  bubble: { 
+    maxWidth: '75%', 
+    padding: 12, 
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 1,
+    elevation: 2
+  },
+  bubbleMe: { backgroundColor: '#6366f1', borderBottomRightRadius: 6, borderTopRightRadius: 20 },
   bubbleThem: { backgroundColor: '#1e293b', borderBottomLeftRadius: 4 },
-  bubbleText: { color: '#fff', fontSize: 15, lineHeight: 21 },
+  bubbleText: { fontSize: 15, lineHeight: 22 },
   bubbleImage: { width: 200, height: 200, borderRadius: 10, marginBottom: 4 },
   bubbleMeta: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', marginTop: 4 },
   bubbleTime: { color: 'rgba(255,255,255,0.55)', fontSize: 10 },

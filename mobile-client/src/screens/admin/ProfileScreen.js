@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Image, Modal, Alert, KeyboardAvoidingView, Platform, ActivityIndicator , StatusBar} from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Image, Modal, Alert, KeyboardAvoidingView, Platform, ActivityIndicator , StatusBar, Animated, Easing } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { Feather } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
@@ -9,6 +9,7 @@ import { useNavigation } from '@react-navigation/native';
 import { updateProfile, getCurrentUser, changePassword, logoutUser, uploadProfileImage } from '../../redux/slices/authSlice';
 import { toggleTheme } from '../../redux/slices/uiSlice';
 import { getAdminDashboardStats } from '../../redux/slices/adminSlice';
+import api from '../../services/api';
 
 export default function ProfileScreen() {
   const dispatch = useDispatch();
@@ -43,6 +44,27 @@ export default function ProfileScreen() {
     dispatch(getCurrentUser());
     dispatch(getAdminDashboardStats());
   }, [dispatch]);
+
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1.15,
+          duration: 1500,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 1500,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+  }, [pulseAnim]);
 
   useEffect(() => {
     if (user) {
@@ -95,7 +117,6 @@ export default function ProfileScreen() {
     }
     setIsBroadcasting(true);
     try {
-      const { default: api } = await import('../../services/api');
       await api.post('/api/notifications/send', {
         email: 'all',
         title: broadcastData.title,
@@ -171,10 +192,7 @@ export default function ProfileScreen() {
       <ScrollView contentContainerStyle={styles.content}>
         {/* Custom Header */}
         <View style={[styles.header, { backgroundColor: 'transparent', borderBottomWidth: 0, paddingHorizontal: 0, paddingBottom: 25, paddingTop: Platform.OS === 'android' ? 40 : 50, flexDirection: 'row', alignItems: 'center' }]}>
-          <TouchableOpacity onPress={() => navigation.navigate('Home')} style={{ marginRight: 18, padding: 4 }}>
-            <Feather name="arrow-left" size={24} color={colors.text} />
-          </TouchableOpacity>
-          <View style={styles.headerTitles}>
+          <View style={{ flex: 1 }}>
             <Text style={[styles.headerTitle, { color: colors.text }]}>My <Text style={{color: '#8b5cf6'}}>Profile</Text></Text>
             <Text style={styles.headerSubtitle}>Manage your account and preferences</Text>
           </View>
@@ -192,49 +210,54 @@ export default function ProfileScreen() {
         {/* Profile Card */}
         <View style={[styles.profileCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={styles.profileCardInner}>
-            <TouchableOpacity style={styles.avatarContainer} onPress={pickImage}>
-              <View style={styles.avatarRing}>
-                {user?.profileImage ? (
-                  <Image source={{ uri: getImageUrl(user.profileImage) }} style={styles.avatarImage} />
-                ) : (
-                  <View style={styles.avatarPlaceholder}>
-                    <Text style={styles.avatarText}>{initials}</Text>
-                  </View>
-                )}
-              </View>
-              <View style={styles.onlineDot} />
-              <View style={[styles.cameraIconBadge, { backgroundColor: colors.iconBg, borderColor: colors.border }]}>
-                <Feather name="camera" size={12} color={colors.iconColor} />
-              </View>
-            </TouchableOpacity>
+            <View style={styles.avatarWrapper}>
+              <Animated.View style={[styles.pulseRing, { transform: [{ scale: pulseAnim }], borderColor: '#8b5cf6' }]} />
+              <TouchableOpacity style={styles.avatarContainer} onPress={pickImage}>
+                <View style={styles.avatarRing}>
+                  {user?.profileImage ? (
+                    <Image source={{ uri: getImageUrl(user.profileImage) }} style={styles.avatarImage} />
+                  ) : (
+                    <View style={styles.avatarPlaceholder}>
+                      <Text style={styles.avatarText}>{initials}</Text>
+                    </View>
+                  )}
+                </View>
+                <View style={[styles.onlineDot, { borderColor: colors.card }]} />
+                <View style={[styles.cameraIconBadge, { backgroundColor: colors.iconBg, borderColor: colors.border }]}>
+                  <Feather name="camera" size={14} color={colors.iconColor} />
+                </View>
+              </TouchableOpacity>
+            </View>
 
             <View style={styles.profileInfo}>
               <Text style={[styles.userName, { color: colors.text }]}>{user?.name || 'Admin Name'}</Text>
               
               <View style={styles.roleBadgeContainer}>
-                <Feather name="award" size={12} color="#a855f7" />
+                <Feather name="award" size={14} color="#a855f7" />
                 <Text style={styles.roleText}>Admin</Text>
               </View>
               
-              <View style={styles.infoRow}>
-                <Feather name="mail" size={12} color={colors.subText} />
-                <Text style={[styles.infoText, { color: colors.subText }]}>{user?.email || 'email@example.com'}</Text>
-              </View>
-              
-              <View style={styles.infoRow}>
-                <Feather name="phone" size={12} color={colors.subText} />
-                <Text style={[styles.infoText, { color: colors.subText }]}>{user?.phone || '+91 0000000000'}</Text>
-              </View>
-              
-              <View style={styles.infoRow}>
-                <Feather name="map-pin" size={12} color={colors.subText} />
-                <Text style={[styles.infoText, { color: colors.subText }]}>{user?.address || 'Bhubaneswar, Odisha, India'}</Text>
+              <View style={styles.infoRowContainer}>
+                <View style={styles.infoRow}>
+                  <Feather name="mail" size={16} color={colors.subText} />
+                  <Text style={[styles.infoText, { color: colors.subText }]}>{user?.email || 'email@example.com'}</Text>
+                </View>
+                
+                <View style={styles.infoRow}>
+                  <Feather name="phone" size={16} color={colors.subText} />
+                  <Text style={[styles.infoText, { color: colors.subText }]}>{user?.phone || '+91 0000000000'}</Text>
+                </View>
+                
+                <View style={[styles.infoRow, { marginBottom: 0 }]}>
+                  <Feather name="map-pin" size={16} color={colors.subText} />
+                  <Text style={[styles.infoText, { color: colors.subText }]}>{user?.address || 'Bhubaneswar, Odisha, India'}</Text>
+                </View>
               </View>
             </View>
 
             <TouchableOpacity style={styles.editBtn} onPress={() => setEditModalVisible(true)}>
-              <Feather name="edit-2" size={12} color="#a855f7" />
-              <Text style={styles.editBtnText}>Edit Profile</Text>
+              <Feather name="edit-2" size={14} color="white" />
+              <Text style={styles.editBtnText}>Edit</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -672,25 +695,29 @@ const styles = StyleSheet.create({
   iconBtn: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
   badge: { position: 'absolute', top: 10, right: 10, width: 6, height: 6, borderRadius: 3, backgroundColor: '#a855f7' },
 
-  profileCard: { borderRadius: 20, padding: 2, marginBottom: 20, borderWidth: 1 },
-  profileCardInner: { flexDirection: 'row', padding: 20, position: 'relative' },
-  avatarContainer: { marginRight: 20, position: 'relative' },
-  avatarRing: { width: 90, height: 90, borderRadius: 45, borderWidth: 2, borderColor: '#8b5cf6', padding: 3, backgroundColor: 'transparent' },
-  avatarImage: { width: '100%', height: '100%', borderRadius: 45 },
-  avatarPlaceholder: { width: '100%', height: '100%', borderRadius: 45, backgroundColor: '#334155', justifyContent: 'center', alignItems: 'center' },
-  avatarText: { fontSize: 30, color: 'white', fontWeight: 'bold' },
-  onlineDot: { position: 'absolute', bottom: 5, right: 5, width: 14, height: 14, borderRadius: 7, backgroundColor: '#22c55e', borderWidth: 2, borderColor: '#13102b' },
-  cameraIconBadge: { position: 'absolute', bottom: -5, left: -5, width: 26, height: 26, borderRadius: 13, justifyContent: 'center', alignItems: 'center', borderWidth: 1 },
+  profileCard: { borderRadius: 28, padding: 2, marginBottom: 30, borderWidth: 1, shadowColor: '#8b5cf6', shadowOffset: { width: 0, height: 12 }, shadowOpacity: 0.15, shadowRadius: 24, elevation: 8 },
+  profileCardInner: { alignItems: 'center', padding: 30, position: 'relative' },
+  avatarWrapper: { position: 'relative', marginBottom: 25, alignItems: 'center', justifyContent: 'center' },
+  pulseRing: { position: 'absolute', width: 140, height: 140, borderRadius: 70, borderWidth: 2, opacity: 0.4 },
+  avatarContainer: { position: 'relative', zIndex: 2 },
+  avatarRing: { width: 120, height: 120, borderRadius: 60, borderWidth: 4, borderColor: '#8b5cf6', padding: 4, backgroundColor: 'transparent' },
+  avatarImage: { width: '100%', height: '100%', borderRadius: 60 },
+  avatarPlaceholder: { width: '100%', height: '100%', borderRadius: 60, backgroundColor: '#3b82f6', justifyContent: 'center', alignItems: 'center' },
+  avatarText: { fontSize: 40, color: 'white', fontWeight: '900' },
+  onlineDot: { position: 'absolute', bottom: 10, right: 10, width: 22, height: 22, borderRadius: 11, backgroundColor: '#22c55e', borderWidth: 4 },
+  cameraIconBadge: { position: 'absolute', bottom: -5, left: -5, width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center', borderWidth: 2 },
 
-  profileInfo: { flex: 1, justifyContent: 'center', paddingRight: 95 },
-  userName: { fontSize: 18, fontWeight: 'bold', marginBottom: 6 },
-  roleBadgeContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(168, 85, 247, 0.1)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12, alignSelf: 'flex-start', marginBottom: 12 },
-  roleText: { color: '#a855f7', fontSize: 11, fontWeight: 'bold', marginLeft: 4 },
-  infoRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 6 },
-  infoText: { fontSize: 12, marginLeft: 8 },
+  profileInfo: { alignItems: 'center', width: '100%' },
+  userName: { fontSize: 26, fontWeight: '900', marginBottom: 10, letterSpacing: 0.5 },
+  roleBadgeContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(168, 85, 247, 0.1)', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, marginBottom: 25 },
+  roleText: { color: '#a855f7', fontSize: 13, fontWeight: '900', marginLeft: 8, textTransform: 'uppercase', letterSpacing: 1.5 },
+  
+  infoRowContainer: { width: '100%', backgroundColor: 'rgba(148,163,184,0.06)', borderRadius: 20, padding: 20 },
+  infoRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
+  infoText: { fontSize: 15, marginLeft: 16, fontWeight: '600' },
 
-  editBtn: { position: 'absolute', top: 20, right: 20, flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(168, 85, 247, 0.1)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, borderWidth: 1, borderColor: 'rgba(168, 85, 247, 0.3)' },
-  editBtnText: { color: '#a855f7', fontSize: 11, fontWeight: 'bold', marginLeft: 6 },
+  editBtn: { position: 'absolute', top: 20, right: 20, flexDirection: 'row', alignItems: 'center', backgroundColor: '#8b5cf6', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 20, shadowColor: '#8b5cf6', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4 },
+  editBtnText: { color: 'white', fontSize: 13, fontWeight: 'bold', marginLeft: 8 },
 
   statsCard: { flexDirection: 'row', borderRadius: 16, padding: 15, marginBottom: 25, justifyContent: 'space-between', alignItems: 'center', borderWidth: 1 },
   statItem: { flex: 1, alignItems: 'center' },

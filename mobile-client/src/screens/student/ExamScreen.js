@@ -253,8 +253,8 @@ export default function ExamScreen({ route, navigation }) {
       {/* End Header */}
 
       {/* Summary Modal */}
-      {examSummary && (
-        <Modal visible={true} transparent animationType="slide">
+      <Modal visible={!!examSummary} transparent animationType="slide">
+        {examSummary && (
           <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'center', alignItems: 'center' }}>
             <View style={{ width: '90%', height: 250, backgroundColor: '#1e293b', borderRadius: 16, overflow: 'hidden' }}>
               <View style={{ padding: 30, backgroundColor: '#0f172a', alignItems: 'center', flex: 1, justifyContent: 'center' }}>
@@ -274,8 +274,8 @@ export default function ExamScreen({ route, navigation }) {
               </View>
             </View>
           </View>
-        </Modal>
-      )}
+        )}
+      </Modal>
 
       <View style={styles.progressRow}>
         <Text style={styles.progressText}>Answered: {answeredCount} / {questions.length}</Text>

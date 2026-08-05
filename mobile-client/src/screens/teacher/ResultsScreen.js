@@ -31,19 +31,23 @@ const ICON_COLORS = ['#8b5cf6', '#f59e0b', '#10b981', '#3b82f6', '#f43f5e'];
 export default function ResultsScreen() {
   const dispatch = useDispatch();
   const { theme } = useSelector(s => s.ui || { theme: 'dark' });
-  const { exams = [] }                          = useSelector((s) => s.exams);
-  const { results: rawResults, isLoading }      = useSelector((s) => s.results);
+  const { exams = [], isLoading: examsLoading }  = useSelector((s) => s.exams);
+  const { results: rawResults, isLoading }       = useSelector((s) => s.results);
   const results                                  = Array.isArray(rawResults) ? rawResults : [];
+
+  const [refreshing, setRefreshing] = useState(false);
+  const [showFilters, setShowFilters] = useState(true);
 
   
   const isDarkMode = theme === 'dark';
   const colors = {
-    bg: isDarkMode ? '#0f172a' : '#f8fafc',
+    bg: isDarkMode ? '#000000' : '#f8fafc',
     text: isDarkMode ? 'white' : '#0f172a',
     subText: isDarkMode ? '#94a3b8' : '#64748b',
     card: isDarkMode ? '#1e293b' : 'white',
     cardAlt: isDarkMode ? '#151e2d' : '#f1f5f9',
     border: isDarkMode ? '#334155' : '#e2e8f0',
+    bannerBg: isDarkMode ? '#13102b' : '#f1f5f9',
   };
   const styles = getStyles(colors);
   
@@ -71,6 +75,13 @@ export default function ResultsScreen() {
     }
   };
 
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await dispatch(getTeacherExams());
+    fetchClasses();
+    setRefreshing(false);
+  };
+
   useEffect(() => {
     if (selectedExamId) dispatch(getTeacherResults(selectedExamId));
   }, [dispatch, selectedExamId]);
@@ -80,8 +91,9 @@ export default function ResultsScreen() {
     if (selectedClass === 'All Classes') return exams;
     return exams.filter(exam => {
       if (!exam.classGroup) return false;
-      const groups = exam.classGroup.split(',').map(s => s.trim());
-      return groups.includes(selectedClass);
+      if (!exam.classGroup) return false;
+      const groups = exam.classGroup.split(',').map(s => s.trim().toLowerCase());
+      return groups.includes(selectedClass.toLowerCase());
     });
   }, [exams, selectedClass]);
 
@@ -112,57 +124,73 @@ export default function ResultsScreen() {
         <View style={styles.headerContainer}>
           <View style={styles.headerTop}>
             <Text style={styles.headerTitle}>
-              Exam <Text style={{ color: '#a78bfa' }}>Results</Text>
+              Exam <Text style={{ color: '#b026ff', textShadowColor: 'rgba(176,38,255,0.4)', textShadowOffset: {width: 0, height: 0}, textShadowRadius: 6 }}>Results</Text>
             </Text>
-            <TouchableOpacity style={styles.filterBtn}>
-              <Feather name="filter" size={18} color={colors.subText} />
+            <TouchableOpacity 
+              style={[styles.filterBtn, !showFilters && { backgroundColor: 'rgba(176,38,255,0.15)', borderColor: 'rgba(176,38,255,0.4)' }]} 
+              onPress={() => setShowFilters(!showFilters)}
+            >
+              <Feather name="filter" size={18} color={!showFilters ? '#b026ff' : colors.subText} />
             </TouchableOpacity>
           </View>
           <Text style={styles.headerSub}>Select an exam to view student results</Text>
         </View>
 
-        {/* Select Exam Button */}
-        <TouchableOpacity
-          style={styles.selectorBtn}
-          onPress={() => setModalVisible(true)}
-        >
-          <View style={styles.selectorBtnLeft}>
-            <View style={styles.selectorIcon}>
-              <Feather name="book-open" size={20} color="#8b5cf6" />
-            </View>
-            <Text style={styles.selectorText}>
-              {selectedExam ? selectedExam.title : 'Select an exam…'}
-            </Text>
-          </View>
-          <Feather name="chevron-down" size={20} color="#64748b" />
-        </TouchableOpacity>
-
-        {/* ── Class Filter Tabs ── */}
-        <View style={{ marginBottom: 15 }}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, gap: 10 }}>
+        {showFilters && (
+          <View>
+            {/* Select Exam Button */}
             <TouchableOpacity
-              style={[styles.tab, { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border }, selectedClass === 'All Classes' && { backgroundColor: '#8b5cf6', borderColor: '#8b5cf6' }]}
-              onPress={() => setSelectedClass('All Classes')}
+              style={[styles.selectorBtn, { backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1 }]}
+              onPress={() => setModalVisible(true)}
             >
-              <Text style={[{ color: '#cbd5e1', fontSize: 13, fontWeight: '600' }, selectedClass === 'All Classes' && { color: 'white' }]}>All Classes</Text>
+              <View style={styles.selectorBtnLeft}>
+                <View style={[styles.selectorIcon, { backgroundColor: 'rgba(176,38,255,0.15)', borderColor: 'rgba(176,38,255,0.3)', borderWidth: 1 }]}>
+                  <Feather name="book-open" size={18} color="#b026ff" />
+                </View>
+                <Text style={styles.selectorText}>
+                  {selectedExam ? selectedExam.title : 'Select an exam…'}
+                </Text>
+              </View>
+              <Feather name="chevron-down" size={20} color={colors.subText} />
             </TouchableOpacity>
-            {classes.map((cls) => (
-              <TouchableOpacity
-                key={cls._id}
-                style={[styles.tab, { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border }, selectedClass === cls.name && { backgroundColor: '#8b5cf6', borderColor: '#8b5cf6' }]}
-                onPress={() => setSelectedClass(cls.name)}
-              >
-                <Text style={[{ color: '#cbd5e1', fontSize: 13, fontWeight: '600' }, selectedClass === cls.name && { color: 'white' }]}>{cls.name}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
+
+            {/* ── Class Filter Tabs ── */}
+            <View style={{ marginBottom: 15 }}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -15 }} contentContainerStyle={{ paddingHorizontal: 35, gap: 10 }}>
+                <TouchableOpacity
+                  style={[styles.tab, { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border }, selectedClass === 'All Classes' && { backgroundColor: 'rgba(0,242,254,0.15)', borderColor: 'rgba(0,242,254,0.4)' }]}
+                  onPress={() => setSelectedClass('All Classes')}
+                >
+                  <Text style={[{ color: colors.subText, fontSize: 13, fontWeight: '600' }, selectedClass === 'All Classes' && { color: '#00f2fe', textShadowColor: 'rgba(0,242,254,0.4)', textShadowOffset: {width: 0, height: 0}, textShadowRadius: 4 }]}>All Classes</Text>
+                </TouchableOpacity>
+                {classes.map((cls) => (
+                  <TouchableOpacity
+                    key={cls._id}
+                    style={[styles.tab, { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border }, selectedClass === cls.name && { backgroundColor: 'rgba(0,242,254,0.15)', borderColor: 'rgba(0,242,254,0.4)' }]}
+                    onPress={() => setSelectedClass(cls.name)}
+                  >
+                    <Text style={[{ color: colors.subText, fontSize: 13, fontWeight: '600' }, selectedClass === cls.name && { color: '#00f2fe', textShadowColor: 'rgba(0,242,254,0.4)', textShadowOffset: {width: 0, height: 0}, textShadowRadius: 4 }]}>{cls.name}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          </View>
+        )}
 
         {/* Exam Cards */}
+        {(examsLoading || refreshing) ? (
+          <View style={{ paddingHorizontal: 20 }}>
+            {[1, 2, 3, 4].map(i => (
+              <Skeleton key={i} width="100%" height={110} borderRadius={16} style={{ marginBottom: 15 }} />
+            ))}
+          </View>
+        ) : (
         <FlatList
           data={filteredExams}
           keyExtractor={(item) => item._id}
           contentContainerStyle={styles.list}
+          refreshing={refreshing}
+          onRefresh={onRefresh}
           ListEmptyComponent={
             <View style={styles.emptyBox}>
               <Feather name="inbox" size={36} color="#8b5cf6" />
@@ -226,6 +254,7 @@ export default function ResultsScreen() {
             );
           }}
         />
+        )}
 
         {/* Exam picker modal */}
         <Modal visible={modalVisible} transparent animationType="slide">
@@ -470,7 +499,7 @@ const getStyles = (colors) => ({
   /* Header */
   headerContainer: {
     paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 24) + 10 : 20,
+    paddingTop: 10,
     paddingBottom: 16,
   },
   headerTop: {
