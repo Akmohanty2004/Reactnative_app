@@ -1,6 +1,8 @@
 import React, { useRef } from 'react';
 import { Pressable, Animated } from 'react-native';
 
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
 const BouncyTouchable = ({ children, style, onPress, activeScale = 0.95, ...props }) => {
   const scale = useRef(new Animated.Value(1)).current;
 
@@ -13,11 +15,9 @@ const BouncyTouchable = ({ children, style, onPress, activeScale = 0.95, ...prop
   };
 
   return (
-    <Pressable onPress={onPress} onPressIn={handlePressIn} onPressOut={handlePressOut} {...props}>
-      <Animated.View style={[style, { transform: [{ scale }] }]}>
-        {children}
-      </Animated.View>
-    </Pressable>
+    <AnimatedPressable onPress={onPress} onPressIn={handlePressIn} onPressOut={handlePressOut} style={[style, { transform: [{ scale }] }]} {...props}>
+      {children}
+    </AnimatedPressable>
   );
 };
 

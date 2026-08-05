@@ -147,7 +147,10 @@ User message: "${text}"`
       const data = await response.json();
       if (data.error) {
         console.error('API Error:', data.error);
-        return `API Error: ${data.error.message}`;
+        if (data.error.code === 503) {
+          return "The AI is currently experiencing very high demand. Please try again in a few moments!";
+        }
+        return `I'm having trouble connecting right now. Please try again later.`;
       }
       if (data.candidates && data.candidates.length > 0) {
         return data.candidates[0].content.parts[0].text;

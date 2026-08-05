@@ -5,6 +5,7 @@ import Toast from 'react-native-toast-message';
 import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
 import { io } from 'socket.io-client';
+import * as Sharing from 'expo-sharing';
 import { getNotifications } from '../redux/slices/notificationSlice';
 import api from '../services/api';
 
@@ -45,6 +46,23 @@ export default function NotificationManager() {
     notificationsRef.current = notifications;
   }, [unreadCount, notifications]);
 
+  // Handle local notification clicks (e.g. file downloads)
+  useEffect(() => {
+    const responseListener = Notifications.addNotificationResponseReceivedListener(async response => {
+      const data = response.notification.request.content.data;
+      if (data && data.fileUri) {
+        try {
+          if (await Sharing.isAvailableAsync()) {
+            await Sharing.shareAsync(data.fileUri, { UTI: 'public.html', mimeType: 'text/html' });
+          }
+        } catch (err) {
+          console.log('Error opening file from notification:', err);
+        }
+      }
+    });
+    return () => Notifications.removeNotificationSubscription(responseListener);
+  }, []);
+
   // Register for Expo Push Notifications to receive notifications when app is closed / not open
   useEffect(() => {
     if (!isAuthenticated || !user) return;
@@ -65,8 +83,11 @@ export default function NotificationManager() {
             lightColor: '#8b5cf6',
           }).catch(() => {});
         }
-        const projectId = Constants.expoConfig?.extra?.eas?.projectId || Constants.easConfig?.projectId || '9cb6df56-a6ab-4015-aa97-56cc7670107d';
-        const tokenData = await Notifications.getExpoPushTokenAsync({ projectId }).catch(() => null);
+        const projectId = Constants.expoConfig?.extra?.eas?.projectId || Constants.easConfig?.projectId || 'f15cfad8-a264-460c-a9df-1dd3ef343a23';
+        const tokenData = await Notifications.getExpoPushTokenAsync({ projectId }).catch((e) => {
+          console.log('Failed to get Expo push token:', e);
+          return null;
+        });
         if (tokenData && tokenData.data) {
           await api.post('/api/users/push-token', { pushToken: tokenData.data }).catch(() => {});
         }

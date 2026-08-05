@@ -9,6 +9,7 @@ import Svg, { Circle, G, Text as SvgText } from 'react-native-svg';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { getAdminDashboardStats, getAdminExams } from '../../redux/slices/adminSlice';
+import { triggerMobileNotification } from '../../components/NotificationManager';
 
 const { width } = Dimensions.get('window');
 
@@ -24,6 +25,7 @@ export default function ReportsScreen({ navigation }) {
   const [timeRange, setTimeRange] = useState('This Month');
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
+  const [showAllSummary, setShowAllSummary] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -163,28 +165,58 @@ export default function ReportsScreen({ navigation }) {
 
   const handleDownloadReport = async () => {
     try {
-      const header = 'Exam Name,Attempts,Passed,Failed,Pass Rate\n';
       const rows = filteredExams.map(exam => {
         const attempts = exam.totalSubmitted || 0;
         const pass = exam.totalPassed || 0;
         const rate = attempts > 0 ? Math.round((pass / attempts) * 100) : 0;
-        return `"${exam.title}",${attempts},${pass},${attempts - pass},${rate}%`;
+        return `<tr>
+          <td style="padding: 12px; border: 1px solid #ddd;">${exam.title}</td>
+          <td style="padding: 12px; border: 1px solid #ddd; text-align: center;">${attempts}</td>
+          <td style="padding: 12px; border: 1px solid #ddd; text-align: center;">${pass}</td>
+          <td style="padding: 12px; border: 1px solid #ddd; text-align: center;">${attempts - pass}</td>
+          <td style="padding: 12px; border: 1px solid #ddd; text-align: center; color: ${rate >= 50 ? '#10b981' : '#ef4444'}; font-weight: bold;">${rate}%</td>
+        </tr>`;
       }).join('\n');
       
-      const csv = header + rows;
+      const html = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Exam Report Summary</title>
+          <style>
+            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; color: #333; }
+            h1 { color: #8b5cf6; text-align: center; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+            th { background-color: #8b5cf6; color: white; padding: 12px; border: 1px solid #7c3aed; }
+          </style>
+        </head>
+        <body>
+          <h1>Exam Summary Report</h1>
+          <p>Generated on: ${new Date().toLocaleString()}</p>
+          <table>
+            <thead>
+              <tr>
+                <th>Exam Name</th>
+                <th>Attempts</th>
+                <th>Passed</th>
+                <th>Failed</th>
+                <th>Pass Rate</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows}
+            </tbody>
+          </table>
+        </body>
+        </html>
+      `;
       
-      const fileUri = FileSystem.documentDirectory + 'Exam_Report.csv';
-      await FileSystem.writeAsStringAsync(fileUri, csv, { encoding: FileSystem.EncodingType.UTF8 });
+      const fileUri = FileSystem.documentDirectory + 'Exam_Report.html';
+      await FileSystem.writeAsStringAsync(fileUri, html, { encoding: FileSystem.EncodingType.UTF8 });
       
-      if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(fileUri, {
-          mimeType: 'text/csv',
-          dialogTitle: 'Download Exam Report',
-          UTI: 'public.comma-separated-values-text'
-        });
-      } else {
-        Alert.alert('Success', 'Report saved to documents directory!');
-      }
+      // Trigger notification which the user can tap to open the HTML file
+      await triggerMobileNotification('Download Complete', 'Successfully downloaded Exam Report. Tap to open.', { fileUri: fileUri });
     } catch (err) {
       Alert.alert('Error', 'Failed to generate report');
       console.log(err);
@@ -497,7 +529,7 @@ export default function ReportsScreen({ navigation }) {
           </View>
 
           {/* Table Rows */}
-          {filteredExams.map((exam, i) => {
+          {(showAllSummary ? filteredExams : filteredExams.slice(0, 5)).map((exam, i) => {
             const attempts = exam.totalSubmitted || 0;
             const pass = exam.totalPassed || 0;
             const rate = attempts > 0 ? Math.round((pass / attempts) * 100) : 0;
@@ -514,6 +546,18 @@ export default function ReportsScreen({ navigation }) {
               </View>
             );
           })}
+          
+          {/* View All / Show Less Button */}
+          {!showAllSummary && filteredExams.length > 5 && (
+            <TouchableOpacity onPress={() => setShowAllSummary(true)} style={{ padding: 16, alignItems: 'center', borderTopWidth: 1, borderTopColor: colors.border }}>
+              <Text style={{ color: colors.accent, fontWeight: 'bold', fontSize: 13 }}>View All Exams</Text>
+            </TouchableOpacity>
+          )}
+          {showAllSummary && filteredExams.length > 5 && (
+            <TouchableOpacity onPress={() => setShowAllSummary(false)} style={{ padding: 16, alignItems: 'center', borderTopWidth: 1, borderTopColor: colors.border }}>
+              <Text style={{ color: colors.accent, fontWeight: 'bold', fontSize: 13 }}>Show Less</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
       </ScrollView>
