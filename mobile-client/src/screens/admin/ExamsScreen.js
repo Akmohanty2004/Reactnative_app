@@ -4,11 +4,13 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator
 import { useDispatch, useSelector } from 'react-redux';
 import { Feather } from '@expo/vector-icons';
 import { getAdminExams } from '../../redux/slices/adminSlice';
+import { getClasses } from '../../redux/slices/classSlice';
+import { ListSkeleton } from '../../components/SkeletonLoader';
 import api from '../../services/api';
 
 export default function ExamsScreen({ navigation }) {
   const dispatch = useDispatch();
-  const { exams } = useSelector(state => state.admin);
+  const { exams, isLoading } = useSelector(state => state.admin);
   const { theme } = useSelector(state => state.ui || { theme: 'dark' });
 
   const [classes, setClasses] = React.useState([]);
@@ -94,7 +96,11 @@ export default function ExamsScreen({ navigation }) {
       </View>
 
       <ScrollView style={styles.listContainer} contentContainerStyle={{ paddingBottom: 30 }}>
-        {filteredExams?.map(exam => (
+        {(isLoading && (!exams || exams.length === 0)) ? (
+          <ListSkeleton isDarkMode={isDarkMode} count={4} />
+        ) : (
+          <>
+            {filteredExams?.map(exam => (
           <View key={exam._id} style={[styles.examCard, { backgroundColor: colors.cardBg, borderColor: colors.cardBorder }]}>
             <View style={styles.examHeader}>
               <View style={styles.titleWrapper}>
@@ -144,6 +150,8 @@ export default function ExamsScreen({ navigation }) {
             <Text style={[styles.emptyTitle, { color: colors.text }]}>No exams found</Text>
             <Text style={[styles.emptySubText, { color: colors.subText }]}>There are currently no exams available on the platform.</Text>
           </View>
+        )}
+        </>
         )}
       </ScrollView>
     </View>

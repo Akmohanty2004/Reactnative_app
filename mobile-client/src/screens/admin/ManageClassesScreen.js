@@ -5,6 +5,7 @@ import { useSelector } from 'react-redux';
 import { Feather } from '@expo/vector-icons';
 import api from '../../services/api';
 import Toast from 'react-native-toast-message';
+import { ListSkeleton } from '../../components/SkeletonLoader';
 
 export default function ManageClassesScreen({ navigation }) {
   const [classes, setClasses] = useState([]);
@@ -114,9 +115,7 @@ export default function ManageClassesScreen({ navigation }) {
       </View>
 
       {isLoading ? (
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <ActivityIndicator size="large" color="#8b5cf6" />
-        </View>
+        <ListSkeleton isDarkMode={isDarkMode} count={5} />
       ) : (
         <FlatList
           data={classes}

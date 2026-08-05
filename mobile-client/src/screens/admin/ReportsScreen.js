@@ -10,6 +10,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { getAdminDashboardStats, getAdminExams } from '../../redux/slices/adminSlice';
 import { triggerMobileNotification } from '../../components/NotificationManager';
+import { CardSkeleton, ListSkeleton } from '../../components/SkeletonLoader';
 
 const { width } = Dimensions.get('window');
 
@@ -269,7 +270,13 @@ export default function ReportsScreen({ navigation }) {
       )}
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        
+        {isLoading ? (
+          <View style={{ paddingTop: 10 }}>
+            <CardSkeleton isDarkMode={isDarkMode} count={4} />
+            <ListSkeleton isDarkMode={isDarkMode} count={3} />
+          </View>
+        ) : (
+          <>
         {/* Stat Cards Row */}
         <View style={styles.statsContainer}>
           {/* Total Exams */}
@@ -559,7 +566,8 @@ export default function ReportsScreen({ navigation }) {
             </TouchableOpacity>
           )}
         </View>
-
+        </>
+        )}
       </ScrollView>
     </View>
   );

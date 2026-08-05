@@ -3,16 +3,21 @@ import { useFocusEffect } from '@react-navigation/native';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Modal, FlatList, LayoutAnimation, UIManager, Platform , StatusBar} from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { Feather } from '@expo/vector-icons';
+import { Dimensions } from 'react-native';
+import { PieChart } from 'react-native-chart-kit';
 import { getAdminExams } from '../../redux/slices/adminSlice';
 import api from '../../services/api';
 import { getTeacherResults, clearResults } from '../../redux/slices/resultSlice';
+import { ListSkeleton, CardSkeleton } from '../../components/SkeletonLoader';
+
+const { width } = Dimensions.get('window');
 
 
 
 export default function ResultsScreen({ navigation, route }) {
   const dispatch = useDispatch();
   const { exams } = useSelector(state => state.admin);
-  const { results: rawResults, isLoading } = useSelector(state => state.results);
+  const { results: rawResults, stats, missingStudents, isLoading } = useSelector(state => state.results);
   const { theme } = useSelector(state => state.ui || { theme: 'dark' });
   const results = Array.isArray(rawResults) ? rawResults : [];
   
@@ -242,9 +247,9 @@ export default function ResultsScreen({ navigation, route }) {
 
           <ScrollView style={styles.content} contentContainerStyle={{ paddingBottom: 40 }}>
             {isLoading ? (
-              <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', marginTop: 80 }}>
-                <ActivityIndicator size="large" color="#8b5cf6" />
-                <Text style={{ marginTop: 15, color: colors.subText, fontSize: 16 }}>Loading results...</Text>
+              <View style={{ paddingTop: 10 }}>
+                <CardSkeleton isDarkMode={isDarkMode} count={3} />
+                <ListSkeleton isDarkMode={isDarkMode} count={4} />
               </View>
             ) : results && results.length > 0 ? (
               <>
@@ -262,6 +267,29 @@ export default function ResultsScreen({ navigation, route }) {
                     <Text style={[styles.statValue, { color: colors.warning }]}>{results.filter(r => r.tabSwitches > 0).length}</Text>
                   </View>
                 </View>
+
+                {/* Graphical Representation of Correctness */}
+                {(stats?.averageCorrect !== undefined && stats?.averageWrong !== undefined) && (
+                  <View style={[styles.listContainerDetails, { backgroundColor: colors.cardBg, borderColor: colors.cardBorder }]}>
+                    <Text style={[styles.sectionTitle, { color: colors.headerTitle, marginBottom: 15 }]}>Average Correctness</Text>
+                    <View style={{ alignItems: 'center' }}>
+                      <PieChart
+                        data={[
+                          { name: 'Correct', count: stats.averageCorrect, color: colors.success, legendFontColor: colors.text },
+                          { name: 'Wrong/Skipped', count: stats.averageWrong, color: colors.danger, legendFontColor: colors.text }
+                        ]}
+                        width={width - 80}
+                        height={180}
+                        chartConfig={{ color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})` }}
+                        accessor={"count"}
+                        backgroundColor={"transparent"}
+                        paddingLeft={"15"}
+                        center={[10, 0]}
+                        absolute
+                      />
+                    </View>
+                  </View>
+                )}
 
                 <View style={[styles.listContainerDetails, { backgroundColor: colors.cardBg, borderColor: colors.cardBorder }]}>
                   <Text style={[styles.sectionTitle, { color: colors.success }]}>✅ Passing Students</Text>
@@ -300,6 +328,24 @@ export default function ResultsScreen({ navigation, route }) {
                           <Text style={[styles.studentEmail, { color: colors.warning, fontSize: 11, marginTop: 2 }]}>Switched Tabs / Left Window</Text>
                         </View>
                         <Text style={[styles.studentScore, { color: colors.warning }]}>{r.tabSwitches} times</Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+
+                {/* Missing Students */}
+                {missingStudents && missingStudents.length > 0 && (
+                  <View style={[styles.listContainerDetails, { backgroundColor: colors.cardBg, borderColor: colors.cardBorder }]}>
+                    <Text style={[styles.sectionTitle, { color: colors.warning }]}>⚠️ Did Not Take Exam</Text>
+                    {missingStudents.map((ms, i) => (
+                      <View key={ms._id} style={[styles.studentRow, i !== missingStudents.length - 1 && { borderBottomColor: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }]}>
+                        <View>
+                          <Text style={[styles.studentName, { color: colors.text }]}>{ms.name || 'Unknown'}</Text>
+                          <Text style={[styles.studentEmail, { color: colors.subText }]}>{ms.email}</Text>
+                        </View>
+                        <View style={{ backgroundColor: 'rgba(245,158,11,0.1)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10 }}>
+                           <Text style={{ color: colors.warning, fontSize: 12, fontWeight: 'bold' }}>Pending</Text>
+                        </View>
                       </View>
                     ))}
                   </View>

@@ -163,6 +163,7 @@ const resultSlice = createSlice({
         state.isLoading = false
         state.results = action.payload.results || []
         state.stats = action.payload.stats
+        state.missingStudents = action.payload.missingStudents || []
       })
       .addCase(getTeacherResults.rejected, (state, action) => {
         state.isLoading = false

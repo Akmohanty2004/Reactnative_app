@@ -6,21 +6,7 @@ import { Feather } from '@expo/vector-icons';
 import { getUsers, deleteUser } from '../../redux/slices/adminSlice';
 import Toast from 'react-native-toast-message';
 
-const UserSkeletonLoader = ({ isDarkMode }) => (
-  <View style={{ paddingVertical: 10 }}>
-    {[1, 2, 3, 4, 5, 6].map((k) => (
-      <View
-        key={k}
-        style={{
-          height: 76,
-          backgroundColor: isDarkMode ? '#1e293b' : '#e2e8f0',
-          borderRadius: 14,
-          marginBottom: 12,
-        }}
-      />
-    ))}
-  </View>
-);
+import { ListSkeleton } from '../../components/SkeletonLoader';
 
 export default function UsersScreen({ navigation }) {
   const dispatch = useDispatch();
@@ -151,7 +137,7 @@ export default function UsersScreen({ navigation }) {
         }
       >
         {(isLoading && (!users || users.length === 0)) ? (
-          <UserSkeletonLoader isDarkMode={isDarkMode} />
+          <ListSkeleton isDarkMode={isDarkMode} count={6} />
         ) : (
           <>
             {filteredUsers.map(user => {
