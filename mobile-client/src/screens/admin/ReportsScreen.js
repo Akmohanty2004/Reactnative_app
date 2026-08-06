@@ -13,6 +13,8 @@ import { triggerMobileNotification } from '../../components/NotificationManager'
 import { CardSkeleton, ListSkeleton } from '../../components/SkeletonLoader';
 import { playRefreshSound } from '../../utils/SoundManager';
 
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
 const { width } = Dimensions.get('window');
 
 // Helper to create simple sparkline data
@@ -22,6 +24,8 @@ const generateSparkline = (base, count, volatility) => {
 
 export default function ReportsScreen({ navigation }) {
   const dispatch = useDispatch();
+  const insets = useSafeAreaInsets();
+  const topPadding = Math.max(insets.top, Platform.OS === 'android' ? (StatusBar.currentHeight || 24) : 0);
   const { stats, exams, isLoading } = useSelector(state => state.admin);
   const { theme } = useSelector(state => state.ui || { theme: 'dark' });
   const [timeRange, setTimeRange] = useState('This Month');
@@ -306,7 +310,7 @@ export default function ReportsScreen({ navigation }) {
   return (
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
       {/* Header */}
-      <View style={[styles.header, { flexDirection: 'row', alignItems: 'center' }]}>
+      <View style={[styles.header, { paddingTop: topPadding + 10, flexDirection: 'row', alignItems: 'center' }]}>
         <TouchableOpacity onPress={() => navigation.navigate('Home')} style={{ marginRight: 15 }}>
           <Feather name="arrow-left" size={24} color={colors.text} />
         </TouchableOpacity>

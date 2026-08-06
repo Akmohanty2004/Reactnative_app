@@ -15,6 +15,7 @@ import {
 import { useDispatch, useSelector } from 'react-redux';
 import { useFocusEffect } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getTeacherExams } from '../../redux/slices/examSlice';
 import Skeleton from '../../components/Skeleton';
 import api from '../../services/api';
@@ -33,6 +34,8 @@ const ICON_COLORS = ['#8b5cf6', '#f59e0b', '#10b981', '#3b82f6', '#f43f5e', '#06
 
 export default function ExamsScreen({ navigation }) {
   const dispatch = useDispatch();
+  const insets = useSafeAreaInsets();
+  const topPadding = Math.max(insets.top, Platform.OS === 'android' ? (StatusBar.currentHeight || 24) : 0);
   const { theme } = useSelector((state) => state.ui || { theme: 'dark' });
   const { exams = [], isLoading } = useSelector((state) => state.exams);
 
@@ -164,7 +167,7 @@ export default function ExamsScreen({ navigation }) {
         <Feather name="inbox" size={36} color="#8b5cf6" />
       </View>
       <Text style={styles.emptyTitle}>No exams found!</Text>
-      <Text style={styles.emptySub}>Looks like you haven't created any exams yet.</Text>
+      <Text style={styles.emptySub}>Looks like you haven&apos;t created any exams yet.</Text>
     </View>
   );
 
@@ -172,7 +175,7 @@ export default function ExamsScreen({ navigation }) {
   const renderFooter = () => (
     <View style={styles.banner}>
       <View style={{ flex: 1 }}>
-        <Text style={styles.bannerTitle}>Can't find your exam?</Text>
+        <Text style={styles.bannerTitle}>Can&apos;t find your exam?</Text>
         <Text style={styles.bannerSub}>Check back later or create a new exam.</Text>
       </View>
       <View style={styles.bannerGraphic}>
@@ -189,7 +192,7 @@ export default function ExamsScreen({ navigation }) {
       <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} translucent={false} backgroundColor={colors.bg} />
       
       {/* ── Header ── */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: topPadding + 10 }]}>
         <TouchableOpacity
           style={styles.backBtn}
           onPress={() => navigation.navigate('Home')}

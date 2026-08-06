@@ -77,6 +77,7 @@ export default function DashboardScreen() {
   const dispatch = useDispatch();
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
+  const topPadding = Math.max(insets.top, Platform.OS === 'android' ? (StatusBar.currentHeight || 24) : 0);
   const [isSidebarVisible, setSidebarVisible] = useState(false);
   const [perfFilter, setPerfFilter] = useState('This Month');
   const [subFilter, setSubFilter] = useState('This Month');
@@ -412,7 +413,7 @@ export default function DashboardScreen() {
         style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}
       >
         {/* ── Header ── */}
-        <View style={[styles.header, { paddingTop: Math.max((insets.top || 20) + 15, 30) }]}>
+        <View style={[styles.header, { paddingTop: topPadding + 10 }]}>
           <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
             <TouchableOpacity 
               onPress={() => navigation.navigate('Profile')}
@@ -485,7 +486,7 @@ export default function DashboardScreen() {
               }
             ]}>Welcome back,</Animated.Text>
             <Text style={[styles.bannerName]}>{user?.name?.split(' ')[0]}! 👋</Text>
-            <Text style={[styles.bannerSub]}>Here's your exam performance summary.</Text>
+            <Text style={[styles.bannerSub]}>Here&apos;s your exam performance summary.</Text>
           </View>
           <Animated.View style={[styles.bannerGraphic, { transform: [{ translateY: floatAnim }] }]}>
             <View style={{ width: 100, height: 100, position: 'relative', marginTop: 10 }}>
@@ -1111,7 +1112,7 @@ export default function DashboardScreen() {
                   No exams found
                 </Text>
                 <Text style={{ color: colors.subText, fontSize: 13, textAlign: 'center', fontWeight: '500', paddingHorizontal: 20 }}>
-                  You don't have any exams matching {statModalConfig.title.toLowerCase()} yet.
+                  You don&apos;t have any exams matching {statModalConfig.title.toLowerCase()} yet.
                 </Text>
               </View>
             }

@@ -85,6 +85,7 @@ export default function DashboardScreen() {
   const dispatch = useDispatch();
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
+  const topPadding = Math.max(insets.top, Platform.OS === 'android' ? (StatusBar.currentHeight || 24) : 0);
   const [isSidebarVisible, setSidebarVisible] = useState(false);
   const { user } = useSelector(state => state.auth);
   const { exams, isLoading: examsLoading } = useSelector(state => state.exams);
@@ -249,7 +250,7 @@ export default function DashboardScreen() {
         style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}
       >
         {/* Header */}
-        <View style={[styles.header, { paddingTop: Math.max((insets.top || 20) - 15, 5) }]}>
+        <View style={[styles.header, { paddingTop: topPadding + 10 }]}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <TouchableOpacity 
               onPress={() => navigation.navigate('Profile')}
@@ -310,7 +311,7 @@ export default function DashboardScreen() {
               <Text style={[styles.bannerTitle, { color: '#ffffff' }]}>
                 Teacher {user?.name?.split(' ')[0]}! <Animated.Text style={{ transform: [{ scale: breatheAnim }] }}>🎓</Animated.Text>
               </Text>
-              <Text style={[styles.bannerSubtitle, { color: '#c4b5fd' }]}>Here's your teaching statistics and{'\n'}exam performance at a glance.</Text>
+              <Text style={[styles.bannerSubtitle, { color: '#c4b5fd' }]}>Here&apos;s your teaching statistics and{'\n'}exam performance at a glance.</Text>
             </View>
                          {/* Attractive Banner Illustration */}
               <Animated.View style={[styles.bannerIllustration, { position: 'absolute', right: -5, bottom: 5, width: 150, height: 120, opacity: 1, transform: [{ translateY: floatAnim }] }]}>

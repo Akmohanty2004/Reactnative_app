@@ -3,9 +3,9 @@ import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, ActivityIndi
 import { useDispatch, useSelector } from 'react-redux';
 import { useFocusEffect } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { getSafeAreaInsets, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getContacts, setContactOnlineStatus } from '../../redux/slices/chatSlice';
-import { io } from 'socket.io-client';
+import { getSocket } from '../../services/socketService';
 
 import api from '../../services/api';
 import BouncyTouchable from '../../components/BouncyTouchable';
@@ -81,6 +81,7 @@ const AnimatedChatItem = ({ item, index, navigation, colors, getImageUrl }) => {
 export default function ChatListScreen({ navigation }) {
   const dispatch = useDispatch();
   const insets = useSafeAreaInsets();
+  const topPadding = Math.max(insets.top, Platform.OS === 'android' ? (StatusBar.currentHeight || 24) : 0);
   const { contacts, isLoadingContacts } = useSelector(state => state.chat);
   const { user } = useSelector(state => state.auth);
   const { theme } = useSelector(state => state.ui || { theme: 'dark' });
@@ -103,38 +104,35 @@ export default function ChatListScreen({ navigation }) {
   );
 
   useEffect(() => {
-    const baseUrl = api.defaults.baseURL || 'https://exam-app-backend-vqos.vercel.app';
-    const newSocket = io(baseUrl);
+    const activeSocket = getSocket(user?._id || user?.id);
 
     const onConnect = () => {
-      if (user?._id) {
-        newSocket.emit('join_room', String(user._id));
-        newSocket.emit('set_status', { isOnline: true });
+      if (user?._id || user?.id) {
+        activeSocket.emit('join_room', String(user._id || user.id));
+        activeSocket.emit('set_status', { isOnline: true });
       }
     };
 
-    if (newSocket.connected) {
+    if (activeSocket.connected) {
       onConnect();
     }
-    newSocket.on('connect', onConnect);
+    activeSocket.on('connect', onConnect);
 
-    newSocket.on('user_online', (uid) => {
-      dispatch(setContactOnlineStatus({ userId: uid, isOnline: true }));
-    });
-    newSocket.on('user_offline', (uid) => {
-      dispatch(setContactOnlineStatus({ userId: uid, isOnline: false }));
-    });
+    const handleUserOnline = (uid) => dispatch(setContactOnlineStatus({ userId: uid, isOnline: true }));
+    const handleUserOffline = (uid) => dispatch(setContactOnlineStatus({ userId: uid, isOnline: false }));
+
+    activeSocket.on('user_online', handleUserOnline);
+    activeSocket.on('user_offline', handleUserOffline);
 
     const handleAppStateChange = (nextAppState) => {
       if (nextAppState === 'active') {
-        if (!newSocket.connected) {
-          newSocket.connect();
+        if (!activeSocket.connected) {
+          activeSocket.connect();
         }
-        newSocket.emit('set_status', { isOnline: true });
-      } else if (nextAppState === 'background' || nextAppState === 'inactive') {
-        if (newSocket.connected) {
-          newSocket.emit('set_status', { isOnline: false });
-        }
+        activeSocket.emit('set_status', { isOnline: true });
+        dispatch(getContacts());
+      } else {
+        activeSocket.emit('set_status', { isOnline: false });
       }
     };
 
@@ -142,10 +140,9 @@ export default function ChatListScreen({ navigation }) {
 
     return () => {
       appStateSubscription?.remove();
-      if (newSocket.connected) {
-        newSocket.emit('set_status', { isOnline: false });
-      }
-      newSocket.disconnect();
+      activeSocket.off('connect', onConnect);
+      activeSocket.off('user_online', handleUserOnline);
+      activeSocket.off('user_offline', handleUserOffline);
     };
   }, [dispatch, user?._id]);
 
@@ -155,8 +152,8 @@ export default function ChatListScreen({ navigation }) {
 
   return (
     <View style={[styles.safeArea, { backgroundColor: colors.bg }]}>
-      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} translucent={false} backgroundColor={colors.headerBg} />
-      <View style={[styles.header, { paddingTop: 15, backgroundColor: colors.headerBg, borderBottomColor: colors.border }]}>
+      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} translucent={true} backgroundColor="transparent" />
+      <View style={[styles.header, { paddingTop: topPadding + 10, backgroundColor: colors.headerBg, borderBottomColor: colors.border }]}>
         <BouncyTouchable style={styles.backBtn} onPress={() => navigation.goBack()} activeScale={0.8}>
           <Feather name="arrow-left" size={24} color={colors.headerText} />
         </BouncyTouchable>

@@ -15,7 +15,7 @@ import * as Sharing from 'expo-sharing';
 import * as MediaLibrary from 'expo-media-library';
 import Toast from 'react-native-toast-message';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { io } from 'socket.io-client';
+import { getSocket } from '../../services/socketService';
 import { Audio } from 'expo-av';
 import EmojiPicker from 'rn-emoji-keyboard';
 import {
@@ -329,6 +329,7 @@ export default function ChatRoomScreen({ route, navigation }) {
   const { user: otherUser } = route.params;
   const dispatch = useDispatch();
   const insets = useSafeAreaInsets();
+  const topPadding = Math.max(insets.top, Platform.OS === 'android' ? (StatusBar.currentHeight || 24) : 0);
 
   const { user } = useSelector(s => s.auth);
   const { messagesByUserId, isSending } = useSelector(s => s.chat);
@@ -437,72 +438,75 @@ export default function ChatRoomScreen({ route, navigation }) {
     dispatch(setCurrentUserId(String(user._id || user.id)));
     dispatch(getChatHistory(otherIdStr));
 
-    const baseUrl = api.defaults.baseURL || 'https://exam-app-backend-vqos.vercel.app';
-    const newSocket = io(baseUrl);
-
-    const targetId = String(otherUser._id || otherUser.id);
     const currentId = String(user._id || user.id);
+    const targetId = String(otherUser._id || otherUser.id);
+    const activeSocket = getSocket(currentId);
 
     const joinRoom = () => {
       if (currentId && currentId !== 'undefined') {
-        newSocket.emit('join_room', currentId);
-        newSocket.emit('set_status', { isOnline: true });
-        newSocket.emit('check_online_status', targetId);
+        activeSocket.emit('join_room', currentId);
+        activeSocket.emit('set_status', { isOnline: true });
+        activeSocket.emit('check_online_status', targetId);
       }
     };
-    if (newSocket.connected) {
+
+    if (activeSocket.connected) {
       joinRoom();
     }
-    newSocket.on('connect', joinRoom);
-    newSocket.on('receive_message', (msg) => dispatch(receiveMessage(msg)));
-    newSocket.on('delete_message', (msgId) =>
-      dispatch(removeMessageLocally({ messageId: msgId, otherUserId: targetId })));
-    newSocket.on('user_online', (uid) => { if (String(uid) === targetId) setIsOnline(true); });
-    newSocket.on('user_offline', (uid) => { 
+    activeSocket.on('connect', joinRoom);
+    
+    const handleReceiveMessage = (msg) => dispatch(receiveMessage(msg));
+    const handleDeleteMessage = (msgId) => dispatch(removeMessageLocally({ messageId: msgId, otherUserId: targetId }));
+    const handleUserOnline = (uid) => { if (String(uid) === targetId) setIsOnline(true); };
+    const handleUserOffline = (uid) => {
       if (String(uid) === targetId) {
         setIsOnline(false);
         setLastSeen(new Date().toISOString());
       }
-    });
-    newSocket.on('user_status_response', (data) => {
+    };
+    const handleUserStatus = (data) => {
       if (String(data.userId) === targetId) {
         setIsOnline(data.isOnline);
         if (data.lastSeen) setLastSeen(data.lastSeen);
       }
-    });
+    };
+
+    activeSocket.on('receive_message', handleReceiveMessage);
+    activeSocket.on('delete_message', handleDeleteMessage);
+    activeSocket.on('user_online', handleUserOnline);
+    activeSocket.on('user_offline', handleUserOffline);
+    activeSocket.on('user_status_response', handleUserStatus);
 
     const statusInterval = setInterval(() => {
-      if (newSocket.connected && targetId && targetId !== 'undefined') {
-        newSocket.emit('check_online_status', targetId);
+      if (activeSocket.connected && targetId && targetId !== 'undefined') {
+        activeSocket.emit('check_online_status', targetId);
       }
-      // Fallback polling for Vercel/stateless environments where Socket.io might fail
-      dispatch(getChatHistory(otherIdStr));
-    }, 1000);
+    }, 5000);
+
     const handleAppStateChange = (nextAppState) => {
       if (nextAppState === 'active') {
-        if (!newSocket.connected) {
-          newSocket.connect();
+        if (!activeSocket.connected) {
+          activeSocket.connect();
         }
-        newSocket.emit('set_status', { isOnline: true });
-      } else if (nextAppState === 'background' || nextAppState === 'inactive') {
-        if (newSocket.connected) {
-          newSocket.emit('set_status', { isOnline: false });
-        }
+        activeSocket.emit('set_status', { isOnline: true });
+        dispatch(getChatHistory(otherIdStr));
       } else {
-        newSocket.emit('set_status', { isOnline: false });
+        activeSocket.emit('set_status', { isOnline: false });
       }
     };
 
     const appStateSubscription = AppState.addEventListener('change', handleAppStateChange);
 
-      return () => {
-        clearInterval(statusInterval);
-        appStateSubscription?.remove();
-        if (newSocket.connected) {
-          newSocket.emit('set_status', { isOnline: false });
-        }
-        newSocket.disconnect();
-      };
+    return () => {
+      clearInterval(statusInterval);
+      appStateSubscription?.remove();
+      activeSocket.off('connect', joinRoom);
+      activeSocket.off('receive_message', handleReceiveMessage);
+      activeSocket.off('delete_message', handleDeleteMessage);
+      activeSocket.off('user_online', handleUserOnline);
+      activeSocket.off('user_offline', handleUserOffline);
+      activeSocket.off('user_status_response', handleUserStatus);
+    };
   }, [dispatch, otherUser._id, otherUser.id, user._id, user.id, otherIdStr]);
 
   const handleSend = async () => {
@@ -901,10 +905,10 @@ export default function ChatRoomScreen({ route, navigation }) {
 
   return (
     <View style={[styles.root, { backgroundColor: colors.bg }]}>
-      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} translucent={false} backgroundColor={colors.headerBg} />
+      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} translucent={true} backgroundColor="transparent" />
 
       {/* ── Header ── */}
-      <View style={[styles.header, { paddingTop: Math.max((insets.top || 20) - 15, 5) + 5, backgroundColor: colors.headerBg, borderBottomWidth: 1, borderBottomColor: colors.inputBorder }]}>
+      <View style={[styles.header, { paddingTop: topPadding + 10, backgroundColor: colors.headerBg, borderBottomWidth: 1, borderBottomColor: colors.inputBorder }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Feather name="arrow-left" size={24} color={colors.headerText} />
         </TouchableOpacity>
@@ -936,7 +940,7 @@ export default function ChatRoomScreen({ route, navigation }) {
       {/* ── Messages ── */}
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'padding'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       >
         {customBg ? (
@@ -965,7 +969,7 @@ export default function ChatRoomScreen({ route, navigation }) {
           />
         )}
 
-        <View style={{ backgroundColor: colors.inputBarBg, borderTopWidth: 1, borderTopColor: colors.inputBarBorder }}>
+        <View style={{ backgroundColor: colors.inputBarBg, borderTopWidth: 1, borderTopColor: colors.inputBarBorder, paddingBottom: Math.max(insets.bottom, 6) }}>
           {/* Preview Staged File */}
           {(stagedImages.length > 0 || stagedAudio) && (
             <View style={[
@@ -1169,7 +1173,7 @@ export default function ChatRoomScreen({ route, navigation }) {
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: colors.inputBg, borderColor: colors.inputBorder }]}>
             <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, { color: colors.headerText }]}>{otherUser.name}'s Report</Text>
+              <Text style={[styles.modalTitle, { color: colors.headerText }]}>{otherUser.name}&apos;s Report</Text>
               <TouchableOpacity onPress={() => setReportVisible(false)}>
                 <Feather name="x" size={24} color={colors.headerText} />
               </TouchableOpacity>

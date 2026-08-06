@@ -6,7 +6,8 @@ import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { getUsers, deleteUser } from '../../redux/slices/adminSlice';
 import Toast from 'react-native-toast-message';
-import { io } from 'socket.io-client';
+import { getSocket } from '../../services/socketService';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { UserSkeleton } from '../../components/SkeletonLoader';
 import { playRefreshSound } from '../../utils/SoundManager';
@@ -14,6 +15,8 @@ import api from '../../services/api';
 
 export default function UsersScreen({ navigation }) {
   const dispatch = useDispatch();
+  const insets = useSafeAreaInsets();
+  const topPadding = Math.max(insets.top, Platform.OS === 'android' ? (StatusBar.currentHeight || 24) : 0);
   const { users, isLoading } = useSelector(state => state.admin);
   const { theme } = useSelector(state => state.ui || { theme: 'dark' });
   const currentUser = useSelector(state => state.auth.user);
@@ -28,25 +31,19 @@ export default function UsersScreen({ navigation }) {
 
   useEffect(() => {
     if (!currentUser) return;
-    const baseUrl = api.defaults.baseURL || 'https://exam-app-backend-vqos.vercel.app';
-    const socket = io(baseUrl);
+    const activeSocket = getSocket(currentUser._id || currentUser.id);
 
-    const myId = String(currentUser._id || currentUser.id);
-    socket.emit('get_online_users');
+    activeSocket.emit('get_online_users');
 
-    socket.on('online_users_list', (ids) => {
+    const handleList = (ids) => {
       if (Array.isArray(ids)) {
         setOnlineUserIds(new Set(ids.map(id => String(id))));
       }
-    });
-
-    socket.on('user_online', (uid) => {
-      if (uid) {
-        setOnlineUserIds(prev => new Set(prev).add(String(uid)));
-      }
-    });
-
-    socket.on('user_offline', (uid) => {
+    };
+    const handleOnline = (uid) => {
+      if (uid) setOnlineUserIds(prev => new Set(prev).add(String(uid)));
+    };
+    const handleOffline = (uid) => {
       if (uid) {
         setOnlineUserIds(prev => {
           const next = new Set(prev);
@@ -54,10 +51,16 @@ export default function UsersScreen({ navigation }) {
           return next;
         });
       }
-    });
+    };
+
+    activeSocket.on('online_users_list', handleList);
+    activeSocket.on('user_online', handleOnline);
+    activeSocket.on('user_offline', handleOffline);
 
     return () => {
-      socket.disconnect();
+      activeSocket.off('online_users_list', handleList);
+      activeSocket.off('user_online', handleOnline);
+      activeSocket.off('user_offline', handleOffline);
     };
   }, [currentUser]);
 
@@ -160,7 +163,7 @@ export default function UsersScreen({ navigation }) {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
-      <View style={[styles.header, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}>
+      <View style={[styles.header, { paddingTop: topPadding + 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           <TouchableOpacity onPress={() => navigation.navigate('Home')} style={{ marginRight: 15 }}>
             <Feather name="arrow-left" size={24} color={colors.text} />

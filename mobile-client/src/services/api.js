@@ -30,22 +30,30 @@ const api = axios.create({
   }
 })
 
+let inMemoryToken = null;
+
+export const setAuthToken = (token) => {
+  inMemoryToken = token;
+};
+
 api.interceptors.request.use(
   async (config) => {
     try {
-      const token = await AsyncStorage.getItem('token')
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`
+      if (!inMemoryToken) {
+        inMemoryToken = await AsyncStorage.getItem('token');
+      }
+      if (inMemoryToken) {
+        config.headers.Authorization = `Bearer ${inMemoryToken}`;
       }
     } catch (error) {
-      console.error('Error reading token from AsyncStorage', error)
+      console.error('Error reading token from AsyncStorage', error);
     }
-    return config
+    return config;
   },
   (error) => {
-    return Promise.reject(error)
+    return Promise.reject(error);
   }
-)
+);
 
 api.interceptors.response.use(
   (response) => response,
@@ -56,6 +64,7 @@ api.interceptors.response.use(
         return Promise.reject(error);
       }
       try {
+        inMemoryToken = null;
         await AsyncStorage.removeItem('token')
         await AsyncStorage.removeItem('user')
         

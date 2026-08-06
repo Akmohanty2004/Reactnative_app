@@ -17,6 +17,8 @@
       },
       "predictiveBackGestureEnabled": false,
       "package": "com.akmohanty.mobileclient",
+      "versionCode": 2,
+      "softwareKeyboardLayoutMode": "pan",
       "googleServicesFile": "./google-services.json",
       "permissions": [
         "android.permission.INTERNET",

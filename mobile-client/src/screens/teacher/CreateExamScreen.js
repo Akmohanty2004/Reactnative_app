@@ -14,11 +14,14 @@ import {
 } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { Feather } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 import { createExam, getTeacherExams } from '../../redux/slices/examSlice';
 
 const CreateExamScreen = ({ navigation }) => {
   const dispatch = useDispatch();
+  const insets = useSafeAreaInsets();
+  const topPadding = Math.max(insets.top, Platform.OS === 'android' ? (StatusBar.currentHeight || 24) : 0);
   const theme = useSelector((state) => state.ui?.theme || 'dark');
   const { isLoading } = useSelector((state) => state.exams || { isLoading: false });
 
@@ -312,7 +315,7 @@ const CreateExamScreen = ({ navigation }) => {
       style={[styles.container, { backgroundColor: colors.background }]}
       behavior="padding"
     >
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
+      <View style={[styles.header, { paddingTop: topPadding + 10, borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Feather name="arrow-left" size={24} color={colors.text} />
         </TouchableOpacity>

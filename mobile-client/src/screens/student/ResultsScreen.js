@@ -6,12 +6,15 @@ import { Feather } from '@expo/vector-icons';
 import Svg, { Path, Defs, LinearGradient, Stop } from 'react-native-svg';
 import { LineChart } from 'react-native-chart-kit';
 import { getStudentResults } from '../../redux/slices/resultSlice';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import BouncyTouchable from '../../components/BouncyTouchable';
 
 const { width } = Dimensions.get('window');
 
 export default function ResultsScreen({ navigation }) {
   const dispatch = useDispatch();
+  const insets = useSafeAreaInsets();
+  const topPadding = Math.max(insets.top, Platform.OS === 'android' ? (StatusBar.currentHeight || 24) : 0);
   const { results: rawResults } = useSelector(state => state.results);
   
   const [sortAscending, setSortAscending] = useState(false);
@@ -127,7 +130,7 @@ export default function ResultsScreen({ navigation }) {
         }
       >
         {/* Custom Header */}
-        <View style={[styles.header, { backgroundColor: 'transparent', borderBottomWidth: 0, paddingHorizontal: 0, paddingBottom: 25, flexDirection: 'row', alignItems: 'center' }]}>
+        <View style={[styles.header, { backgroundColor: 'transparent', borderBottomWidth: 0, paddingHorizontal: 0, paddingBottom: 25, paddingTop: topPadding + 10, flexDirection: 'row', alignItems: 'center' }]}>
           <BouncyTouchable onPress={() => navigation.navigate('Home')} style={{ marginRight: 15 }} activeScale={0.8}>
             <Feather name="arrow-left" size={24} color={colors.text} />
           </BouncyTouchable>
@@ -309,7 +312,7 @@ export default function ResultsScreen({ navigation }) {
               </View>
             </View>
             <Text style={[styles.emptyTitle, { color: colors.text }]}>No results found</Text>
-            <Text style={[styles.emptySubtitle, { color: colors.subText }]}>You haven't taken any exams yet.{'\n'}Start learning and take your first exam!</Text>
+            <Text style={[styles.emptySubtitle, { color: colors.subText }]}>You haven&apos;t taken any exams yet.{'\n'}Start learning and take your first exam!</Text>
           </View>
         )}
       </View>
@@ -330,7 +333,7 @@ export default function ResultsScreen({ navigation }) {
                     Result Pending Evaluation
                   </Text>
                   <Text style={{ color: '#94a3b8', fontSize: 14, textAlign: 'center', lineHeight: 22, paddingHorizontal: 10 }}>
-                    Your exam "{selectedResult.examId?.title || 'Exam'}" was submitted successfully.
+                    Your exam &quot;{selectedResult.examId?.title || 'Exam'}&quot; was submitted successfully.
                   </Text>
                 </View>
 

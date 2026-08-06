@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
-import api from '../../services/api'
+import api, { setAuthToken } from '../../services/api'
 import Toast from 'react-native-toast-message'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 
@@ -38,6 +38,7 @@ export const verifyLoginUser = createAsyncThunk(
       })
       
       if (response.data.token) {
+        setAuthToken(response.data.token);
         await AsyncStorage.setItem('token', response.data.token)
         await AsyncStorage.setItem('user', JSON.stringify(response.data.user))
         api.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`

@@ -4,6 +4,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator
 import { useDispatch, useSelector } from 'react-redux';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getAdminExams } from '../../redux/slices/adminSlice';
 import { ListSkeleton } from '../../components/SkeletonLoader';
 import api from '../../services/api';
@@ -11,6 +12,8 @@ import { playRefreshSound } from '../../utils/SoundManager';
 
 export default function ExamsScreen({ navigation }) {
   const dispatch = useDispatch();
+  const insets = useSafeAreaInsets();
+  const topPadding = Math.max(insets.top, Platform.OS === 'android' ? (StatusBar.currentHeight || 24) : 0);
   const { exams, isLoading } = useSelector(state => state.admin);
   const { theme } = useSelector(state => state.ui || { theme: 'dark' });
 
@@ -81,7 +84,7 @@ export default function ExamsScreen({ navigation }) {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
-      <View style={[styles.header, { flexDirection: 'row', alignItems: 'center' }]}>
+      <View style={[styles.header, { paddingTop: topPadding + 10, flexDirection: 'row', alignItems: 'center' }]}>
         <TouchableOpacity onPress={() => navigation.navigate('Home')} style={{ marginRight: 15 }}>
           <Feather name="arrow-left" size={24} color={colors.text} />
         </TouchableOpacity>

@@ -2,11 +2,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   View, Text, StyleSheet, ScrollView, TouchableOpacity, 
   Alert, BackHandler, AppState, Dimensions, ActivityIndicator,
-  StatusBar, Image, Modal
+  StatusBar, Image, Modal, Platform
 } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { Camera, CameraView } from 'expo-camera';
 import { Feather } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 import { getStudentExam } from '../../redux/slices/examSlice';
 import { submitExam } from '../../redux/slices/resultSlice';
@@ -16,6 +17,8 @@ const { width } = Dimensions.get('window');
 export default function ExamScreen({ route, navigation }) {
   const { examId } = route.params || {};
   const dispatch = useDispatch();
+  const insets = useSafeAreaInsets();
+  const topPadding = Math.max(insets.top, Platform.OS === 'android' ? (StatusBar.currentHeight || 24) : 0);
   
   const { currentExam, error, isLoading } = useSelector(state => state.exams);
   const [currentQuestion, setCurrentQuestion] = useState(0);
@@ -239,7 +242,7 @@ export default function ExamScreen({ route, navigation }) {
     <View style={styles.container}>
       <StatusBar hidden={exam?.fullscreenMode !== false} barStyle="light-content" backgroundColor="#0f172a" />
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: topPadding + 10 }]}>
         <View style={{ flex: 1 }}>
           <Text style={styles.examTitle} numberOfLines={1}>{exam.title}</Text>
           <Text style={styles.examSubject}>{exam.subject}</Text>

@@ -10,12 +10,15 @@ import {
   Image,
 } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { getStudentsPerformance } from '../../redux/slices/resultSlice';
 import Skeleton from '../../components/Skeleton';
 
 export default function StudentsListScreen({ navigation }) {
   const dispatch = useDispatch();
+  const insets = useSafeAreaInsets();
+  const topPadding = Math.max(insets.top, Platform.OS === 'android' ? (StatusBar.currentHeight || 24) : 0);
   const { studentsPerformance = [], isLoading } = useSelector((state) => state.results);
   const { theme } = useSelector((state) => state.ui || { theme: 'dark' });
   const isDarkMode = theme === 'dark';
@@ -82,7 +85,7 @@ export default function StudentsListScreen({ navigation }) {
     <View style={styles.safe}>
       <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} translucent={false} backgroundColor={colors.bg} />
       
-      <View style={styles.headerContainer}>
+      <View style={[styles.headerContainer, { paddingTop: topPadding + 10 }]}>
         <View style={styles.headerTop}>
           <TouchableOpacity onPress={() => navigation.navigate('Home')} style={{ marginRight: 15 }}>
             <Feather name="arrow-left" size={24} color={colors.text} />

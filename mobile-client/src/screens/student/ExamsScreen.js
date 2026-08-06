@@ -6,6 +6,7 @@ import {
 import { useDispatch, useSelector } from 'react-redux';
 import { useFocusEffect } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 import api from '../../services/api';
 import { getStudentExams } from '../../redux/slices/examSlice';
@@ -13,6 +14,8 @@ import { getStudentResults } from '../../redux/slices/resultSlice';
 import BouncyTouchable from '../../components/BouncyTouchable';
 
 export default function ExamsScreen({ navigation }) {
+  const insets = useSafeAreaInsets();
+  const topPadding = Math.max(insets.top, Platform.OS === 'android' ? (StatusBar.currentHeight || 24) : 0);
   const [searchTerm, setSearchTerm] = useState('');
   const [filter, setFilter] = useState('all');
   const [selectedExam, setSelectedExam] = useState(null);
@@ -154,7 +157,7 @@ export default function ExamsScreen({ navigation }) {
         showsVerticalScrollIndicator={false}
       >
         {/* Custom Header */}
-        <View style={[styles.header, { backgroundColor: 'transparent', borderBottomWidth: 0, paddingHorizontal: 0, paddingBottom: 25, flexDirection: 'row', alignItems: 'center' }]}>
+        <View style={[styles.header, { backgroundColor: 'transparent', borderBottomWidth: 0, paddingHorizontal: 0, paddingBottom: 25, paddingTop: topPadding + 10, flexDirection: 'row', alignItems: 'center' }]}>
           <TouchableOpacity onPress={() => navigation.navigate('Home')} style={{ marginRight: 15 }}>
             <Feather name="arrow-left" size={24} color={colors.text} />
           </TouchableOpacity>

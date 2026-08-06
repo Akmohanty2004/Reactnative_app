@@ -15,6 +15,7 @@ export default function ProfileScreen() {
   const dispatch = useDispatch();
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
+  const topPadding = Math.max(insets.top, Platform.OS === 'android' ? (StatusBar.currentHeight || 24) : 0);
   const { user } = useSelector(state => state.auth);
   const { theme, showChatbot, notificationsEnabled } = useSelector((state) => state.ui || { theme: 'dark', showChatbot: true, notificationsEnabled: true });
   const { stats } = useSelector(state => state.admin);
@@ -191,7 +192,7 @@ export default function ProfileScreen() {
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
       <ScrollView contentContainerStyle={styles.content}>
         {/* Custom Header */}
-        <View style={[styles.header, { backgroundColor: 'transparent', borderBottomWidth: 0, paddingHorizontal: 0, paddingBottom: 25, paddingTop: Platform.OS === 'android' ? 40 : 50, flexDirection: 'row', alignItems: 'center' }]}>
+        <View style={[styles.header, { backgroundColor: 'transparent', borderBottomWidth: 0, paddingHorizontal: 0, paddingBottom: 25, paddingTop: topPadding + 10, flexDirection: 'row', alignItems: 'center' }]}>
           <View style={{ flex: 1 }}>
             <Text style={[styles.headerTitle, { color: colors.text }]}>My <Text style={{color: '#8b5cf6'}}>Profile</Text></Text>
             <Text style={styles.headerSubtitle}>Manage your account and preferences</Text>
@@ -601,14 +602,14 @@ export default function ProfileScreen() {
                 <Feather name="shield" size={32} color="#10b981" style={{ marginBottom: 15 }} />
                 <Text style={{ color: colors.text, fontSize: 18, fontWeight: '700', marginBottom: 10 }}>Privacy Policy</Text>
                 <Text style={{ color: colors.subText, fontSize: 14, lineHeight: 22, marginBottom: 15 }}>
-                  Your privacy is important to us. It is ExamHub's policy to respect your privacy regarding any information we may collect from you across our application.
+                  Your privacy is important to us. It is ExamHub&apos;s policy to respect your privacy regarding any information we may collect from you across our application.
                 </Text>
                 <Text style={{ color: colors.text, fontWeight: 'bold', marginBottom: 5 }}>1. Information we collect</Text>
                 <Text style={{ color: colors.subText, fontSize: 13, lineHeight: 20, marginBottom: 15 }}>We only ask for personal information when we truly need it to provide a service to you. We collect it by fair and lawful means, with your knowledge and consent.</Text>
                 <Text style={{ color: colors.text, fontWeight: 'bold', marginBottom: 5 }}>2. How we use your data</Text>
-                <Text style={{ color: colors.subText, fontSize: 13, lineHeight: 20, marginBottom: 15 }}>We only retain collected information for as long as necessary to provide you with your requested service. What data we store, we'll protect within commercially acceptable means to prevent loss and theft.</Text>
+                <Text style={{ color: colors.subText, fontSize: 13, lineHeight: 20, marginBottom: 15 }}>We only retain collected information for as long as necessary to provide you with your requested service. What data we store, we&apos;ll protect within commercially acceptable means to prevent loss and theft.</Text>
                 <Text style={{ color: colors.text, fontWeight: 'bold', marginBottom: 5 }}>3. Third-party access</Text>
-                <Text style={{ color: colors.subText, fontSize: 13, lineHeight: 20, marginBottom: 15 }}>We don't share any personally identifying information publicly or with third-parties, except when required to by law.</Text>
+                <Text style={{ color: colors.subText, fontSize: 13, lineHeight: 20, marginBottom: 15 }}>We don&apos;t share any personally identifying information publicly or with third-parties, except when required to by law.</Text>
               </View>
             </ScrollView>
           </View>

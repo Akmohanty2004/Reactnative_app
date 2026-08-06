@@ -8,14 +8,15 @@ import { PieChart } from 'react-native-chart-kit';
 import { getAdminExams } from '../../redux/slices/adminSlice';
 import api from '../../services/api';
 import { getTeacherResults, clearResults } from '../../redux/slices/resultSlice';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ListSkeleton, CardSkeleton } from '../../components/SkeletonLoader';
 
 const { width } = Dimensions.get('window');
 
-
-
 export default function ResultsScreen({ navigation, route }) {
   const dispatch = useDispatch();
+  const insets = useSafeAreaInsets();
+  const topPadding = Math.max(insets.top, Platform.OS === 'android' ? (StatusBar.currentHeight || 24) : 0);
   const { exams } = useSelector(state => state.admin);
   const { results: rawResults, stats, missingStudents, isLoading } = useSelector(state => state.results);
   const { theme } = useSelector(state => state.ui || { theme: 'dark' });
@@ -94,7 +95,7 @@ export default function ResultsScreen({ navigation, route }) {
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
       {!selectedExamId ? (
         <View style={{ flex: 1 }}>
-          <View style={styles.headerRowOverview}>
+          <View style={[styles.headerRowOverview, { paddingTop: topPadding + 10 }]}>
             <TouchableOpacity onPress={() => navigation.navigate('AdminTabs', {screen: 'Home'})} style={styles.backBtnOverview}>
               <Feather name="arrow-left" size={24} color={colors.headerTitle} />
             </TouchableOpacity>
@@ -220,7 +221,7 @@ export default function ResultsScreen({ navigation, route }) {
         </View>
       ) : (
         <View style={{ flex: 1 }}>
-          <View style={[styles.headerDetails, { backgroundColor: colors.cardBg, borderBottomColor: colors.cardBorder }]}>
+          <View style={[styles.headerDetails, { paddingTop: topPadding + 10, backgroundColor: colors.cardBg, borderBottomColor: colors.cardBorder }]}>
             <View style={styles.headerRow}>
               <TouchableOpacity 
                 onPress={() => {

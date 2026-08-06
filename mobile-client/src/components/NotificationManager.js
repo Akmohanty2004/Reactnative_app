@@ -4,7 +4,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import Toast from 'react-native-toast-message';
 import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
-import { io } from 'socket.io-client';
+import { getSocket } from '../services/socketService';
 import * as Sharing from 'expo-sharing';
 import { getNotifications } from '../redux/slices/notificationSlice';
 import api from '../services/api';
@@ -144,26 +144,24 @@ export default function NotificationManager() {
   useEffect(() => {
     if (!isAuthenticated || !user) return;
 
-    const baseUrl = api.defaults.baseURL || 'https://exam-app-backend-vqos.vercel.app';
-    const socket = io(baseUrl);
     const userId = String(user._id || user.id);
+    const activeSocket = getSocket(userId);
 
     const onConnect = () => {
       if (userId && userId !== 'undefined') {
-        socket.emit('join_room', userId);
+        activeSocket.emit('join_room', userId);
         const isActive = AppState.currentState === 'active';
-        socket.emit('set_status', { isOnline: isActive });
+        activeSocket.emit('set_status', { isOnline: isActive });
       }
     };
 
-    if (socket.connected) {
+    if (activeSocket.connected) {
       onConnect();
     }
-    socket.on('connect', onConnect);
+    activeSocket.on('connect', onConnect);
 
-    socket.on('new_notification', (notif) => {
+    const handleNewNotification = (notif) => {
       if (notif) {
-        // If user disabled notifications in settings, do not trigger device notifications or toasts
         if (notificationsEnabledRef.current === false) {
           return;
         }
@@ -172,18 +170,13 @@ export default function NotificationManager() {
         const senderId = notif.data?.senderId || notif.senderId || notif.data?.sender?._id;
         const myUserId = String(user._id || user.id);
 
-        // DO NOT show notification on sender's device!
         if (senderId && String(senderId) === myUserId) {
           return;
         }
 
         if (isChatMessage) {
-          // If the receiver is NOT actively chatting with the sender in ChatRoomScreen
           if (String(senderId) !== String(currentChatRef.current)) {
-            // Trigger native device system notification (shows on receiver's phone notification drawer)
             triggerMobileNotification(notif.title || 'New Message', notif.message, notif.data);
-            
-            // In-app banner toast
             Toast.show({
               type: 'info',
               text1: notif.title || 'New Message',
@@ -194,9 +187,7 @@ export default function NotificationManager() {
             });
           }
         } else {
-          // Standard notification (Exam created, published, updated, grade released)
           triggerMobileNotification(notif.title || 'ExamHub Notification', notif.message || 'You have a new notification.', notif.data);
-          
           Toast.show({
             type: 'info',
             text1: notif.title || 'ExamHub Notification',
@@ -208,10 +199,9 @@ export default function NotificationManager() {
           dispatch(getNotifications());
         }
       }
-    });
+    };
 
-    // Real-time listener for newly published or updated exams
-    socket.on('exam_published', (data) => {
+    const handleExamPublished = (data) => {
       if (data && notificationsEnabledRef.current !== false) {
         triggerMobileNotification(
           data.title ? `New Exam Published: ${data.title}` : 'New Exam Published!',
@@ -219,9 +209,9 @@ export default function NotificationManager() {
           data
         );
       }
-    });
+    };
 
-    socket.on('exam_updated', (data) => {
+    const handleExamUpdated = (data) => {
       if (data && notificationsEnabledRef.current !== false) {
         triggerMobileNotification(
           data.title ? `Exam Updated: ${data.title}` : 'Exam Notification',
@@ -229,18 +219,20 @@ export default function NotificationManager() {
           data
         );
       }
-    });
+    };
+
+    activeSocket.on('new_notification', handleNewNotification);
+    activeSocket.on('exam_published', handleExamPublished);
+    activeSocket.on('exam_updated', handleExamUpdated);
 
     const handleAppStateChange = (nextAppState) => {
       if (nextAppState === 'active') {
-        if (!socket.connected) {
-          socket.connect();
+        if (!activeSocket.connected) {
+          activeSocket.connect();
         }
-        socket.emit('set_status', { isOnline: true });
-      } else if (nextAppState === 'background' || nextAppState === 'inactive') {
-        if (socket.connected) {
-          socket.emit('set_status', { isOnline: false });
-        }
+        activeSocket.emit('set_status', { isOnline: true });
+      } else {
+        activeSocket.emit('set_status', { isOnline: false });
       }
     };
 
@@ -248,10 +240,10 @@ export default function NotificationManager() {
 
     return () => {
       appStateSubscription?.remove();
-      if (socket.connected) {
-        socket.emit('set_status', { isOnline: false });
-      }
-      socket.disconnect();
+      activeSocket.off('connect', onConnect);
+      activeSocket.off('new_notification', handleNewNotification);
+      activeSocket.off('exam_published', handleExamPublished);
+      activeSocket.off('exam_updated', handleExamUpdated);
     };
   }, [isAuthenticated, user, dispatch]);
 

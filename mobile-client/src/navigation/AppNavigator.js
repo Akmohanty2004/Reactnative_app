@@ -6,6 +6,7 @@ import { ActivityIndicator, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 
 import { initAuth } from '../redux/slices/authSlice';
+import { loadSavedTheme } from '../redux/slices/uiSlice';
 
 // Navigators
 import StudentNavigator from './StudentNavigator';
@@ -40,6 +41,7 @@ export default function AppNavigator() {
 
   useEffect(() => {
     dispatch(initAuth());
+    dispatch(loadSavedTheme());
   }, [dispatch]);
 
   const statusBarStyle = theme === 'dark' ? 'light' : 'dark';

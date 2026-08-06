@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Platform, StatusBar } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { Feather } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getExamById, publishExamResults } from '../../redux/slices/examSlice';
 import { getTeacherResults } from '../../redux/slices/resultSlice';
 import Toast from 'react-native-toast-message';
@@ -9,6 +10,8 @@ import Toast from 'react-native-toast-message';
 export default function ExamDetailsScreen({ route, navigation }) {
   const { examId } = route.params;
   const dispatch = useDispatch();
+  const insets = useSafeAreaInsets();
+  const topPadding = Math.max(insets.top, Platform.OS === 'android' ? (StatusBar.currentHeight || 24) : 0);
   
   const { currentExam } = useSelector(state => state.exams);
   const { results: rawResults } = useSelector(state => state.results);
@@ -47,7 +50,7 @@ export default function ExamDetailsScreen({ route, navigation }) {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: topPadding + 10 }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Feather name="arrow-left" size={24} color="white" />
         </TouchableOpacity>

@@ -11,6 +11,7 @@ import {
   StatusBar,
   Platform,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Skeleton from '../../components/Skeleton';
 import { useDispatch, useSelector } from 'react-redux';
 import { Feather } from '@expo/vector-icons';
@@ -29,6 +30,8 @@ const ICON_COLORS = ['#8b5cf6', '#f59e0b', '#10b981', '#3b82f6', '#f43f5e'];
 
 export default function ResultsScreen() {
   const dispatch = useDispatch();
+  const insets = useSafeAreaInsets();
+  const topPadding = Math.max(insets.top, Platform.OS === 'android' ? (StatusBar.currentHeight || 24) : 0);
   const { theme } = useSelector(s => s.ui || { theme: 'dark' });
   const { exams = [], isLoading: examsLoading }  = useSelector((s) => s.exams);
   const { results: rawResults, isLoading }       = useSelector((s) => s.results);
@@ -120,7 +123,7 @@ export default function ResultsScreen() {
         <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={isDarkMode ? "#0d1117" : "#f8fafc"} translucent={false} />
 
         {/* Header */}
-        <View style={styles.headerContainer}>
+        <View style={[styles.headerContainer, { paddingTop: topPadding + 10 }]}>
           <View style={styles.headerTop}>
             <Text style={styles.headerTitle}>
               Exam <Text style={{ color: '#b026ff', textShadowColor: 'rgba(176,38,255,0.4)', textShadowOffset: {width: 0, height: 0}, textShadowRadius: 6 }}>Results</Text>
@@ -295,7 +298,7 @@ export default function ResultsScreen() {
       <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={isDarkMode ? "#0d1117" : "#f8fafc"} translucent={false} />
 
       {/* Header */}
-      <View style={styles.headerContainer}>
+      <View style={[styles.headerContainer, { paddingTop: topPadding + 10 }]}>
         <View style={styles.headerTop}>
           <TouchableOpacity
             style={styles.backBtn}

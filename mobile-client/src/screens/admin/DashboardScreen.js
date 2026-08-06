@@ -69,6 +69,7 @@ const AdminSkeleton = ({ isDarkMode }) => (
 export default function DashboardScreen({ navigation }) {
   const dispatch = useDispatch();
   const insets = useSafeAreaInsets();
+  const topPadding = Math.max(insets.top, Platform.OS === 'android' ? (StatusBar.currentHeight || 24) : 0);
   const { stats, isLoading } = useSelector(state => state.admin);
   const { toppers } = useSelector(state => state.results);
   const { user } = useSelector(state => state.auth);
@@ -269,7 +270,7 @@ export default function DashboardScreen({ navigation }) {
         style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}
       >
         {/* Top Header */}
-        <View style={[styles.topHeader, { paddingTop: Platform.OS === 'android' ? 40 : 50 }]}>
+        <View style={[styles.topHeader, { paddingTop: topPadding + 10 }]}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <TouchableOpacity 
               onPress={() => navigation.navigate('Profile')}

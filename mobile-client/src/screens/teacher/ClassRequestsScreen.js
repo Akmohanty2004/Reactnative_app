@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator ,
 import { useFocusEffect } from '@react-navigation/native';
 import { useSelector } from 'react-redux';
 import { Feather } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import api from '../../services/api';
 import Toast from 'react-native-toast-message';
 
@@ -11,6 +12,8 @@ export default function ClassRequestsScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const { theme } = useSelector(state => state.ui || { theme: 'dark' });
   const isDarkMode = theme === 'dark';
+  const insets = useSafeAreaInsets();
+  const topPadding = Math.max(insets.top, Platform.OS === 'android' ? (StatusBar.currentHeight || 24) : 0);
 
   const colors = {
     bg: isDarkMode ? '#000000' : '#f8fafc',
@@ -85,7 +88,7 @@ export default function ClassRequestsScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.bg }]}><StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} translucent={false} backgroundColor={colors.bg} />
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: topPadding + 10 }]}>
         <Text style={[styles.title, { color: colors.text }]}>Class Verification</Text>
         <Text style={[styles.subtitle, { color: colors.subText }]}>Approve or reject student class change requests.</Text>
       </View>

@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, StatusBar, Platform, Animated } from 'react-native';
 import { useSelector, useDispatch } from 'react-redux';
 import { Feather } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getNotifications, markAsRead, markAllAsRead } from '../../redux/slices/notificationSlice';
 import BouncyTouchable from '../../components/BouncyTouchable';
 
@@ -60,6 +61,8 @@ const AnimatedNotificationItem = ({ item, index, colors, isDarkMode, handleNotif
 
 export default function NotificationsScreen({ navigation }) {
   const dispatch = useDispatch();
+  const insets = useSafeAreaInsets();
+  const topPadding = Math.max(insets.top, Platform.OS === 'android' ? (StatusBar.currentHeight || 24) : 0);
   const { notifications = [], isLoading } = useSelector(state => state.notifications);
   const { theme } = useSelector(state => state.ui || { theme: 'dark' });
   
@@ -110,8 +113,8 @@ export default function NotificationsScreen({ navigation }) {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
-      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} translucent={false} backgroundColor={colors.bg} />
-      <View style={[styles.header, { backgroundColor: colors.headerBg, borderBottomWidth: 1, borderBottomColor: colors.border }]}>
+      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} translucent={true} backgroundColor="transparent" />
+      <View style={[styles.header, { paddingTop: topPadding + 10, backgroundColor: colors.headerBg, borderBottomWidth: 1, borderBottomColor: colors.border }]}>
         <BouncyTouchable onPress={() => navigation.goBack()} style={[styles.backBtn, { backgroundColor: isDarkMode ? '#1e293b' : 'white', borderColor: colors.border }]} activeScale={0.8}>
           <Feather name="arrow-left" size={20} color={colors.text} />
         </BouncyTouchable>
@@ -139,7 +142,7 @@ export default function NotificationsScreen({ navigation }) {
                   <Feather name="bell-off" size={40} color={colors.subText} />
                 </Animated.View>
                 <Text style={[styles.emptyTitle, { color: colors.text }]}>No notifications yet</Text>
-                <Text style={[styles.emptySub, { color: colors.subText }]}>When you get notifications, they'll show up here</Text>
+                <Text style={[styles.emptySub, { color: colors.subText }]}>When you get notifications, they&apos;ll show up here</Text>
               </View>
             }
           />
