@@ -23,7 +23,7 @@ const Stack = createNativeStackNavigator();
 // Auth Stack
 function AuthStack() {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Navigator screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
       <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen name="Register" component={RegisterScreen} />
     </Stack.Navigator>
@@ -33,7 +33,7 @@ function AuthStack() {
 export default function AppNavigator() {
   const dispatch = useDispatch();
   const { isAuthenticated, user, isInitializing } = useSelector((state) => state.auth);
-  const { theme } = useSelector((state) => state.ui || { theme: 'dark' });
+  const { theme, showChatbot } = useSelector((state) => state.ui || { theme: 'dark', showChatbot: true });
   
   const [currentRouteName, setCurrentRouteName] = useState('');
   const navigationRef = useNavigationContainerRef();
@@ -64,7 +64,7 @@ export default function AppNavigator() {
       }}
     >
       <StatusBar style={statusBarStyle} />
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Navigator screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
         {!isAuthenticated ? (
           <Stack.Screen name="Auth" component={AuthStack} />
         ) : user?.role === 'admin' ? (
@@ -75,7 +75,7 @@ export default function AppNavigator() {
           <Stack.Screen name="StudentDashboard" component={StudentNavigator} />
         )}
       </Stack.Navigator>
-      <GlobalChatbot currentRouteName={currentRouteName} />
+      {showChatbot !== false && <GlobalChatbot currentRouteName={currentRouteName} />}
     </NavigationContainer>
   );
 }

@@ -9,7 +9,6 @@ import {
   TextInput,
   ScrollView,
   RefreshControl,
-  SafeAreaView,
   StatusBar,
   Platform,
 } from 'react-native';
@@ -186,8 +185,8 @@ export default function ExamsScreen({ navigation }) {
 
   /* ── Render ────────────────────────────────────────────────────── */
   return (
-    <SafeAreaView style={styles.safe}>
-      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor="transparent" />
+    <View style={styles.safe}>
+      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} translucent={false} backgroundColor={colors.bg} />
       
       {/* ── Header ── */}
       <View style={styles.header}>
@@ -293,7 +292,7 @@ export default function ExamsScreen({ navigation }) {
       >
         <Feather name="plus" size={28} color={colors.text} />
       </TouchableOpacity>
-    </SafeAreaView>
+    </View>
   );
 }
 

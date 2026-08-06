@@ -7,7 +7,7 @@ import Toast from 'react-native-toast-message';
 import * as ImagePicker from 'expo-image-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { updateProfile, getCurrentUser, changePassword, logoutUser, uploadProfileImage } from '../../redux/slices/authSlice';
-import { toggleTheme } from '../../redux/slices/uiSlice';
+import { toggleTheme, toggleChatbot, toggleNotificationsEnabled } from '../../redux/slices/uiSlice';
 import { sendPersonalNotification } from '../../redux/slices/notificationSlice';
 import { getTeacherExams } from '../../redux/slices/examSlice';
 
@@ -17,7 +17,7 @@ export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const { user } = useSelector(state => state.auth);
   const { unreadCount } = useSelector(state => state.notifications);
-  const { theme } = useSelector(state => state.ui || { theme: 'dark' });
+  const { theme, showChatbot, notificationsEnabled } = useSelector((state) => state.ui || { theme: 'dark', showChatbot: true, notificationsEnabled: true });
   const { exams } = useSelector(state => state.exams);
 
   const [isEditModalVisible, setEditModalVisible] = useState(false);
@@ -265,7 +265,7 @@ export default function ProfileScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.bg }]}>
+    <View style={[styles.container, { backgroundColor: colors.bg }]}><StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} translucent={false} backgroundColor={colors.bg} />
       <Animated.ScrollView contentContainerStyle={styles.content} style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }} showsVerticalScrollIndicator={false}>
 
         {/* Custom Header */}
@@ -798,15 +798,41 @@ export default function ProfileScreen() {
                 </View>
                 <Switch value={isDarkMode} onValueChange={() => dispatch(toggleTheme())} />
               </View>
-              <View style={[styles.listItem, { borderBottomWidth: 0 }]}>
+              <View style={[styles.listItem, { borderBottomColor: colors.modalBorder }]}>
                 <View style={[styles.listIconWrapper, {backgroundColor: 'rgba(16, 185, 129, 0.1)'}]}>
                   <Feather name="bell" size={18} color="#34d399" />
                 </View>
                 <View style={styles.listTextContainer}>
                   <Text style={[styles.listTitle, { color: colors.text }]}>Push Notifications</Text>
                 </View>
-                <Switch value={true} onValueChange={() => Toast.show({ type: 'info', text1: 'Preferences saved' })} />
+                <Switch 
+                  value={notificationsEnabled !== false} 
+                  onValueChange={() => {
+                    dispatch(toggleNotificationsEnabled());
+                    Toast.show({
+                      type: 'info',
+                      text1: 'Push Notifications',
+                      text2: notificationsEnabled !== false ? 'Notifications turned OFF' : 'Notifications turned ON'
+                    });
+                  }}
+                  trackColor={{ false: "#cbd5e1", true: "#a78bfa" }}
+                  thumbColor={notificationsEnabled !== false ? "#8b5cf6" : "#f1f5f9"}
+                />
               </View>
+                <View style={[styles.listItem, { borderBottomWidth: 0 }]}>
+                  <View style={[styles.listIconWrapper, {backgroundColor: 'rgba(139, 92, 246, 0.1)'}]}>
+                    <Feather name="message-circle" size={18} color="#8b5cf6" />
+                  </View>
+                  <View style={styles.listTextContainer}>
+                    <Text style={[styles.listTitle, { color: colors.text }]}>Show AI Assistant</Text>
+                  </View>
+                  <Switch 
+                    value={showChatbot !== false} 
+                    onValueChange={() => dispatch(toggleChatbot())} 
+                    trackColor={{ false: "#cbd5e1", true: "#c4b5fd" }}
+                    thumbColor={showChatbot !== false ? "#8b5cf6" : "#f1f5f9"}
+                  />
+                </View>
             </View>
 
             <View style={[styles.listCard, { backgroundColor: colors.modalCard, borderColor: colors.modalBorder, marginTop: 15 }]}>

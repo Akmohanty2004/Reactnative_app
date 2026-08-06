@@ -9,7 +9,6 @@ import {
   FlatList,
   ActivityIndicator,
   StatusBar,
-  SafeAreaView,
   Platform,
 } from 'react-native';
 import Skeleton from '../../components/Skeleton';
@@ -117,7 +116,7 @@ export default function ResultsScreen() {
   ──────────────────────────────────────────────────────────────── */
   if (!selectedExamId) {
     return (
-      <SafeAreaView style={styles.safe}>
+      <View style={styles.safe}>
         <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={isDarkMode ? "#0d1117" : "#f8fafc"} translucent={false} />
 
         {/* Header */}
@@ -284,7 +283,7 @@ export default function ResultsScreen() {
             </View>
           </View>
         </Modal>
-      </SafeAreaView>
+      </View>
     );
   }
 
@@ -292,7 +291,7 @@ export default function ResultsScreen() {
      VIEW 2 – Student results for selected exam
   ──────────────────────────────────────────────────────────────── */
   return (
-    <SafeAreaView style={styles.safe}>
+    <View style={styles.safe}>
       <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={isDarkMode ? "#0d1117" : "#f8fafc"} translucent={false} />
 
       {/* Header */}
@@ -478,7 +477,7 @@ export default function ResultsScreen() {
           )}
         </ScrollView>
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 

@@ -200,113 +200,124 @@ const AudioMessage = ({ uri, isMe, onLongPress }) => {
 
   const [sound, setSound] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [duration, setDuration] = useState(0);
   const [position, setPosition] = useState(0);
+  const soundRef = useRef(null);
 
   useEffect(() => {
-    let mounted = true;
-    let s = null;
-    const loadMetadata = async () => {
+    let isMounted = true;
+    let tempSound = null;
+    const fetchMetadataDuration = async () => {
       try {
-        const { sound: newSound, status } = await Audio.Sound.createAsync(
-          { uri: getImageUrl(uri) },
+        const fullUrl = getImageUrl(uri);
+        const { sound: s, status } = await Audio.Sound.createAsync(
+          { uri: fullUrl },
           { shouldPlay: false }
         );
-        if (!mounted) {
-          newSound.unloadAsync();
-          return;
-        }
-        s = newSound;
-        setSound(newSound);
-        if (status && status.durationMillis) {
+        tempSound = s;
+        if (isMounted && status && status.durationMillis) {
           setDuration(Math.round(status.durationMillis / 1000));
         }
-        newSound.setOnPlaybackStatusUpdate((status) => {
-          if (!mounted) return;
-          if (status.isLoaded) {
-            if (status.durationMillis) {
-              setDuration(Math.round(status.durationMillis / 1000));
-            }
-            if (status.positionMillis !== undefined) {
-              setPosition(Math.round(status.positionMillis / 1000));
-            }
-            setIsPlaying(status.isPlaying);
-            if (status.didJustFinish) {
-              setIsPlaying(false);
-              setPosition(0);
-            }
-          }
-        });
+        await s.unloadAsync();
+        tempSound = null;
       } catch (err) {
-        // ignore preload error
+        // metadata load error fallback
       }
     };
-    loadMetadata();
+    if (uri) {
+      fetchMetadataDuration();
+    }
     return () => {
-      mounted = false;
-      if (s) s.unloadAsync();
+      isMounted = false;
+      if (tempSound) {
+        tempSound.unloadAsync().catch(() => {});
+      }
+      if (soundRef.current) {
+        soundRef.current.unloadAsync().catch(() => {});
+        soundRef.current = null;
+      }
     };
   }, [uri]);
 
   const playSound = async () => {
+    if (isLoading) return;
     try {
-      if (sound) {
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: false,
+        playsInSilentModeIOS: true,
+        shouldDuckAndroid: true,
+        playThroughEarpieceAndroid: false,
+      });
+
+      if (soundRef.current) {
         if (isPlaying) {
-          await sound.pauseAsync();
+          await soundRef.current.pauseAsync();
           setIsPlaying(false);
         } else {
-          await sound.playFromPositionAsync(position * 1000 || 0);
+          if (position >= duration && duration > 0) {
+            await soundRef.current.setPositionAsync(0);
+          }
+          await soundRef.current.playAsync();
           setIsPlaying(true);
         }
       } else {
-        await Audio.setAudioModeAsync({
-          allowsRecordingIOS: false,
-          playsInSilentModeIOS: true,
-          shouldDuckAndroid: true,
-          playThroughEarpieceAndroid: false,
-        });
+        setIsLoading(true);
+        const fullUrl = getImageUrl(uri);
         const { sound: newSound, status } = await Audio.Sound.createAsync(
-          { uri: getImageUrl(uri) },
-          { shouldPlay: true }
+          { uri: fullUrl },
+          { shouldPlay: true, isLooping: false, progressUpdateIntervalMillis: 250 }
         );
+        soundRef.current = newSound;
         setSound(newSound);
+        setIsLoading(false);
+        setIsPlaying(true);
+
         if (status && status.durationMillis) {
           setDuration(Math.round(status.durationMillis / 1000));
         }
-        setIsPlaying(true);
-        newSound.setOnPlaybackStatusUpdate((status) => {
-          if (status.isLoaded) {
-            if (status.durationMillis) {
-              setDuration(Math.round(status.durationMillis / 1000));
+
+        newSound.setOnPlaybackStatusUpdate((st) => {
+          if (st.isLoaded) {
+            if (st.durationMillis) {
+              setDuration(Math.round(st.durationMillis / 1000));
             }
-            if (status.positionMillis !== undefined) {
-              setPosition(Math.round(status.positionMillis / 1000));
+            if (st.positionMillis !== undefined) {
+              setPosition(Math.round(st.positionMillis / 1000));
             }
-            setIsPlaying(status.isPlaying);
-            if (status.didJustFinish) {
+            setIsPlaying(st.isPlaying);
+            if (st.didJustFinish) {
               setIsPlaying(false);
               setPosition(0);
+              newSound.stopAsync().catch(() => {});
+              newSound.setPositionAsync(0).catch(() => {});
             }
           }
         });
       }
     } catch (err) {
       console.error('Audio playback error:', err);
-      Alert.alert('Audio Unavailable', 'This audio file is not available on the server. Please record and send a new voice message.');
+      setIsLoading(false);
+      setIsPlaying(false);
+      Alert.alert('Audio Unavailable', 'Could not play voice message. Please check server connection.');
     }
   };
 
   const progressPercent = duration > 0 ? Math.min(100, (position / duration) * 100) : 0;
 
   return (
-    <TouchableOpacity style={styles.audioBubbleRow} onPress={playSound} onLongPress={onLongPress}>
-      <Feather name={isPlaying ? "pause" : "play"} size={22} color={iconColor} />
+    <TouchableOpacity style={styles.audioBubbleRow} onPress={playSound} onLongPress={onLongPress} activeOpacity={0.8}>
+      {isLoading ? (
+        <ActivityIndicator size="small" color={iconColor} style={{ width: 22, height: 22 }} />
+      ) : (
+        <Feather name={isPlaying ? "pause" : "play"} size={22} color={iconColor} />
+      )}
       <View style={{ flex: 1, marginLeft: 10, marginRight: 10 }}>
         <View style={[styles.audioWaveform, { backgroundColor: waveformBg }]}>
           <View style={[styles.audioProgress, { backgroundColor: progressBg, width: `${isPlaying || position > 0 ? progressPercent : 0}%` }]} />
         </View>
         <Text style={{ color: textColor, fontSize: 11, marginTop: 4, fontWeight: '600' }}>
-          {isPlaying || position > 0 ? `${formatSecs(position)} / ${formatSecs(duration)}` : `${formatSecs(duration)}`}
+          {isPlaying || position > 0 ? `${formatSecs(position)} / ${formatSecs(duration || 0)}` : `${formatSecs(duration || 0)}`}
         </Text>
       </View>
       <Feather name="mic" size={16} color={micColor} />
@@ -435,6 +446,7 @@ export default function ChatRoomScreen({ route, navigation }) {
     const joinRoom = () => {
       if (currentId && currentId !== 'undefined') {
         newSocket.emit('join_room', currentId);
+        newSocket.emit('set_status', { isOnline: true });
         newSocket.emit('check_online_status', targetId);
       }
     };
@@ -486,7 +498,10 @@ export default function ChatRoomScreen({ route, navigation }) {
       return () => {
         clearInterval(statusInterval);
         appStateSubscription?.remove();
-        // newSocket.disconnect();
+        if (newSocket.connected) {
+          newSocket.emit('set_status', { isOnline: false });
+        }
+        newSocket.disconnect();
       };
   }, [dispatch, otherUser._id, otherUser.id, user._id, user.id, otherIdStr]);
 

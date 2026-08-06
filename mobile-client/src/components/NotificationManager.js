@@ -11,20 +11,35 @@ import api from '../services/api';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
-    shouldShowAlert: true, // Allow native system alerts to show up (essential for smartwatches and device notification center)
+    shouldShowAlert: true,
     shouldPlaySound: true,
     shouldSetBadge: true,
+    shouldShowBanner: true,
+    shouldShowList: true,
   }),
 });
 
 export async function triggerMobileNotification(title, message, data = {}) {
   try {
+    if (Platform.OS === 'android') {
+      await Notifications.setNotificationChannelAsync('default', {
+        name: 'ExamHub Notifications',
+        importance: Notifications.AndroidImportance.MAX,
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: '#8b5cf6',
+        sound: 'default',
+        enableVibrate: true,
+        showBadge: true,
+      }).catch(() => {});
+    }
+
     await Notifications.scheduleNotificationAsync({
       content: {
         title: title || 'ExamHub Notification',
         body: message || 'You have a new notification',
         data: data,
-        sound: true,
+        sound: 'default',
+        priority: Notifications.AndroidNotificationPriority.HIGH,
       },
       trigger: null,
     });
@@ -38,16 +53,45 @@ export default function NotificationManager() {
   const { unreadCount, notifications } = useSelector(state => state.notifications);
   const { isAuthenticated, user } = useSelector(state => state.auth);
   const { currentUserId } = useSelector(state => state.chat);
+  const { notificationsEnabled } = useSelector(state => state.ui || { notificationsEnabled: true });
   
   const unreadCountRef = useRef(unreadCount);
   const notificationsRef = useRef(notifications);
   const currentChatRef = useRef(currentUserId);
+  const notificationsEnabledRef = useRef(notificationsEnabled);
 
   useEffect(() => {
     unreadCountRef.current = unreadCount;
     notificationsRef.current = notifications;
     currentChatRef.current = currentUserId;
-  }, [unreadCount, notifications, currentUserId]);
+    notificationsEnabledRef.current = notificationsEnabled;
+  }, [unreadCount, notifications, currentUserId, notificationsEnabled]);
+
+  // Immediate channel setup & permission check on mount
+  useEffect(() => {
+    const initNotifications = async () => {
+      try {
+        if (Platform.OS === 'android') {
+          await Notifications.setNotificationChannelAsync('default', {
+            name: 'ExamHub Notifications',
+            importance: Notifications.AndroidImportance.MAX,
+            vibrationPattern: [0, 250, 250, 250],
+            lightColor: '#8b5cf6',
+            sound: 'default',
+            enableVibrate: true,
+            showBadge: true,
+          }).catch(() => {});
+        }
+        const { status: existingStatus } = await Notifications.getPermissionsAsync();
+        if (existingStatus !== 'granted') {
+          await Notifications.requestPermissionsAsync();
+        }
+      } catch (err) {
+        console.log('Error initializing notifications channel:', err);
+      }
+    };
+    initNotifications();
+  }, []);
 
   // Handle local notification clicks (e.g. file downloads)
   useEffect(() => {
@@ -63,7 +107,7 @@ export default function NotificationManager() {
         }
       }
     });
-    return () => Notifications.removeNotificationSubscription(responseListener);
+    return () => responseListener.remove();
   }, []);
 
   // Register for Expo Push Notifications to receive notifications when app is closed / not open
@@ -78,14 +122,6 @@ export default function NotificationManager() {
           finalStatus = status;
         }
         if (finalStatus !== 'granted') return;
-        if (Platform.OS === 'android') {
-          await Notifications.setNotificationChannelAsync('default', {
-            name: 'default',
-            importance: Notifications.AndroidImportance.MAX,
-            vibrationPattern: [0, 250, 250, 250],
-            lightColor: '#8b5cf6',
-          }).catch(() => {});
-        }
         const projectId = Constants.expoConfig?.extra?.eas?.projectId || Constants.easConfig?.projectId || 'f15cfad8-a264-460c-a9df-1dd3ef343a23';
         const tokenData = await Notifications.getExpoPushTokenAsync({ projectId }).catch((e) => {
           console.log('Failed to get Expo push token:', e);
@@ -101,6 +137,9 @@ export default function NotificationManager() {
     registerPushToken();
   }, [isAuthenticated, user]);
 
+  const scheduledExamIdsRef = useRef(new Set());
+  const { exams } = useSelector(state => state.exams || { exams: [] });
+
   // Socket listener for real-time notifications
   useEffect(() => {
     if (!isAuthenticated || !user) return;
@@ -112,6 +151,8 @@ export default function NotificationManager() {
     const onConnect = () => {
       if (userId && userId !== 'undefined') {
         socket.emit('join_room', userId);
+        const isActive = AppState.currentState === 'active';
+        socket.emit('set_status', { isOnline: isActive });
       }
     };
 
@@ -122,19 +163,30 @@ export default function NotificationManager() {
 
     socket.on('new_notification', (notif) => {
       if (notif) {
-        const isChatMessage = notif.data && notif.data.messageId;
-        const senderId = notif.data && notif.data.senderId;
+        // If user disabled notifications in settings, do not trigger device notifications or toasts
+        if (notificationsEnabledRef.current === false) {
+          return;
+        }
+
+        const isChatMessage = notif.data && (notif.data.messageId || notif.data.type === 'chat');
+        const senderId = notif.data?.senderId || notif.senderId || notif.data?.sender?._id;
+        const myUserId = String(user._id || user.id);
+
+        // DO NOT show notification on sender's device!
+        if (senderId && String(senderId) === myUserId) {
+          return;
+        }
 
         if (isChatMessage) {
-          // If the message is from the person we are currently chatting with, do nothing (silent)
+          // If the receiver is NOT actively chatting with the sender in ChatRoomScreen
           if (String(senderId) !== String(currentChatRef.current)) {
-            // Trigger native device notification for other chats
+            // Trigger native device system notification (shows on receiver's phone notification drawer)
             triggerMobileNotification(notif.title || 'New Message', notif.message, notif.data);
             
-            // Also show in-app toast for immediate visibility
+            // In-app banner toast
             Toast.show({
               type: 'info',
-              text1: notif.title,
+              text1: notif.title || 'New Message',
               text2: notif.message,
               visibilityTime: 4000,
               position: 'top',
@@ -142,7 +194,7 @@ export default function NotificationManager() {
             });
           }
         } else {
-          // Standard notification - trigger native device notification
+          // Standard notification (Exam created, published, updated, grade released)
           triggerMobileNotification(notif.title || 'ExamHub Notification', notif.message || 'You have a new notification.', notif.data);
           
           Toast.show({
@@ -155,6 +207,27 @@ export default function NotificationManager() {
           });
           dispatch(getNotifications());
         }
+      }
+    });
+
+    // Real-time listener for newly published or updated exams
+    socket.on('exam_published', (data) => {
+      if (data && notificationsEnabledRef.current !== false) {
+        triggerMobileNotification(
+          data.title ? `New Exam Published: ${data.title}` : 'New Exam Published!',
+          data.message || 'A new exam is now available on your dashboard.',
+          data
+        );
+      }
+    });
+
+    socket.on('exam_updated', (data) => {
+      if (data && notificationsEnabledRef.current !== false) {
+        triggerMobileNotification(
+          data.title ? `Exam Updated: ${data.title}` : 'Exam Notification',
+          data.message || 'An exam detail or schedule has been updated.',
+          data
+        );
       }
     });
 
@@ -175,12 +248,56 @@ export default function NotificationManager() {
 
     return () => {
       appStateSubscription?.remove();
-      // We intentionally do not disconnect here to allow background notifications
-      // socket.disconnect();
+      if (socket.connected) {
+        socket.emit('set_status', { isOnline: false });
+      }
+      socket.disconnect();
     };
   }, [isAuthenticated, user, dispatch]);
 
-  // Polling for new notifications backup
+  // Schedule local 30-minute prior native device notifications for upcoming exams
+  useEffect(() => {
+    if (!isAuthenticated || !user || !exams || !Array.isArray(exams)) return;
+
+    const schedule30MinExamReminders = async () => {
+      try {
+        if (notificationsEnabledRef.current === false) return;
+        const now = Date.now();
+        for (const exam of exams) {
+          if (!exam || !exam._id) continue;
+          if (scheduledExamIdsRef.current.has(exam._id)) continue;
+
+          const startTimeRaw = exam.startTime || exam.startDate || exam.createdAt;
+          if (!startTimeRaw) continue;
+
+          const examTime = new Date(startTimeRaw).getTime();
+          // Calculate 30 minutes before exam start
+          const reminderTime = new Date(examTime - 30 * 60 * 1000);
+
+          if (reminderTime.getTime() > now) {
+            scheduledExamIdsRef.current.add(exam._id);
+
+            await Notifications.scheduleNotificationAsync({
+              content: {
+                title: '⏰ Exam Starts in 30 Minutes!',
+                body: `Your exam "${exam.title || 'Upcoming Exam'}" starts in 30 minutes. Get ready!`,
+                data: { examId: exam._id, type: 'exam_reminder_30m' },
+                sound: 'default',
+                priority: Notifications.AndroidNotificationPriority.HIGH,
+              },
+              trigger: reminderTime,
+            }).catch(e => console.log('Error scheduling 30m reminder:', e));
+          }
+        }
+      } catch (err) {
+        console.log('Error in 30m exam reminder scheduler:', err);
+      }
+    };
+
+    schedule30MinExamReminders();
+  }, [exams, isAuthenticated, user]);
+
+  // Polling backup for new notifications
   useEffect(() => {
     let interval;
     if (isAuthenticated && user) {
@@ -188,6 +305,7 @@ export default function NotificationManager() {
         try {
           const prevCount = unreadCountRef.current;
           const prevNotifications = notificationsRef.current || [];
+          const myUserId = String(user._id || user.id);
           
           const result = await dispatch(getNotifications()).unwrap();
           const newCount = result.unreadCount;
@@ -197,6 +315,10 @@ export default function NotificationManager() {
             const newNotifs = (result.notifications || []).slice(0, countDiff);
             newNotifs.forEach((newNotif, index) => {
               if (newNotif && (!prevNotifications.length || newNotif._id !== prevNotifications[0]?._id)) {
+                const senderId = newNotif.data?.senderId || newNotif.senderId || newNotif.data?.sender?._id;
+                // DO NOT trigger device notification for sender!
+                if (senderId && String(senderId) === myUserId) return;
+
                 triggerMobileNotification(
                   newNotif.title || 'New Notification',
                   newNotif.message || 'You have a new notification.',
@@ -219,7 +341,7 @@ export default function NotificationManager() {
         } catch (error) {
           console.log('Error polling notifications:', error);
         }
-      }, 60000); // 60 seconds (1 minute backup poll; Socket.IO handles real-time instant notifications)
+      }, 60000);
     }
     return () => clearInterval(interval);
   }, [isAuthenticated, user, dispatch]);

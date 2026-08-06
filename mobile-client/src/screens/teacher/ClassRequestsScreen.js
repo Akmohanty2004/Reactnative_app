@@ -84,7 +84,7 @@ export default function ClassRequestsScreen() {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.bg }]}>
+    <View style={[styles.container, { backgroundColor: colors.bg }]}><StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} translucent={false} backgroundColor={colors.bg} />
       <View style={styles.header}>
         <Text style={[styles.title, { color: colors.text }]}>Class Verification</Text>
         <Text style={[styles.subtitle, { color: colors.subText }]}>Approve or reject student class change requests.</Text>

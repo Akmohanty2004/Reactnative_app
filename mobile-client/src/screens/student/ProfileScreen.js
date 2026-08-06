@@ -9,7 +9,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { updateProfile, getCurrentUser, changePassword, logoutUser, uploadProfileImage } from '../../redux/slices/authSlice';
 import { getStudentResults } from '../../redux/slices/resultSlice';
-import { toggleTheme } from '../../redux/slices/uiSlice';
+import { toggleTheme, toggleChatbot, toggleNotificationsEnabled } from '../../redux/slices/uiSlice';
 import api from '../../services/api';
 import BouncyTouchable from '../../components/BouncyTouchable';
 
@@ -20,7 +20,7 @@ export default function ProfileScreen() {
   const { user, token } = useSelector(state => state.auth);
   const { results } = useSelector(state => state.results);
   const { unreadCount } = useSelector(state => state.notifications);
-  const { theme } = useSelector(state => state.ui || { theme: 'dark' });
+  const { theme, showChatbot, notificationsEnabled } = useSelector(state => state.ui || { theme: 'dark', showChatbot: true, notificationsEnabled: true });
 
   const [isEditing, setIsEditing] = useState(false);
   const [imageTimestamp, setImageTimestamp] = useState(Date.now());
@@ -529,18 +529,42 @@ export default function ProfileScreen() {
                   />
                 </View>
 
-                <TouchableOpacity 
-                  style={[styles.settingsRow, { borderBottomColor: colors.border }]}
-                  onPress={() => Toast.show({ type: 'info', text1: 'Notifications', text2: 'Push notifications are enabled.' })}
-                >
+                <View style={[styles.settingsRow, { borderBottomColor: colors.border }]}>
                   <View style={styles.settingsRowLeft}>
                     <View style={[styles.settingsIconWrapper, { backgroundColor: 'rgba(16,185,129,0.1)' }]}>
-                      <Feather name="bell" size={20} color="#10b981" />
+                      <Feather name="message-square" size={20} color="#10b981" />
                     </View>
-                    <Text style={[styles.settingsRowText, { color: colors.text }]}>Notifications</Text>
-            </View>
-                  <Feather name="chevron-right" size={20} color={colors.subText} />
-                </TouchableOpacity>
+                    <Text style={[styles.settingsRowText, { color: colors.text }]}>Show AI Assistant</Text>
+                  </View>
+                  <Switch
+                    value={showChatbot !== false}
+                    onValueChange={() => dispatch(toggleChatbot())}
+                    trackColor={{ false: "#cbd5e1", true: "#34d399" }}
+                    thumbColor={showChatbot !== false ? "#10b981" : "#f1f5f9"}
+                  />
+                </View>
+
+                <View style={[styles.settingsRow, { borderBottomColor: colors.border }]}>
+                  <View style={styles.settingsRowLeft}>
+                    <View style={[styles.settingsIconWrapper, { backgroundColor: 'rgba(139,92,246,0.1)' }]}>
+                      <Feather name="bell" size={20} color="#8b5cf6" />
+                    </View>
+                    <Text style={[styles.settingsRowText, { color: colors.text }]}>Device Notifications</Text>
+                  </View>
+                  <Switch
+                    value={notificationsEnabled !== false}
+                    onValueChange={() => {
+                      dispatch(toggleNotificationsEnabled());
+                      Toast.show({
+                        type: 'info',
+                        text1: 'Device Notifications',
+                        text2: notificationsEnabled !== false ? 'Notifications disabled' : 'Notifications enabled'
+                      });
+                    }}
+                    trackColor={{ false: "#cbd5e1", true: "#a78bfa" }}
+                    thumbColor={notificationsEnabled !== false ? "#8b5cf6" : "#f1f5f9"}
+                  />
+                </View>
               </View>
 
               <View style={styles.settingsSection}>

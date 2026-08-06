@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Image, Modal, Alert, KeyboardAvoidingView, Platform, ActivityIndicator , StatusBar, Animated, Easing } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Image, Modal, Alert, KeyboardAvoidingView, Platform, ActivityIndicator, Switch, StatusBar, Animated, Easing } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { Feather } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
@@ -7,7 +7,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { updateProfile, getCurrentUser, changePassword, logoutUser, uploadProfileImage } from '../../redux/slices/authSlice';
-import { toggleTheme } from '../../redux/slices/uiSlice';
+import { toggleTheme, toggleChatbot, toggleNotificationsEnabled } from '../../redux/slices/uiSlice';
 import { getAdminDashboardStats } from '../../redux/slices/adminSlice';
 import api from '../../services/api';
 
@@ -16,7 +16,7 @@ export default function ProfileScreen() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const { user } = useSelector(state => state.auth);
-  const { theme } = useSelector(state => state.ui || { theme: 'dark' });
+  const { theme, showChatbot, notificationsEnabled } = useSelector((state) => state.ui || { theme: 'dark', showChatbot: true, notificationsEnabled: true });
   const { stats } = useSelector(state => state.admin);
   const { notifications } = useSelector(state => state.notifications || { notifications: [] });
   
@@ -174,7 +174,7 @@ export default function ProfileScreen() {
 
   const isDarkMode = theme === 'dark';
   const colors = {
-    bg: isDarkMode ? '#09090b' : '#f8fafc',
+    bg: isDarkMode ? '#000000' : '#f8fafc',
     text: isDarkMode ? 'white' : '#0f172a',
     subText: isDarkMode ? '#94a3b8' : '#64748b',
     card: isDarkMode ? '#13102b' : 'white',
@@ -358,16 +358,28 @@ export default function ProfileScreen() {
             <Feather name="chevron-right" size={20} color={colors.subText} />
           </TouchableOpacity>
           
-          <TouchableOpacity style={[styles.listItem, { borderBottomColor: colors.listBorder }]} onPress={() => setSettingsModalVisible(true)}>
+          <View style={[styles.listItem, { borderBottomColor: colors.listBorder }]}>
             <View style={[styles.listIconWrapper, {backgroundColor: 'rgba(16, 185, 129, 0.1)'}]}>
               <Feather name="bell" size={18} color="#34d399" />
             </View>
             <View style={styles.listTextContainer}>
-              <Text style={[styles.listTitle, { color: colors.text }]}>Notifications</Text>
-              <Text style={[styles.listSubtitle, { color: colors.subText }]}>Manage your notification settings</Text>
+              <Text style={[styles.listTitle, { color: colors.text }]}>Push Notifications</Text>
+              <Text style={[styles.listSubtitle, { color: colors.subText }]}>Toggle device notifications</Text>
             </View>
-            <Feather name="chevron-right" size={20} color={colors.subText} />
-          </TouchableOpacity>
+            <Switch 
+              value={notificationsEnabled !== false} 
+              onValueChange={() => {
+                dispatch(toggleNotificationsEnabled());
+                Toast.show({
+                  type: 'info',
+                  text1: 'Push Notifications',
+                  text2: notificationsEnabled !== false ? 'Notifications turned OFF' : 'Notifications turned ON'
+                });
+              }}
+              trackColor={{ false: "#cbd5e1", true: "#a78bfa" }}
+              thumbColor={notificationsEnabled !== false ? "#8b5cf6" : "#f1f5f9"}
+            />
+          </View>
           
           <TouchableOpacity style={[styles.listItem, {borderBottomWidth: 0}]} onPress={() => setLanguageModalVisible(true)}>
             <View style={[styles.listIconWrapper, {backgroundColor: 'rgba(168, 85, 247, 0.1)'}]}>
@@ -666,13 +678,22 @@ export default function ProfileScreen() {
                 </View>
                 <Feather name={isPushEnabled ? "toggle-right" : "toggle-left"} size={28} color={isPushEnabled ? "#10b981" : colors.subText} />
               </TouchableOpacity>
-              <View style={[styles.listItem, { borderBottomWidth: 0 }]}>
+              <View style={[styles.listItem, { borderBottomColor: colors.listBorder }]}>
                 <View style={styles.listTextContainer}>
                   <Text style={[styles.listTitle, { color: colors.text }]}>App Theme</Text>
                   <Text style={[styles.listSubtitle, { color: colors.subText }]}>Toggle light and dark mode</Text>
                 </View>
                 <TouchableOpacity onPress={() => dispatch(toggleTheme())}>
                   <Feather name={isDarkMode ? "toggle-right" : "toggle-left"} size={28} color={isDarkMode ? "#a855f7" : colors.subText} />
+                </TouchableOpacity>
+              </View>
+              <View style={[styles.listItem, { borderBottomWidth: 0 }]}>
+                <View style={styles.listTextContainer}>
+                  <Text style={[styles.listTitle, { color: colors.text }]}>Show AI Assistant</Text>
+                  <Text style={[styles.listSubtitle, { color: colors.subText }]}>Toggle floating chatbot</Text>
+                </View>
+                <TouchableOpacity onPress={() => dispatch(toggleChatbot())}>
+                  <Feather name={showChatbot !== false ? "toggle-right" : "toggle-left"} size={28} color={showChatbot !== false ? "#a855f7" : colors.subText} />
                 </TouchableOpacity>
               </View>
             </View>

@@ -146,7 +146,7 @@ User message: "${text}"`
 
       const data = await response.json();
       if (data.error) {
-        console.error('API Error:', data.error);
+        console.warn('API Rate Limit:', data.error.message);
         if (data.error.code === 503) {
           return "The AI is currently experiencing very high demand. Please try again in a few moments!";
         }

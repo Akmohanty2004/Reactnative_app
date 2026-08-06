@@ -6,6 +6,7 @@ import {
 import { useDispatch, useSelector } from 'react-redux';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
+import { useVideoPlayer, VideoView } from 'expo-video';
 import { LineChart, BarChart, PieChart } from 'react-native-chart-kit';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getStudentExams } from '../../redux/slices/examSlice';
@@ -62,6 +63,17 @@ const AnimatedLikeButton = ({ item, handleLike, styles, colors, extraStyle }) =>
 };
 
 export default function DashboardScreen() {
+  const player = useVideoPlayer(require('../../../assets/student side video.mp4'), player => {
+    player.loop = true;
+    player.volume = 0.2;
+  });
+
+  React.useEffect(() => {
+    const sub = player.addListener('playToEnd', () => {
+      player.muted = true;
+    });
+    return () => sub.remove();
+  }, [player]);
   const dispatch = useDispatch();
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
@@ -93,6 +105,12 @@ export default function DashboardScreen() {
 
   const { user } = useSelector(s => s.auth);
   const { exams, isLoading: examsLoading } = useSelector(s => s.exams);
+
+  React.useEffect(() => {
+    if (!examsLoading && player) {
+      player.play();
+    }
+  }, [examsLoading, player]);
   const { results, leaderboard, toppers } = useSelector(s => s.results);
   const [refreshing, setRefreshing] = useState(false);
   const [showAllToppers, setShowAllToppers] = useState(false);
@@ -447,21 +465,50 @@ export default function DashboardScreen() {
         </View>
 
         {/* 🌟 Welcome Banner 🌟 */}
-        <View style={styles.banner}>
+        <Animated.View style={[
+          styles.banner, 
+          { 
+            borderColor: isDarkMode ? 'rgba(6,182,212,0.5)' : 'rgba(99,102,241,0.5)',
+            shadowColor: isDarkMode ? '#06b6d4' : '#6366f1',
+            shadowOpacity: 0.3,
+            shadowRadius: 8,
+            transform: [{ scale: breatheAnim.interpolate({ inputRange: [1, 1.03], outputRange: [1, 1.01] }) }]
+          }
+        ]}>
           <View style={{ flex: 1 }}>
-            <Text style={[styles.bannerWelcome, { color: isDarkMode ? '#e0e7ff' : '#4f46e5' }]}>Welcome back,</Text>
+            <Animated.Text style={[
+              styles.bannerWelcome, 
+              { 
+                color: isDarkMode ? '#00f2fe' : '#4f46e5',
+                textShadowColor: isDarkMode ? 'rgba(0,242,254,0.6)' : 'rgba(79,70,229,0.3)',
+                textShadowRadius: 6
+              }
+            ]}>Welcome back,</Animated.Text>
             <Text style={[styles.bannerName]}>{user?.name?.split(' ')[0]}! 👋</Text>
             <Text style={[styles.bannerSub]}>Here's your exam performance summary.</Text>
           </View>
           <Animated.View style={[styles.bannerGraphic, { transform: [{ translateY: floatAnim }] }]}>
-            <View style={styles.monitorOuter}>
-              <Feather name="monitor" size={70} color={isDarkMode ? "#ffffff" : "#6366f1"} style={{ opacity: 0.85 }} />
-              <View style={[styles.monitorInner, { backgroundColor: isDarkMode ? 'rgba(0,242,254,0.3)' : 'rgba(6,182,212,0.2)' }]}>
-                <Feather name="activity" size={24} color={isDarkMode ? "#00f2fe" : "#4f46e5"} />
+            <View style={{ width: 100, height: 100, position: 'relative', marginTop: 10 }}>
+              <VideoView
+                player={player}
+                style={{
+                  position: 'absolute',
+                  top: 12.5,
+                  left: 8.3,
+                  width: 83.4,
+                  height: 58.4,
+                  borderRadius: 6,
+                }}
+                contentFit="cover"
+                nativeControls={false}
+              />
+              <Feather name="monitor" size={100} color={isDarkMode ? "#ffffff" : "#6366f1"} style={{ position: 'absolute', top: 0, left: 0 }} />
+              <View style={[styles.monitorInner, { bottom: 2, right: -10, backgroundColor: isDarkMode ? 'rgba(0,242,254,0.7)' : 'rgba(6,182,212,0.6)', padding: 6, borderRadius: 12 }]}>
+                <Feather name="activity" size={24} color={isDarkMode ? "#ffffff" : "#ffffff"} />
               </View>
             </View>
           </Animated.View>
-        </View>
+        </Animated.View>
 
         {/* ── Ongoing Exam Banner ── */}
         {exams?.find(e => getExamStatus(e) === 'Available') && (

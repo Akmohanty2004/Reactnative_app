@@ -58,6 +58,12 @@ api.interceptors.response.use(
       try {
         await AsyncStorage.removeItem('token')
         await AsyncStorage.removeItem('user')
+        
+        // Lazily require store to avoid circular dependency and dispatch logout
+        const { store } = require('../redux/store');
+        if (store) {
+          store.dispatch({ type: 'auth/logout/fulfilled' });
+        }
       } catch (err) {
         console.error('Error removing token', err)
       }

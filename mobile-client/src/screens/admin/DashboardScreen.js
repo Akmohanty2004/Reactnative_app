@@ -3,6 +3,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { View, Text, StyleSheet, ScrollView, Dimensions, TouchableOpacity, Alert, FlatList, Modal, TextInput, ActivityIndicator, StatusBar, RefreshControl, Image, Animated , Platform} from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { Feather } from '@expo/vector-icons';
+import { useVideoPlayer, VideoView } from 'expo-video';
 import { PieChart } from 'react-native-chart-kit';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -11,7 +12,7 @@ import { getAdminDashboardStats } from '../../redux/slices/adminSlice';
 import { getToppers, likeTopper } from '../../redux/slices/resultSlice';
 import BouncyTouchable from '../../components/BouncyTouchable';
 import api from '../../services/api';
-import { playRefreshSound } from '../../utils/SoundManager';
+import { playRefreshSound, playLikeSound } from '../../utils/SoundManager';
 
 const getImageUrl = (path) => {
   if (!path) return null;
@@ -32,16 +33,36 @@ const { width } = Dimensions.get('window');
 
 const AdminSkeleton = ({ isDarkMode }) => (
   <View style={{ paddingVertical: 10 }}>
-    <View style={{ height: 160, backgroundColor: isDarkMode ? '#1e293b' : '#e2e8f0', borderRadius: 24, marginBottom: 20 }} />
-    <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginBottom: 20 }}>
-      {[1, 2, 3, 4, 5, 6].map((idx) => (
+    {/* Horizontal Scrollable Stat Cards Skeleton */}
+    <View style={{ flexDirection: 'row', gap: 12, marginBottom: 20 }}>
+      {[1, 2, 3, 4].map((idx) => (
         <View 
           key={idx} 
-          style={{ width: '31%', height: 100, backgroundColor: isDarkMode ? '#1e293b' : '#e2e8f0', borderRadius: 16, marginBottom: 10 }} 
-        />
+          style={{ 
+            width: 130, 
+            height: 105, 
+            backgroundColor: isDarkMode ? '#1e293b' : '#e2e8f0', 
+            borderRadius: 18,
+            padding: 12,
+            justify: 'space-between'
+          }} 
+        >
+          <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: isDarkMode ? '#334155' : '#cbd5e1', marginBottom: 12 }} />
+          <View style={{ width: 70, height: 10, borderRadius: 5, backgroundColor: isDarkMode ? '#334155' : '#cbd5e1', marginBottom: 8 }} />
+          <View style={{ width: 45, height: 18, borderRadius: 6, backgroundColor: isDarkMode ? '#334155' : '#cbd5e1' }} />
+        </View>
       ))}
     </View>
-    <View style={{ height: 220, backgroundColor: isDarkMode ? '#1e293b' : '#e2e8f0', borderRadius: 24, marginBottom: 20 }} />
+    {/* Chart Skeleton */}
+    <View style={{ height: 210, backgroundColor: isDarkMode ? '#1e293b' : '#e2e8f0', borderRadius: 24, marginBottom: 20, padding: 16 }}>
+      <View style={{ width: 140, height: 14, borderRadius: 7, backgroundColor: isDarkMode ? '#334155' : '#cbd5e1', marginBottom: 20 }} />
+      <View style={{ flex: 1, backgroundColor: isDarkMode ? '#334155' : '#cbd5e1', borderRadius: 16, opacity: 0.5 }} />
+    </View>
+    {/* Distribution & Activity Row Skeleton */}
+    <View style={{ flexDirection: 'row', gap: 12, marginBottom: 20 }}>
+      <View style={{ flex: 1, height: 180, backgroundColor: isDarkMode ? '#1e293b' : '#e2e8f0', borderRadius: 24 }} />
+      <View style={{ flex: 1, height: 180, backgroundColor: isDarkMode ? '#1e293b' : '#e2e8f0', borderRadius: 24 }} />
+    </View>
   </View>
 );
 
@@ -69,6 +90,23 @@ export default function DashboardScreen({ navigation }) {
   const breatheAnim = React.useRef(new Animated.Value(1)).current;
   const modalZoomAnim = React.useRef(new Animated.Value(0)).current;
   const spinAnim = React.useRef(new Animated.Value(0)).current;
+
+  const player = useVideoPlayer(require('../../../assets/admin side video.mp4'), player => {
+    player.loop = true;
+  });
+
+  React.useEffect(() => {
+    if (!isLoading && player) {
+      player.play();
+    }
+  }, [isLoading, player]);
+
+  React.useEffect(() => {
+    const sub = player.addListener('playToEnd', () => {
+      player.muted = true;
+    });
+    return () => sub.remove();
+  }, [player]);
 
   React.useEffect(() => {
     if (selectedTopper) {
@@ -129,12 +167,13 @@ export default function DashboardScreen({ navigation }) {
   }, [dispatch]);
 
   const handleLike = (resultId) => {
+    playLikeSound();
     dispatch(likeTopper(resultId));
   };
 
   const isDarkMode = theme === 'dark';
   const colors = {
-    bg: isDarkMode ? '#0B0E14' : '#f8fafc',
+    bg: isDarkMode ? '#000000' : '#f8fafc',
     text: isDarkMode ? '#ffffff' : '#0f172a',
     subText: isDarkMode ? '#94a3b8' : '#64748b',
     card: isDarkMode ? '#141927' : '#ffffff',
@@ -266,11 +305,7 @@ export default function DashboardScreen({ navigation }) {
           </View>
         </View>
 
-        {(isLoading && !stats) || refreshing ? (
-          <AdminSkeleton isDarkMode={isDarkMode} />
-        ) : (
-          <>
-            {/* Welcome Banner */}
+        {/* Welcome Banner */}
         <View style={styles.bannerOuter}>
           <LinearGradient
             colors={isDarkMode ? ['#1a1060', '#0d1b4b'] : ['#7c3aed', '#4f46e5']}
@@ -281,28 +316,29 @@ export default function DashboardScreen({ navigation }) {
               <Text style={[styles.bannerTitle, { color: '#ffffff' }]}>
                 <Text style={{ color: '#e0e7ff' }}>Welcome back,</Text>{'\n'}Admin! <Animated.Text style={{ transform: [{ scale: breatheAnim }] }}>👑</Animated.Text>
               </Text>
-              <Text style={[styles.bannerSubtitle, { color: '#c4b5fd' }]}>Here's what's happening{'\n'}on your platform today.</Text>
+              <Text style={[styles.bannerSubtitle, { color: '#c4b5fd' }]}>Here&apos;s what&apos;s happening{'\n'}on your platform today.</Text>
             </View>
             {/* Dashboard illustration */}
-            <Animated.View style={[styles.bannerIllustration, { transform: [{ translateY: floatAnim }] }]}>
-              <View style={styles.illustrationScreen}>
-                <LinearGradient colors={['#312e81','#1e1b4b']} style={styles.illustrationBg}>
-                  {/* Mini chart bars */}
-                  <View style={styles.miniChartRow}>
-                    {[40,65,45,80,55,70].map((h,i) => (
-                      <Animated.View key={i} style={[styles.miniBar, { height: h * 0.6, backgroundColor: i % 2 === 0 ? '#8b5cf6' : '#6366f1', transform: [{ scaleY: i % 2 === 0 ? breatheAnim : pulseAnim }] }]} />
-                    ))}
-                  </View>
-                  {/* Mini pie placeholder */}
-                  <View style={styles.miniPieWrapper}>
-                    <View style={[styles.miniPie, { borderColor: '#8b5cf6' }]} />
-                    <Animated.View style={[styles.miniPieSlice, { borderColor: '#f59e0b', transform: [{ rotate: spin }] }]} />
-                  </View>
-                </LinearGradient>
-              </View>
-            </Animated.View>
+              <Animated.View style={[styles.bannerIllustration, { position: 'absolute', right: -5, bottom: -5, width: 140, height: 110, opacity: 1, transform: [{ translateY: floatAnim }] }]}>
+                <View style={{ width: 130, height: 90, borderRadius: 16, backgroundColor: '#000', transform: [{ rotate: '-4deg' }], shadowColor: '#6366f1', shadowOffset: {width:0, height:8}, shadowOpacity: 0.5, shadowRadius: 12, elevation: 10, borderWidth: 2, borderColor: 'rgba(255,255,255,0.3)' }}>
+                  <VideoView
+                    player={player}
+                    style={{ width: '100%', height: '100%', borderRadius: 14 }}
+                    contentFit="cover"
+                    nativeControls={false}
+                  />
+                  <Animated.View style={{ position: 'absolute', top: -12, right: -12, backgroundColor: '#8b5cf6', width: 32, height: 32, borderRadius: 16, justifyContent: 'center', alignItems: 'center', transform: [{ scale: pulseAnim }], shadowColor: '#000', shadowOffset: {width:0, height:4}, shadowOpacity: 0.3, shadowRadius: 4, elevation: 5 }}>
+                    <Feather name="shield" size={16} color="#fff" />
+                  </Animated.View>
+                </View>
+              </Animated.View>
           </LinearGradient>
         </View>
+
+        {isLoading ? (
+          <AdminSkeleton isDarkMode={isDarkMode} />
+        ) : (
+          <>
 
         {/* Stats Grid - Scrollable */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 2, gap: 12, marginBottom: 15 }}>
@@ -826,10 +862,6 @@ const styles = StyleSheet.create({
   emptyLeader: { alignItems: 'center', paddingVertical: 20 },
   emptyText: { fontSize: 13, textAlign: 'center' },
   viewAll: { color: '#818cf8', fontSize: 13, fontWeight: '600' },
-  modalContainer: { flex: 1 },
-  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, paddingTop: 48, borderBottomWidth: 1 },
-  modalTitle: { fontSize: 18, fontWeight: 'bold' },
-  modalCloseBtn: { padding: 4 },
   
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
   optionsModalContent: { width: 220, borderRadius: 12, padding: 8, borderWidth: 1, elevation: 5 },

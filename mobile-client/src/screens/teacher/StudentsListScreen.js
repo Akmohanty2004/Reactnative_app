@@ -5,7 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  SafeAreaView,
   StatusBar,
   Platform,
   Image,
@@ -80,8 +79,8 @@ export default function StudentsListScreen({ navigation }) {
   const styles = getStyles(colors);
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor="transparent" />
+    <View style={styles.safe}>
+      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} translucent={false} backgroundColor={colors.bg} />
       
       <View style={styles.headerContainer}>
         <View style={styles.headerTop}>
@@ -143,7 +142,7 @@ export default function StudentsListScreen({ navigation }) {
           )}
         </ScrollView>
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 

@@ -51,7 +51,7 @@ export default function ReportsScreen({ navigation }) {
 
   const isDarkMode = theme === 'dark';
   const colors = {
-    bg: isDarkMode ? '#0f172a' : '#f8fafc',
+    bg: isDarkMode ? '#000000' : '#f8fafc',
     card: isDarkMode ? '#1e293b' : 'white',
     text: isDarkMode ? '#ffffff' : '#0f172a',
     subText: isDarkMode ? '#94a3b8' : '#64748b',
@@ -174,9 +174,9 @@ export default function ReportsScreen({ navigation }) {
       labels,
       datasets: [
         {
-          data: attemptData.every(v => v === 0) ? attemptData.map(() => 0.001) : attemptData, // Prevent flat 0 error
+          data: attemptData.every(v => v === 0) ? attemptData.map(() => 0.002) : attemptData, // Prevent flat 0 error and overlap
           color: (opacity = 1) => colors.accent,
-          strokeWidth: 2
+          strokeWidth: 4 // Thicker so it's visible under Pass line if they match
         },
         {
           data: passData.every(v => v === 0) ? passData.map(() => 0.001) : passData,

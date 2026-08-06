@@ -57,7 +57,7 @@ function TeacherTabs() {
 
 export default function TeacherNavigator() {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Navigator screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
       <Stack.Screen name="TeacherTabs" component={TeacherTabs} />
       <Stack.Screen name="ExamDetails" component={ExamDetailsScreen} />
       <Stack.Screen name="CreateExam" component={CreateExamScreen} />

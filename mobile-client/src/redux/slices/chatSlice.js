@@ -139,7 +139,14 @@ const chatSlice = createSlice({
       })
       .addCase(getContacts.fulfilled, (state, action) => {
         state.isLoadingContacts = false;
-        state.contacts = action.payload;
+        const fetchedContacts = action.payload || [];
+        state.contacts = fetchedContacts.map(nc => {
+          const existing = state.contacts.find(c => String(c._id) === String(nc._id));
+          return {
+            ...nc,
+            isOnline: existing && existing.isOnline !== undefined ? existing.isOnline : (nc.isOnline === true)
+          };
+        });
       })
       .addCase(getContacts.rejected, (state, action) => {
         state.isLoadingContacts = false;

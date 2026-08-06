@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, StatusBar, Platform, Animated, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, StatusBar, Platform, Animated } from 'react-native';
 import { useSelector, useDispatch } from 'react-redux';
 import { Feather } from '@expo/vector-icons';
 import { getNotifications, markAsRead, markAllAsRead } from '../../redux/slices/notificationSlice';
@@ -109,7 +109,7 @@ export default function NotificationsScreen({ navigation }) {
   );
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]}>
+    <View style={[styles.container, { backgroundColor: colors.bg }]}>
       <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} translucent={false} backgroundColor={colors.bg} />
       <View style={[styles.header, { backgroundColor: colors.headerBg, borderBottomWidth: 1, borderBottomColor: colors.border }]}>
         <BouncyTouchable onPress={() => navigation.goBack()} style={[styles.backBtn, { backgroundColor: isDarkMode ? '#1e293b' : 'white', borderColor: colors.border }]} activeScale={0.8}>
@@ -145,7 +145,7 @@ export default function NotificationsScreen({ navigation }) {
           />
         </View>
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -169,13 +169,10 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   headerTitle: { 
+    flex: 1,
     fontSize: 20, 
     fontWeight: '700',
-    position: 'absolute',
-    left: 0,
-    right: 0,
     textAlign: 'center',
-    zIndex: 1,
   },
   markAllBtn: { padding: 5, zIndex: 10 },
   markAllText: { fontSize: 14, fontWeight: '600' },

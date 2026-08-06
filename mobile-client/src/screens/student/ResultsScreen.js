@@ -135,8 +135,12 @@ export default function ResultsScreen({ navigation }) {
             <Text style={[styles.headerTitle, { color: colors.text }]}>My <Text style={{color: '#6366f1'}}>Results</Text></Text>
             <Text style={[styles.headerSubtitle, { color: colors.subText }]} numberOfLines={2}>Track your performance and progress</Text>
           </View>
-          <BouncyTouchable style={[styles.iconBtn, { borderColor: isDarkMode ? 'rgba(255,255,255,0.1)' : colors.border }]} activeScale={0.8}>
-            <Feather name="calendar" size={20} color={colors.text} />
+          <BouncyTouchable 
+            style={[styles.iconBtn, { borderColor: isDarkMode ? 'rgba(255,255,255,0.1)' : colors.border, backgroundColor: sortAscending ? (isDarkMode ? 'rgba(99,102,241,0.2)' : 'rgba(99,102,241,0.1)') : 'transparent' }]} 
+            activeScale={0.8}
+            onPress={() => setSortAscending(!sortAscending)}
+          >
+            <Feather name="calendar" size={20} color={sortAscending ? (isDarkMode ? '#818cf8' : '#4f46e5') : colors.text} />
           </BouncyTouchable>
         </View>
         <View style={styles.statsGrid}>

@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert, Image, RefreshControl, ActivityIndicator, Platform, StatusBar } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
@@ -6,6 +6,7 @@ import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { getUsers, deleteUser } from '../../redux/slices/adminSlice';
 import Toast from 'react-native-toast-message';
+import { io } from 'socket.io-client';
 
 import { UserSkeleton } from '../../components/SkeletonLoader';
 import { playRefreshSound } from '../../utils/SoundManager';
@@ -23,6 +24,42 @@ export default function UsersScreen({ navigation }) {
   const [classes, setClasses] = useState([]);
   const [selectedClass, setSelectedClass] = useState('All');
   const [isFetchingClasses, setIsFetchingClasses] = useState(false);
+  const [onlineUserIds, setOnlineUserIds] = useState(new Set());
+
+  useEffect(() => {
+    if (!currentUser) return;
+    const baseUrl = api.defaults.baseURL || 'https://exam-app-backend-vqos.vercel.app';
+    const socket = io(baseUrl);
+
+    const myId = String(currentUser._id || currentUser.id);
+    socket.emit('get_online_users');
+
+    socket.on('online_users_list', (ids) => {
+      if (Array.isArray(ids)) {
+        setOnlineUserIds(new Set(ids.map(id => String(id))));
+      }
+    });
+
+    socket.on('user_online', (uid) => {
+      if (uid) {
+        setOnlineUserIds(prev => new Set(prev).add(String(uid)));
+      }
+    });
+
+    socket.on('user_offline', (uid) => {
+      if (uid) {
+        setOnlineUserIds(prev => {
+          const next = new Set(prev);
+          next.delete(String(uid));
+          return next;
+        });
+      }
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [currentUser]);
 
   useFocusEffect(
     useCallback(() => {
@@ -109,7 +146,7 @@ export default function UsersScreen({ navigation }) {
 
   const isDarkMode = theme === 'dark';
   const colors = {
-    bg: isDarkMode ? '#0f172a' : '#f8fafc',
+    bg: isDarkMode ? '#000000' : '#f8fafc',
     text: isDarkMode ? 'white' : '#0f172a',
     subText: isDarkMode ? '#94a3b8' : '#64748b',
     cardBg: isDarkMode ? '#1e293b' : 'white',
@@ -227,7 +264,8 @@ export default function UsersScreen({ navigation }) {
           <>
             {filteredUsers.map(user => {
               const roleStyle = getRoleColor(user.role);
-              const isOnline = user.lastLogin && new Date(user.lastLogin) >= new Date(Date.now() - 2 * 60 * 1000);
+              const isCurrent = currentUser && String(user._id || user.id) === String(currentUser._id || currentUser.id);
+              const isOnline = isCurrent || onlineUserIds.has(String(user._id || user.id));
               
               return (
                 <View key={user._id} style={[styles.userCard, { backgroundColor: colors.cardBg, borderColor: colors.cardBorder }]}>

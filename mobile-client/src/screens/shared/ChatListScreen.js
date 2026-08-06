@@ -1,5 +1,5 @@
 import React, { useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, ActivityIndicator, StatusBar, Platform, Animated, AppState, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, ActivityIndicator, StatusBar, Platform, Animated, AppState } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { useFocusEffect } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
@@ -106,9 +106,17 @@ export default function ChatListScreen({ navigation }) {
     const baseUrl = api.defaults.baseURL || 'https://exam-app-backend-vqos.vercel.app';
     const newSocket = io(baseUrl);
 
-    if (user?._id) {
-      newSocket.emit('join_room', String(user._id));
+    const onConnect = () => {
+      if (user?._id) {
+        newSocket.emit('join_room', String(user._id));
+        newSocket.emit('set_status', { isOnline: true });
+      }
+    };
+
+    if (newSocket.connected) {
+      onConnect();
     }
+    newSocket.on('connect', onConnect);
 
     newSocket.on('user_online', (uid) => {
       dispatch(setContactOnlineStatus({ userId: uid, isOnline: true }));
@@ -134,7 +142,10 @@ export default function ChatListScreen({ navigation }) {
 
     return () => {
       appStateSubscription?.remove();
-      // newSocket.disconnect();
+      if (newSocket.connected) {
+        newSocket.emit('set_status', { isOnline: false });
+      }
+      newSocket.disconnect();
     };
   }, [dispatch, user?._id]);
 
@@ -143,7 +154,7 @@ export default function ChatListScreen({ navigation }) {
   );
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.bg }]}>
+    <View style={[styles.safeArea, { backgroundColor: colors.bg }]}>
       <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} translucent={false} backgroundColor={colors.headerBg} />
       <View style={[styles.header, { paddingTop: 15, backgroundColor: colors.headerBg, borderBottomColor: colors.border }]}>
         <BouncyTouchable style={styles.backBtn} onPress={() => navigation.goBack()} activeScale={0.8}>
@@ -170,7 +181,7 @@ export default function ChatListScreen({ navigation }) {
           }
         />
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -182,7 +193,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#1e293b', borderBottomWidth: 1, borderBottomColor: '#334155'
   },
   backBtn: { marginRight: 15 },
-  headerTitle: { fontSize: 20, fontWeight: 'bold', color: '#fff' },
+  headerTitle: { flex: 1, fontSize: 20, fontWeight: 'bold', color: '#fff', textAlign: 'center', marginRight: 40 },
   loader: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   list: { padding: 15 },
   chatItem: {

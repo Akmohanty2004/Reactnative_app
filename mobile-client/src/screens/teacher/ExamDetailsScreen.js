@@ -174,7 +174,7 @@ export default function ExamDetailsScreen({ route, navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#000000' },
-  content: { padding: 20, paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 20 : 20 },
+  content: { padding: 20, paddingTop: 20 },
   header: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
   backBtn: { marginRight: 15 },
   headerText: { flex: 1 },

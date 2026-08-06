@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, Dimensions, TouchableOpacity, Modal
 import { useDispatch, useSelector } from 'react-redux';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
+import { useVideoPlayer, VideoView } from 'expo-video';
 import { PieChart } from 'react-native-chart-kit';
 import Svg, { Path } from 'react-native-svg';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -71,12 +72,28 @@ const AnimatedLikeButton = ({ item, handleLike, styles, colors, extraStyle }) =>
 };
 
 export default function DashboardScreen() {
+  const player = useVideoPlayer(require('../../../assets/Teacher side video.mp4'), player => {
+    player.loop = true;
+  });
+
+  React.useEffect(() => {
+    const sub = player.addListener('playToEnd', () => {
+      player.muted = true;
+    });
+    return () => sub.remove();
+  }, [player]);
   const dispatch = useDispatch();
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const [isSidebarVisible, setSidebarVisible] = useState(false);
   const { user } = useSelector(state => state.auth);
   const { exams, isLoading: examsLoading } = useSelector(state => state.exams);
+
+  React.useEffect(() => {
+    if (!examsLoading && player) {
+      player.play();
+    }
+  }, [examsLoading, player]);
   const { toppers } = useSelector(state => state.results || { toppers: [] });
   const [showAllToppers, setShowAllToppers] = useState(false);
   const [selectedTopper, setSelectedTopper] = useState(null);
@@ -222,7 +239,7 @@ export default function DashboardScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
-      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} translucent={true} backgroundColor="transparent" />
+      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} translucent={false} backgroundColor={colors.bg} />
       <Animated.ScrollView 
         contentContainerStyle={styles.content} 
         showsVerticalScrollIndicator={false}
@@ -295,16 +312,20 @@ export default function DashboardScreen() {
               </Text>
               <Text style={[styles.bannerSubtitle, { color: '#c4b5fd' }]}>Here's your teaching statistics and{'\n'}exam performance at a glance.</Text>
             </View>
-            
-            {/* Attractive Banner Illustration */}
-            <Animated.View style={[styles.bannerIllustration, { position: 'absolute', right: -20, bottom: -20, width: 140, height: 140, opacity: 0.9, transform: [{ translateY: floatAnim }] }]}>
-              <View style={{ width: 120, height: 120, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.1)', transform: [{ rotate: '15deg' }], justifyContent: 'center', alignItems: 'center' }}>
-                <Feather name="book-open" size={54} color="rgba(255,255,255,0.8)" />
-                <Animated.View style={{ position: 'absolute', top: -10, right: -10, backgroundColor: 'rgba(236,72,153,0.8)', width: 30, height: 30, borderRadius: 15, justifyContent: 'center', alignItems: 'center', transform: [{ scale: pulseAnim }] }}>
-                  <Feather name="star" size={14} color="#fff" />
-                </Animated.View>
-              </View>
-            </Animated.View>
+                         {/* Attractive Banner Illustration */}
+              <Animated.View style={[styles.bannerIllustration, { position: 'absolute', right: -5, bottom: 5, width: 150, height: 120, opacity: 1, transform: [{ translateY: floatAnim }] }]}>
+                <View style={{ width: 140, height: 95, borderRadius: 16, backgroundColor: '#000', transform: [{ rotate: '-6deg' }], shadowColor: '#ec4899', shadowOffset: {width:0, height:8}, shadowOpacity: 0.5, shadowRadius: 12, elevation: 10, borderWidth: 2, borderColor: 'rgba(255,255,255,0.3)' }}>
+                  <VideoView
+                    player={player}
+                    style={{ width: '100%', height: '100%', borderRadius: 14 }}
+                    contentFit="cover"
+                    nativeControls={false}
+                  />
+                  <Animated.View style={{ position: 'absolute', top: -12, right: -12, backgroundColor: 'rgba(236,72,153,1)', width: 32, height: 32, borderRadius: 16, justifyContent: 'center', alignItems: 'center', transform: [{ scale: pulseAnim }], shadowColor: '#000', shadowOffset: {width:0, height:4}, shadowOpacity: 0.3, shadowRadius: 4, elevation: 5 }}>
+                    <Feather name="star" size={16} color="#fff" />
+                  </Animated.View>
+                </View>
+              </Animated.View>   
           </LinearGradient>
         </View>
 
@@ -874,7 +895,7 @@ const styles = StyleSheet.create({
   // Sidebar
   sidebarOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', flexDirection: 'row' },
   sidebarCloseArea: { flex: 1 },
-  sidebarContent: { width: 250, height: '100%', padding: 20, paddingTop: Platform.OS === 'android' ? 10 : 20, elevation: 5, shadowColor: '#000', shadowOffset: { width: 5, height: 0 }, shadowOpacity: 0.3, shadowRadius: 10 },
+  sidebarContent: { width: 250, height: '100%', padding: 20, paddingTop: 20, elevation: 5, shadowColor: '#000', shadowOffset: { width: 5, height: 0 }, shadowOpacity: 0.3, shadowRadius: 10 },
   sidebarHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 30 },
   sidebarTitle: { fontSize: 22, fontWeight: 'bold' },
   sidebarItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 15, borderBottomWidth: 1, borderBottomColor: 'rgba(150,150,150,0.1)' },

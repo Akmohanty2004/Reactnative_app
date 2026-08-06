@@ -1,12 +1,45 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Animated, Platform } from 'react-native';
+import { View, Text, StyleSheet, Animated, Platform, ActivityIndicator } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import { useDispatch, useSelector } from 'react-redux';
 import api from '../services/api';
+import { getNotifications } from '../redux/slices/notificationSlice';
+import { getStudentExams, getTeacherExams } from '../redux/slices/examSlice';
+import { getAdminDashboardStats } from '../redux/slices/adminSlice';
+import { getContacts } from '../redux/slices/chatSlice';
+import { getStudentResults, getLeaderboard, getToppers } from '../redux/slices/resultSlice';
 
 export default function OfflineNetworkBanner() {
+  const dispatch = useDispatch();
+  const { user } = useSelector(state => state.auth || {});
   const [isOffline, setIsOffline] = useState(false);
   const [showBackOnline, setShowBackOnline] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
   const slideAnim = React.useRef(new Animated.Value(-100)).current;
+
+  const handleAutoReloadData = async () => {
+    try {
+      setIsSyncing(true);
+      dispatch(getNotifications());
+      dispatch(getContacts());
+      if (user) {
+        if (user.role === 'admin') {
+          dispatch(getAdminDashboardStats());
+        } else if (user.role === 'teacher') {
+          dispatch(getTeacherExams());
+        } else {
+          dispatch(getStudentExams());
+          dispatch(getStudentResults());
+          dispatch(getLeaderboard());
+          dispatch(getToppers());
+        }
+      }
+    } catch (err) {
+      console.log('Error auto reloading data on network restore:', err);
+    } finally {
+      setTimeout(() => setIsSyncing(false), 2500);
+    }
+  };
 
   useEffect(() => {
     let wasOffline = false;
@@ -47,9 +80,10 @@ export default function OfflineNetworkBanner() {
             setIsOffline(false);
             wasOffline = false;
             setShowBackOnline(true);
+            handleAutoReloadData();
             setTimeout(() => {
               setShowBackOnline(false);
-            }, 3000);
+            }, 4000);
           } else {
             setIsOffline(false);
           }
@@ -102,13 +136,17 @@ export default function OfflineNetworkBanner() {
   const title = isOffline ? 'Check Internet Connection' : 'Back Online!';
   const subtitle = isOffline
     ? 'Internet connection is offline or slow. Please check your Wi-Fi or mobile data.'
-    : 'Internet connection restored (Wi-Fi or Mobile Data).';
+    : 'Connection restored. Automatically refreshing data...';
   const iconName = isOffline ? 'wifi-off' : 'wifi';
 
   return (
     <Animated.View style={[styles.bannerContainer, { backgroundColor: bgColor, transform: [{ translateY: slideAnim }] }]}>
       <View style={styles.content}>
-        <Feather name={iconName} size={20} color="#ffffff" style={styles.icon} />
+        {showBackOnline && isSyncing ? (
+          <ActivityIndicator size="small" color="#ffffff" style={styles.icon} />
+        ) : (
+          <Feather name={iconName} size={20} color="#ffffff" style={styles.icon} />
+        )}
         <View style={styles.textContainer}>
           <Text style={styles.title}>{title}</Text>
           <Text style={styles.subtitle}>{subtitle}</Text>

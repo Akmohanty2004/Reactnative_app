@@ -45,7 +45,8 @@
       "expo-image-picker",
       "expo-notifications",
       "expo-av",
-      "expo-file-system"
+      "expo-file-system",
+      "expo-video"
     ],
     "extra": {
       "eas": {
