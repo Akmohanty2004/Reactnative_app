@@ -501,12 +501,8 @@ router.get('/toppers', authMiddleware, async (req, res) => {
           { classGroup: { $regex: new RegExp('General', 'i') } },
           { classGroup: { $exists: false } }
         ];
-      } else {
-        query.$or = [
-          { classGroup: { $regex: new RegExp('General', 'i') } }, 
-          { classGroup: { $exists: false } }
-        ];
       }
+      // If userClass is 'General', we don't add a $or constraint, meaning they can see toppers for all exams
     }
 
     // Find exams (limit to 10 recent exams for 3x faster loading)
