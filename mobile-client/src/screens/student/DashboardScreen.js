@@ -153,10 +153,10 @@ export default function DashboardScreen() {
   useFocusEffect(
     useCallback(() => {
       const fetchData = () => {
+        dispatch(getToppers()); // Fetch toppers first for immediate display
         dispatch(getStudentExams());
         dispatch(getStudentResults());
         dispatch(getLeaderboard());
-        dispatch(getToppers());
       };
 
       fetchData();
@@ -234,10 +234,10 @@ export default function DashboardScreen() {
     playRefreshSound();
     setRefreshing(true);
     await Promise.all([
+      dispatch(getToppers()), // Fetch toppers first for immediate display
       dispatch(getStudentExams()),
       dispatch(getStudentResults()),
       dispatch(getLeaderboard()),
-      dispatch(getToppers()),
     ]);
     setRefreshing(false);
   }, [dispatch]);
@@ -727,6 +727,72 @@ export default function DashboardScreen() {
         </View>
         )}
 
+        {/* ── Exam Toppers ── */}
+        <View style={styles.fullCard}>
+          <View style={styles.cardHeader}>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Text style={{ fontSize: 20, marginRight: 8 }}>🏆</Text>
+              <View>
+                <Text style={[styles.cardTitle, { color: colors.text }]}>Exam Toppers</Text>
+                <Text style={styles.cardSubtitle}>Top performers in recent exams</Text>
+              </View>
+            </View>
+            {toppers && toppers.length > 0 && (
+              <BouncyTouchable activeScale={0.9} onPress={() => setShowAllToppers(true)}>
+                <Text style={styles.viewAll}>View All</Text>
+              </BouncyTouchable>
+            )}
+          </View>
+
+          {/* carousel style – horizontal scroll */}
+          {toppers && toppers.length > 0 ? (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 12 }}>
+              {toppers.slice(0, 2).map((item, idx) => (
+                <TouchableOpacity 
+                  key={item.resultId} 
+                  onPress={() => setSelectedTopper(item)}
+                  activeOpacity={0.7}
+                  style={[styles.leaderCard, { width: 280, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: colors.card, borderColor: colors.border }]}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                    <View style={{ position: 'relative', marginRight: 12 }}>
+                      {item.student?.profileImage ? (
+                        <Image source={{ uri: getImageUrl(item.student.profileImage) }} style={{ width: 44, height: 44, borderRadius: 22, borderWidth: 2, borderColor: idx === 0 ? '#fbbf24' : idx === 1 ? '#94a3b8' : idx === 2 ? '#b45309' : isDarkMode ? 'rgba(255,255,255,0.08)' : '#e2e8f0' }} />
+                      ) : (
+                        <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: idx === 0 ? '#fbbf24' : idx === 1 ? '#94a3b8' : idx === 2 ? '#b45309' : isDarkMode ? 'rgba(255,255,255,0.08)' : '#e2e8f0', justifyContent: 'center', alignItems: 'center' }}>
+                          <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold' }}>{(item.student?.name || 'U').charAt(0).toUpperCase()}</Text>
+                        </View>
+                      )}
+                      <View style={{ position: 'absolute', bottom: -2, right: -2, backgroundColor: idx === 0 ? '#fbbf24' : idx === 1 ? '#94a3b8' : idx === 2 ? '#b45309' : isDarkMode ? 'rgba(255,255,255,0.08)' : '#e2e8f0', width: 20, height: 20, borderRadius: 10, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: isDarkMode ? '#000000' : '#f8fafc' }}>
+                        <Text style={{ color: '#fff', fontSize: 10, fontWeight: '900' }}>{idx + 1}</Text>
+                      </View>
+                    </View>
+                    <View style={{ flex: 1, marginRight: 10 }}>
+                      <Text style={[styles.leaderName, { textAlign: 'left', marginBottom: 2, color: colors.text }]} numberOfLines={1}>{item.student?.name || 'Unknown'}</Text>
+                      <Text style={[styles.recentSub, { textAlign: 'left', color: colors.subText }]} numberOfLines={1}>{item.examTitle}</Text>
+                    </View>
+                  </View>
+                  <View style={{ alignItems: 'flex-end' }}>
+                    <Text style={styles.leaderScore}>{item.score?.toFixed(1)}%</Text>
+                    <AnimatedLikeButton 
+                      item={item} 
+                      handleLike={handleLike} 
+                      styles={styles} 
+                      colors={colors}
+                      extraStyle={{ marginTop: 6, paddingVertical: 4, paddingHorizontal: 10, width: 'auto' }}
+                    />
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          ) : (
+            <View style={styles.emptyLeader}>
+              <Feather name="award" size={24} color="#475569" />
+              <Text style={[styles.emptyText, { marginTop: 8 }]}>No toppers available yet.</Text>
+            </View>
+          )}
+        </View>
+
         {/* ── Recent Exams (full width) ── */}
         <View style={styles.fullCard}>
           <View style={styles.cardHeader}>
@@ -808,72 +874,6 @@ export default function DashboardScreen() {
             <View style={styles.emptyLeader}>
               <Feather name="calendar" size={24} color="#475569" />
               <Text style={[styles.emptyText, { marginTop: 8 }]}>No upcoming exams scheduled.</Text>
-            </View>
-          )}
-        </View>
-
-        {/* ── Exam Toppers ── */}
-        <View style={styles.fullCard}>
-          <View style={styles.cardHeader}>
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <Text style={{ fontSize: 20, marginRight: 8 }}>🏆</Text>
-              <View>
-                <Text style={[styles.cardTitle, { color: colors.text }]}>Exam Toppers</Text>
-                <Text style={styles.cardSubtitle}>Top performers in recent exams</Text>
-              </View>
-            </View>
-            {toppers && toppers.length > 0 && (
-              <BouncyTouchable activeScale={0.9} onPress={() => setShowAllToppers(true)}>
-                <Text style={styles.viewAll}>View All</Text>
-              </BouncyTouchable>
-            )}
-          </View>
-
-          {/* carousel style – horizontal scroll */}
-          {toppers && toppers.length > 0 ? (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 12 }}>
-              {toppers.slice(0, 2).map((item, idx) => (
-                <TouchableOpacity 
-                  key={item.resultId} 
-                  onPress={() => setSelectedTopper(item)}
-                  activeOpacity={0.7}
-                  style={[styles.leaderCard, { width: 280, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: colors.card, borderColor: colors.border }]}
-                >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                    <View style={{ position: 'relative', marginRight: 12 }}>
-                      {item.student?.profileImage ? (
-                        <Image source={{ uri: getImageUrl(item.student.profileImage) }} style={{ width: 44, height: 44, borderRadius: 22, borderWidth: 2, borderColor: idx === 0 ? '#fbbf24' : idx === 1 ? '#94a3b8' : idx === 2 ? '#b45309' : isDarkMode ? 'rgba(255,255,255,0.08)' : '#e2e8f0' }} />
-                      ) : (
-                        <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: idx === 0 ? '#fbbf24' : idx === 1 ? '#94a3b8' : idx === 2 ? '#b45309' : isDarkMode ? 'rgba(255,255,255,0.08)' : '#e2e8f0', justifyContent: 'center', alignItems: 'center' }}>
-                          <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold' }}>{(item.student?.name || 'U').charAt(0).toUpperCase()}</Text>
-                        </View>
-                      )}
-                      <View style={{ position: 'absolute', bottom: -2, right: -2, backgroundColor: idx === 0 ? '#fbbf24' : idx === 1 ? '#94a3b8' : idx === 2 ? '#b45309' : isDarkMode ? 'rgba(255,255,255,0.08)' : '#e2e8f0', width: 20, height: 20, borderRadius: 10, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: isDarkMode ? '#000000' : '#f8fafc' }}>
-                        <Text style={{ color: '#fff', fontSize: 10, fontWeight: '900' }}>{idx + 1}</Text>
-                      </View>
-                    </View>
-                    <View style={{ flex: 1, marginRight: 10 }}>
-                      <Text style={[styles.leaderName, { textAlign: 'left', marginBottom: 2, color: colors.text }]} numberOfLines={1}>{item.student?.name || 'Unknown'}</Text>
-                      <Text style={[styles.recentSub, { textAlign: 'left', color: colors.subText }]} numberOfLines={1}>{item.examTitle}</Text>
-                    </View>
-                  </View>
-                  <View style={{ alignItems: 'flex-end' }}>
-                    <Text style={styles.leaderScore}>{item.score?.toFixed(1)}%</Text>
-                    <AnimatedLikeButton 
-                      item={item} 
-                      handleLike={handleLike} 
-                      styles={styles} 
-                      colors={colors}
-                      extraStyle={{ marginTop: 6, paddingVertical: 4, paddingHorizontal: 10, width: 'auto' }}
-                    />
-                  </View>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          ) : (
-            <View style={styles.emptyLeader}>
-              <Feather name="award" size={24} color="#475569" />
-              <Text style={[styles.emptyText, { marginTop: 8 }]}>No toppers available yet.</Text>
             </View>
           )}
         </View>
