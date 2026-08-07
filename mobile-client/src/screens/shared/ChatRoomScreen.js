@@ -445,7 +445,6 @@ export default function ChatRoomScreen({ route, navigation }) {
     const joinRoom = () => {
       if (currentId && currentId !== 'undefined') {
         activeSocket.emit('join_room', currentId);
-        activeSocket.emit('set_status', { isOnline: true });
         activeSocket.emit('check_online_status', targetId);
       }
     };
@@ -485,13 +484,7 @@ export default function ChatRoomScreen({ route, navigation }) {
 
     const handleAppStateChange = (nextAppState) => {
       if (nextAppState === 'active') {
-        if (!activeSocket.connected) {
-          activeSocket.connect();
-        }
-        activeSocket.emit('set_status', { isOnline: true });
         dispatch(getChatHistory(otherIdStr));
-      } else {
-        activeSocket.emit('set_status', { isOnline: false });
       }
     };
 
@@ -922,11 +915,11 @@ export default function ChatRoomScreen({ route, navigation }) {
             </View>
           )}
           {isOnline && <View style={styles.headerOnlineDot} />}
-          <View style={{ marginLeft: 10 }}>
-            <Text style={[styles.headerName, { color: colors.headerText }]}>{otherUser.name}</Text>
+          <View style={{ marginLeft: 10, flex: 1, paddingRight: 5 }}>
+            <Text style={[styles.headerName, { color: colors.headerText }]} numberOfLines={1}>{otherUser.name}</Text>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               {isOnline && <View style={[styles.statusDot, { backgroundColor: '#34d399' }]} />}
-              <Text style={[styles.headerStatus, { color: colors.statusText }]}>{isOnline ? 'Online' : (lastSeen ? `last seen ${formatLastSeen(lastSeen)}` : 'Offline')}</Text>
+              <Text style={[styles.headerStatus, { color: colors.statusText }]} numberOfLines={1}>{isOnline ? 'Online' : (lastSeen ? `last seen ${formatLastSeen(lastSeen)}` : 'Offline')}</Text>
             </View>
           </View>
         </View>
@@ -959,12 +952,15 @@ export default function ChatRoomScreen({ route, navigation }) {
         ) : (
           <FlatList
             ref={flatListRef}
-            style={{ flex: 1 }}
             data={listData}
-            inverted
             keyExtractor={(item) => item.id || item._id}
             renderItem={renderItem}
             contentContainerStyle={styles.list}
+            inverted
+            initialNumToRender={15}
+            maxToRenderPerBatch={10}
+            windowSize={10}
+            removeClippedSubviews={Platform.OS === 'android'}
             showsVerticalScrollIndicator={false}
           />
         )}

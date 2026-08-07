@@ -12,8 +12,6 @@ import Toast from 'react-native-toast-message';
 import { getStudentExam } from '../../redux/slices/examSlice';
 import { submitExam } from '../../redux/slices/resultSlice';
 
-const { width } = Dimensions.get('window');
-
 export default function ExamScreen({ route, navigation }) {
   const { examId } = route.params || {};
   const dispatch = useDispatch();
@@ -96,6 +94,7 @@ export default function ExamScreen({ route, navigation }) {
 
       return () => { subscription.remove(); };
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentExam, isStarted]);
 
   useEffect(() => {
@@ -130,6 +129,7 @@ export default function ExamScreen({ route, navigation }) {
       }, 1000);
     }
     return () => clearInterval(timerRef.current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentExam, isStarted]);
 
   useEffect(() => {
@@ -141,6 +141,7 @@ export default function ExamScreen({ route, navigation }) {
     };
     const backHandler = BackHandler.addEventListener('hardwareBackPress', backAction);
     return () => backHandler.remove();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isStarted, isSubmitted]);
 
   const handleAnswerSelect = (answer) => {
@@ -501,5 +502,5 @@ const styles = StyleSheet.create({
   cameraToggle: { position: 'absolute', bottom: 8, left: 8, backgroundColor: 'rgba(0,0,0,0.6)', padding: 8, borderRadius: 20 },
   calcBtn: { position: 'absolute', bottom: 20, left: 20, width: 56, height: 56, borderRadius: 28, backgroundColor: '#6366f1', justifyContent: 'center', alignItems: 'center', elevation: 5, zIndex: 1000 },
   calcModalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center' },
-  calcModalContainer: { width: 300, backgroundColor: '#1e293b', padding: 25, borderRadius: 20, alignItems: 'center' }
+  calcModalContainer: { width: '85%', maxWidth: 350, backgroundColor: '#1e293b', padding: 25, borderRadius: 20, alignItems: 'center' }
 });

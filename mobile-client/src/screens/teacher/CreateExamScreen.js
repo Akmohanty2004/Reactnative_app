@@ -59,6 +59,7 @@ const CreateExamScreen = ({ navigation }) => {
   });
 
   const [availableClasses, setAvailableClasses] = useState([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     const fetchClasses = async () => {
@@ -272,7 +273,10 @@ const CreateExamScreen = ({ navigation }) => {
   };
 
   const handleCreateExam = async () => {
+    if (isSubmitting) return;
     if (!validateForm()) return;
+
+    setIsSubmitting(true);
 
     const formattedQuestions = questions.map((q) => ({
       ...q,
@@ -307,6 +311,7 @@ const CreateExamScreen = ({ navigation }) => {
         text1: 'Error',
         text2: error?.message || 'Failed to create exam',
       });
+      setIsSubmitting(false);
     }
   };
 
@@ -315,6 +320,7 @@ const CreateExamScreen = ({ navigation }) => {
       style={[styles.container, { backgroundColor: colors.background }]}
       behavior="padding"
     >
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} translucent={true} backgroundColor="transparent" />
       <View style={[styles.header, { paddingTop: topPadding + 10, borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Feather name="arrow-left" size={24} color={colors.text} />
@@ -653,9 +659,9 @@ const CreateExamScreen = ({ navigation }) => {
         <TouchableOpacity
           style={[styles.submitButton, { backgroundColor: colors.primary }]}
           onPress={handleCreateExam}
-          disabled={isLoading}
+          disabled={isLoading || isSubmitting}
         >
-          {isLoading ? (
+          {(isLoading || isSubmitting) ? (
             <ActivityIndicator color="#fff" />
           ) : (
             <>

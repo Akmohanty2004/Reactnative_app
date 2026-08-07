@@ -819,7 +819,7 @@ export default function RegisterScreen({ navigation }) {
 
                   <View style={styles.resendContainer}>
                     <Text style={styles.resendText}>
-                      Didn't receive the code?{" "}
+                      Didn&apos;t receive the code?{" "}
                     </Text>
                     <TouchableOpacity onPress={handleResendOTP}>
                       <View

@@ -436,7 +436,7 @@ export default function LoginScreen({ navigation }) {
                   activeScale={0.98}
                 >
                   <Text style={styles.registerText}>
-                    Don't have an account?{" "}
+                    Don&apos;t have an account?{" "}
                     <Text style={styles.registerTextBold}>Sign up</Text>
                   </Text>
                 </BouncyTouchable>
@@ -469,7 +469,7 @@ export default function LoginScreen({ navigation }) {
                 </View>
                 <Text style={styles.title}>Check Your Email</Text>
                 <Text style={styles.subtitle}>
-                  We've sent a 6-digit code to
+                  We&apos;ve sent a 6-digit code to
                 </Text>
                 <Text
                   style={[
@@ -550,7 +550,7 @@ export default function LoginScreen({ navigation }) {
               </TouchableOpacity>
 
               <View style={styles.resendContainer}>
-                <Text style={styles.resendText}>Didn't receive the code? </Text>
+                <Text style={styles.resendText}>Didn&apos;t receive the code? </Text>
                 <TouchableOpacity onPress={handleResendOTP}>
                   <View
                     style={{

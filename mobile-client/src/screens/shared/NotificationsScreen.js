@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, StatusBar, Platform, Animated } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, StatusBar, Platform, Animated, Image } from 'react-native';
 import { useSelector, useDispatch } from 'react-redux';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -38,21 +38,38 @@ const AnimatedNotificationItem = ({ item, index, colors, isDarkMode, handleNotif
         onPress={() => handleNotificationPress(item)}
         activeScale={0.97}
       >
-        <Animated.View style={[
-          styles.iconContainer, 
-          { backgroundColor: isDarkMode ? 'rgba(139,92,246,0.1)' : '#f3e8ff' },
-          !item.isRead && { transform: [{ scale: pulseAnim }] }
-        ]}>
-          <Feather 
-            name={item.type === 'exam_created' ? 'file-text' : item.type === 'exam_submitted' ? 'check-circle' : 'bell'} 
-            size={20} 
-            color={colors.primary} 
+        {item.sender && item.sender.profileImage ? (
+          <Animated.Image 
+            source={{ uri: item.sender.profileImage }}
+            style={[
+              styles.iconContainer, 
+              !item.isRead && { transform: [{ scale: pulseAnim }], borderWidth: 2, borderColor: colors.primary }
+            ]}
           />
-        </Animated.View>
+        ) : (
+          <Animated.View style={[
+            styles.iconContainer, 
+            { backgroundColor: isDarkMode ? 'rgba(139,92,246,0.1)' : '#f3e8ff' },
+            !item.isRead && { transform: [{ scale: pulseAnim }] }
+          ]}>
+            <Feather 
+              name={item.type === 'exam_created' ? 'file-text' : item.type === 'exam_submitted' ? 'check-circle' : 'bell'} 
+              size={20} 
+              color={colors.primary} 
+            />
+          </Animated.View>
+        )}
         <View style={styles.notificationContent}>
           <Text style={[styles.notificationTitle, { color: colors.text, fontWeight: item.isRead ? '500' : '700' }]}>{item.title}</Text>
           <Text style={[styles.notificationMessage, { color: colors.subText }]}>{item.message}</Text>
-          <Text style={[styles.notificationTime, { color: colors.subText }]}>{new Date(item.createdAt).toLocaleString()}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 2 }}>
+            <Text style={[styles.notificationTime, { color: colors.subText }]}>{new Date(item.createdAt).toLocaleString()}</Text>
+            {item.sender && item.sender.role && (
+              <Text style={{ fontSize: 10, color: colors.primary, textTransform: 'capitalize', fontWeight: '600' }}>
+                {item.sender.role}
+              </Text>
+            )}
+          </View>
         </View>
       </BouncyTouchable>
     </Animated.View>
@@ -118,7 +135,7 @@ export default function NotificationsScreen({ navigation }) {
         <BouncyTouchable onPress={() => navigation.goBack()} style={[styles.backBtn, { backgroundColor: isDarkMode ? '#1e293b' : 'white', borderColor: colors.border }]} activeScale={0.8}>
           <Feather name="arrow-left" size={20} color={colors.text} />
         </BouncyTouchable>
-        <Text style={[styles.headerTitle, { color: '#00f2fe', textShadowColor: 'rgba(0,242,254,0.4)', textShadowOffset: {width: 0, height: 0}, textShadowRadius: 6 }]}>Notifications</Text>
+        <Text style={[styles.headerTitle, { color: '#00f2fe', textShadowColor: 'rgba(0,242,254,0.4)', textShadowOffset: {width: 0, height: 0}, textShadowRadius: 6 }]} numberOfLines={1}>Notifications</Text>
         <BouncyTouchable onPress={handleMarkAllRead} style={styles.markAllBtn} activeScale={0.9}>
           <Text style={[styles.markAllText, { color: '#b026ff', textShadowColor: 'rgba(176,38,255,0.4)', textShadowOffset: {width: 0, height: 0}, textShadowRadius: 4 }]}>Mark all read</Text>
         </BouncyTouchable>
@@ -136,6 +153,10 @@ export default function NotificationsScreen({ navigation }) {
             renderItem={renderItem}
             contentContainerStyle={styles.listContainer}
             showsVerticalScrollIndicator={false}
+            initialNumToRender={10}
+            maxToRenderPerBatch={10}
+            windowSize={5}
+            removeClippedSubviews={Platform.OS === 'android'}
             ListEmptyComponent={
               <View style={styles.emptyContainer}>
                 <Animated.View style={[styles.emptyIconBg, { backgroundColor: isDarkMode ? '#1e293b' : '#f1f5f9', transform: [{ scale: pulseAnim }] }]}>

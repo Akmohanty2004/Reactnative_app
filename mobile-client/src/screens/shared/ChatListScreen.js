@@ -109,7 +109,6 @@ export default function ChatListScreen({ navigation }) {
     const onConnect = () => {
       if (user?._id || user?.id) {
         activeSocket.emit('join_room', String(user._id || user.id));
-        activeSocket.emit('set_status', { isOnline: true });
       }
     };
 
@@ -126,13 +125,7 @@ export default function ChatListScreen({ navigation }) {
 
     const handleAppStateChange = (nextAppState) => {
       if (nextAppState === 'active') {
-        if (!activeSocket.connected) {
-          activeSocket.connect();
-        }
-        activeSocket.emit('set_status', { isOnline: true });
         dispatch(getContacts());
-      } else {
-        activeSocket.emit('set_status', { isOnline: false });
       }
     };
 
@@ -157,7 +150,7 @@ export default function ChatListScreen({ navigation }) {
         <BouncyTouchable style={styles.backBtn} onPress={() => navigation.goBack()} activeScale={0.8}>
           <Feather name="arrow-left" size={24} color={colors.headerText} />
         </BouncyTouchable>
-        <Text style={[styles.headerTitle, { color: '#00f2fe', textShadowColor: 'rgba(0,242,254,0.4)', textShadowOffset: {width: 0, height: 0}, textShadowRadius: 6 }]}>Messages</Text>
+        <Text style={[styles.headerTitle, { color: '#00f2fe', textShadowColor: 'rgba(0,242,254,0.4)', textShadowOffset: {width: 0, height: 0}, textShadowRadius: 6 }]} numberOfLines={1}>Messages</Text>
       </View>
 
       {isLoadingContacts ? (
@@ -170,6 +163,10 @@ export default function ChatListScreen({ navigation }) {
           keyExtractor={item => item._id}
           renderItem={renderItem}
           contentContainerStyle={styles.list}
+          initialNumToRender={10}
+          maxToRenderPerBatch={10}
+          windowSize={5}
+          removeClippedSubviews={Platform.OS === 'android'}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <Feather name="message-square" size={48} color={colors.subText} />

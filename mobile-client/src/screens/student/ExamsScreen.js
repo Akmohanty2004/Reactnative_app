@@ -52,6 +52,7 @@ export default function ExamsScreen({ navigation }) {
       ).start();
       
       return () => { fadeAnim.setValue(0); slideAnim.setValue(30); floatAnim.setValue(0); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [dispatch])
   );
 
@@ -151,6 +152,7 @@ export default function ExamsScreen({ navigation }) {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
+      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} translucent={true} backgroundColor="transparent" />
       <Animated.ScrollView 
         contentContainerStyle={[styles.contentContainer, { paddingBottom: 100 }]}
         style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}

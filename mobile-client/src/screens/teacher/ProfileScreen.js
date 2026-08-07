@@ -70,6 +70,7 @@ export default function ProfileScreen() {
         pulseAnim.setValue(1);
         breatheAnim.setValue(1);
       };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
   );
 
@@ -266,7 +267,7 @@ export default function ProfileScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.bg }]}><StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} translucent={false} backgroundColor={colors.bg} />
+    <View style={[styles.container, { backgroundColor: colors.bg }]}><StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} translucent={true} backgroundColor="transparent" />
       <Animated.ScrollView contentContainerStyle={styles.content} style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }} showsVerticalScrollIndicator={false}>
 
         {/* Custom Header */}

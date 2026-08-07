@@ -56,6 +56,7 @@ export default function ResultsScreen({ navigation }) {
       ]).start();
       
       return () => { fadeAnim.setValue(0); slideAnim.setValue(30); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [dispatch])
   );
 

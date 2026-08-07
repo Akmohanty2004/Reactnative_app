@@ -120,7 +120,7 @@ export default function ResultsScreen() {
   if (!selectedExamId) {
     return (
       <View style={styles.safe}>
-        <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={isDarkMode ? "#0d1117" : "#f8fafc"} translucent={false} />
+        <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} translucent={true} backgroundColor="transparent" />
 
         {/* Header */}
         <View style={[styles.headerContainer, { paddingTop: topPadding + 10 }]}>

@@ -30,7 +30,6 @@ const getImageUrl = (path) => {
   return `${baseUrl}/${normalized.replace(/^\//, '')}`;
 };
 
-const { width } = Dimensions.get('window');
 
 // Mini sparkline wave component
 const WaveLine = ({ color }) => (
@@ -74,6 +73,7 @@ const AnimatedLikeButton = ({ item, handleLike, styles, colors, extraStyle }) =>
 export default function DashboardScreen() {
   const player = useVideoPlayer(require('../../../assets/Teacher side video.mp4'), player => {
     player.loop = true;
+    player.volume = 0;
   });
 
   React.useEffect(() => {
@@ -119,6 +119,7 @@ export default function DashboardScreen() {
       Animated.spring(modalZoomAnim, { toValue: 1, friction: 6, tension: 50, useNativeDriver: true }).start();
     }
   }, [selectedTopper]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
 
   // On mount, trigger entrance animation
   useFocusEffect(
@@ -152,6 +153,7 @@ export default function DashboardScreen() {
       
       return () => { fadeAnim.setValue(0); slideAnim.setValue(20); floatAnim.setValue(0); pulseAnim.setValue(1); breatheAnim.setValue(1); spinAnim.setValue(0); };
     }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   );
 
   const spin = spinAnim.interpolate({
@@ -240,7 +242,7 @@ export default function DashboardScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
-      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} translucent={false} backgroundColor={colors.bg} />
+      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} translucent={true} backgroundColor="transparent" />
       <Animated.ScrollView 
         contentContainerStyle={styles.content} 
         showsVerticalScrollIndicator={false}

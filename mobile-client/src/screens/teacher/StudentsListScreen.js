@@ -83,7 +83,7 @@ export default function StudentsListScreen({ navigation }) {
 
   return (
     <View style={styles.safe}>
-      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} translucent={false} backgroundColor={colors.bg} />
+      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} translucent={true} backgroundColor="transparent" />
       
       <View style={[styles.headerContainer, { paddingTop: topPadding + 10 }]}>
         <View style={styles.headerTop}>

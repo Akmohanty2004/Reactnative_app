@@ -94,6 +94,7 @@ export default function DashboardScreen({ navigation }) {
 
   const player = useVideoPlayer(require('../../../assets/admin side video.mp4'), player => {
     player.loop = true;
+    player.volume = 0;
   });
 
   React.useEffect(() => {

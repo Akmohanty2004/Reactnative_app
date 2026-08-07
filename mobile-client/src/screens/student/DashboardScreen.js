@@ -65,7 +65,7 @@ const AnimatedLikeButton = ({ item, handleLike, styles, colors, extraStyle }) =>
 export default function DashboardScreen() {
   const player = useVideoPlayer(require('../../../assets/student side video.mp4'), player => {
     player.loop = true;
-    player.volume = 0.2;
+    player.volume = 0;
   });
 
   React.useEffect(() => {
@@ -530,12 +530,18 @@ export default function DashboardScreen() {
 
         {/* ── Stat Cards - Scrollable ── */}
         {((examsLoading && (!exams || exams.length === 0)) || refreshing) ? (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 2, gap: 12, marginBottom: 16 }}>
-            <Skeleton width={130} height={110} borderRadius={20} />
-            <Skeleton width={130} height={110} borderRadius={20} />
-            <Skeleton width={130} height={110} borderRadius={20} />
-            <Skeleton width={130} height={110} borderRadius={20} />
-          </ScrollView>
+          <FlatList
+            horizontal
+            data={[1, 2, 3, 4]}
+            keyExtractor={(item) => item.toString()}
+            renderItem={() => <Skeleton width={130} height={110} borderRadius={20} />}
+            contentContainerStyle={{ paddingHorizontal: 2, gap: 12, marginBottom: 16 }}
+            showsHorizontalScrollIndicator={false}
+            initialNumToRender={5}
+            maxToRenderPerBatch={5}
+            windowSize={5}
+            removeClippedSubviews={Platform.OS === 'android'}
+          />
         ) : (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 2, gap: 12, marginBottom: 16 }}>
             {[
@@ -981,9 +987,9 @@ export default function DashboardScreen() {
           </View>
           
           <FlatList
+            horizontal
             data={sortedExams}
             keyExtractor={item => item._id}
-            contentContainerStyle={{ padding: 16 }}
             renderItem={({ item }) => {
               const status = getExamStatus(item);
               const ss = statusStyle[status] || statusStyle['Expired'];

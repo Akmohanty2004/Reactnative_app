@@ -150,8 +150,6 @@ export default function NotificationManager() {
     const onConnect = () => {
       if (userId && userId !== 'undefined') {
         activeSocket.emit('join_room', userId);
-        const isActive = AppState.currentState === 'active';
-        activeSocket.emit('set_status', { isOnline: isActive });
       }
     };
 
@@ -176,7 +174,7 @@ export default function NotificationManager() {
 
         if (isChatMessage) {
           if (String(senderId) !== String(currentChatRef.current)) {
-            triggerMobileNotification(notif.title || 'New Message', notif.message, notif.data);
+            // triggerMobileNotification(notif.title || 'New Message', notif.message, notif.data);
             Toast.show({
               type: 'info',
               text1: notif.title || 'New Message',
@@ -187,7 +185,7 @@ export default function NotificationManager() {
             });
           }
         } else {
-          triggerMobileNotification(notif.title || 'ExamHub Notification', notif.message || 'You have a new notification.', notif.data);
+          // triggerMobileNotification(notif.title || 'ExamHub Notification', notif.message || 'You have a new notification.', notif.data);
           Toast.show({
             type: 'info',
             text1: notif.title || 'ExamHub Notification',
@@ -222,24 +220,15 @@ export default function NotificationManager() {
     };
 
     activeSocket.on('new_notification', handleNewNotification);
+    if (activeSocket.connected) {
+      onConnect();
+    }
+    activeSocket.on('connect', onConnect);
+
     activeSocket.on('exam_published', handleExamPublished);
     activeSocket.on('exam_updated', handleExamUpdated);
 
-    const handleAppStateChange = (nextAppState) => {
-      if (nextAppState === 'active') {
-        if (!activeSocket.connected) {
-          activeSocket.connect();
-        }
-        activeSocket.emit('set_status', { isOnline: true });
-      } else {
-        activeSocket.emit('set_status', { isOnline: false });
-      }
-    };
-
-    const appStateSubscription = AppState.addEventListener('change', handleAppStateChange);
-
     return () => {
-      appStateSubscription?.remove();
       activeSocket.off('connect', onConnect);
       activeSocket.off('new_notification', handleNewNotification);
       activeSocket.off('exam_published', handleExamPublished);
@@ -311,11 +300,11 @@ export default function NotificationManager() {
                 // DO NOT trigger device notification for sender!
                 if (senderId && String(senderId) === myUserId) return;
 
-                triggerMobileNotification(
-                  newNotif.title || 'New Notification',
-                  newNotif.message || 'You have a new notification.',
-                  newNotif.data || {}
-                );
+                // triggerMobileNotification(
+                //   newNotif.title || 'New Notification',
+                //   newNotif.message || 'You have a new notification.',
+                //   newNotif.data || {}
+                // );
 
                 if (index === 0) {
                   Toast.show({

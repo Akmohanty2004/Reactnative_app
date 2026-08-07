@@ -60,11 +60,7 @@ export default function GlobalChatbot({ currentRouteName }) {
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
       onPanResponderGrant: () => {
-        pan.setOffset({
-          x: pan.x._value,
-          y: pan.y._value
-        });
-        pan.setValue({ x: 0, y: 0 });
+        pan.extractOffset();
       },
       onPanResponderMove: Animated.event(
         [null, { dx: pan.x, dy: pan.y }],
@@ -146,11 +142,14 @@ User message: "${text}"`
 
       const data = await response.json();
       if (data.error) {
-        console.warn('API Rate Limit:', data.error.message);
+        console.warn('API Error:', data.error.message);
+        if (data.error.message && data.error.message.toLowerCase().includes('api key')) {
+          return "Error: Your Gemini API Key is invalid! Please update it in src/config/keys.js";
+        }
         if (data.error.code === 503) {
           return "The AI is currently experiencing very high demand. Please try again in a few moments!";
         }
-        return `I'm having trouble connecting right now. Please try again later.`;
+        return `API Error: ${data.error.message || 'Unknown error occurred.'}`;
       }
       if (data.candidates && data.candidates.length > 0) {
         return data.candidates[0].content.parts[0].text;

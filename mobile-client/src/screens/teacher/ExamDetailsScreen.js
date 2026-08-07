@@ -50,6 +50,7 @@ export default function ExamDetailsScreen({ route, navigation }) {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <StatusBar barStyle="light-content" translucent={true} backgroundColor="transparent" />
       <View style={[styles.header, { paddingTop: topPadding + 10 }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Feather name="arrow-left" size={24} color="white" />

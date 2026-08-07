@@ -189,7 +189,7 @@ export default function ExamsScreen({ navigation }) {
   /* ── Render ────────────────────────────────────────────────────── */
   return (
     <View style={styles.safe}>
-      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} translucent={false} backgroundColor={colors.bg} />
+      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} translucent={true} backgroundColor="transparent" />
       
       {/* ── Header ── */}
       <View style={[styles.header, { paddingTop: topPadding + 10 }]}>
