@@ -827,6 +827,7 @@ export default function DashboardScreen() {
             </View>
           )}
         </View>
+        )}
 
         {/* ── Exam Toppers ── */}
         {((examsLoading && (!exams || exams.length === 0)) || refreshing) ? (
