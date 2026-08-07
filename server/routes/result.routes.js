@@ -492,7 +492,6 @@ router.get('/toppers', authMiddleware, async (req, res) => {
       // Admins see all exams (no isResultPublished restriction)
       query = {};
     } else {
-      query.isResultPublished = true;
       const userClass = req.user.classGroup || 'General';
       if (userClass !== 'General') {
         query.$or = [
