@@ -728,6 +728,14 @@ export default function DashboardScreen() {
         )}
 
         {/* ── Recent Exams (full width) ── */}
+        {((examsLoading && (!exams || exams.length === 0)) || refreshing) ? (
+          <View style={styles.fullCard}>
+            <Skeleton width="100%" height={24} style={{marginBottom: 16}} borderRadius={8} />
+            <Skeleton width="100%" height={60} style={{marginBottom: 8}} borderRadius={12} />
+            <Skeleton width="100%" height={60} style={{marginBottom: 8}} borderRadius={12} />
+            <Skeleton width="100%" height={60} borderRadius={12} />
+          </View>
+        ) : (
         <View style={styles.fullCard}>
           <View style={styles.cardHeader}>
             <Text style={styles.cardTitleLg}>Recent Exams</Text>
@@ -769,8 +777,16 @@ export default function DashboardScreen() {
             <Text style={styles.emptyText}>No recent exams.</Text>
           )}
         </View>
+        )}
 
         {/* ── Upcoming Exams (full width) ── */}
+        {((examsLoading && (!exams || exams.length === 0)) || refreshing) ? (
+          <View style={styles.fullCard}>
+            <Skeleton width="100%" height={24} style={{marginBottom: 16}} borderRadius={8} />
+            <Skeleton width="100%" height={60} style={{marginBottom: 8}} borderRadius={12} />
+            <Skeleton width="100%" height={60} borderRadius={12} />
+          </View>
+        ) : (
         <View style={styles.fullCard}>
           <View style={styles.cardHeader}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -813,6 +829,15 @@ export default function DashboardScreen() {
         </View>
 
         {/* ── Exam Toppers ── */}
+        {((examsLoading && (!exams || exams.length === 0)) || refreshing) ? (
+          <View style={styles.fullCard}>
+            <Skeleton width="100%" height={24} style={{marginBottom: 16}} borderRadius={8} />
+            <View style={{ flexDirection: 'row', gap: 12 }}>
+              <Skeleton width={280} height={80} borderRadius={12} />
+              <Skeleton width={280} height={80} borderRadius={12} />
+            </View>
+          </View>
+        ) : (
         <View style={styles.fullCard}>
           <View style={styles.cardHeader}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -877,6 +902,7 @@ export default function DashboardScreen() {
             </View>
           )}
         </View>
+        )}
 
         <View style={{ height: 20 }} />
       </Animated.ScrollView>
