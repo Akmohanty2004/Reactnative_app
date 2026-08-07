@@ -221,7 +221,7 @@ User message: "${text}"`
       >
         <KeyboardAvoidingView 
           style={styles.modalOverlay}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
           <Animated.View style={[styles.modalOverlayBg, { opacity: fadeAnim }]}>
             <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={() => setIsOpen(false)} />
